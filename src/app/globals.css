@@ -25,3 +25,21 @@ body {
     text-wrap: balance;
   }
 }
+
+@layer components {
+  .input {
+    @apply border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary;
+  }
+  .btn-primary {
+    @apply bg-brand-primary text-white px-4 py-2 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 transition;
+  }
+  .btn-secondary {
+    @apply bg-gray-100 text-gray-800 px-4 py-2 rounded-lg font-semibold hover:bg-gray-200 transition;
+  }
+  .btn-success {
+    @apply bg-green-600 text-white px-3 py-1 rounded font-medium hover:bg-green-700 transition;
+  }
+  .btn-danger {
+    @apply bg-red-600 text-white px-3 py-1 rounded font-medium hover:bg-red-700 transition;
+  }
+}
