@@ -1,0 +1,38 @@
+<h2>Gallery — Gap Style</h2>
+<p class="subtitle">Same masonry layout, different spacing. Photos fill the tiles completely.</p>
+
+<div class="options" style="flex-direction: column; gap: 28px;">
+
+  <!-- Option A: No gap -->
+  <div class="option" data-choice="no-gap" onclick="toggleSelect(this)" style="display: block; padding: 20px;">
+    <div class="content" style="margin-bottom: 14px;">
+      <h3>A — No gap (seamless)</h3>
+      <p>Images touch edge to edge. Bold, immersive. Like a photo wall.</p>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-radius: 8px; overflow: hidden;">
+      <div style="background: linear-gradient(135deg, #1e3a5f, #2563eb); height: 110px; display:flex; align-items:center; justify-content:center; color:#93c5fd; font-size:22px;">📸</div>
+      <div style="background: linear-gradient(135deg, #14532d, #16a34a); height: 160px; display:flex; align-items:center; justify-content:center; color:#4ade80; font-size:22px; grid-row: span 2;">🎥</div>
+      <div style="background: linear-gradient(135deg, #7c2d12, #ea580c); height: 110px; display:flex; align-items:center; justify-content:center; color:#fdba74; font-size:22px;">📸</div>
+      <div style="background: linear-gradient(135deg, #581c87, #9333ea); height: 130px; display:flex; align-items:center; justify-content:center; color:#d8b4fe; font-size:22px;">📸</div>
+      <div style="background: linear-gradient(135deg, #1e3a5f, #0ea5e9); height: 100px; display:flex; align-items:center; justify-content:center; color:#7dd3fc; font-size:22px;">📸</div>
+      <div style="background: linear-gradient(135deg, #14532d, #22c55e); height: 100px; display:flex; align-items:center; justify-content:center; color:#86efac; font-size:22px;">🎥</div>
+    </div>
+  </div>
+
+  <!-- Option B: Small gap -->
+  <div class="option" data-choice="small-gap" onclick="toggleSelect(this)" style="display: block; padding: 20px;">
+    <div class="content" style="margin-bottom: 14px;">
+      <h3>B — Small gap (2px)</h3>
+      <p>Hairline separation between images. Feels clean and structured without visible grey space.</p>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; border-radius: 8px; overflow: hidden; background: #0f172a;">
+      <div style="background: linear-gradient(135deg, #1e3a5f, #2563eb); height: 110px; display:flex; align-items:center; justify-content:center; color:#93c5fd; font-size:22px;">📸</div>
+      <div style="background: linear-gradient(135deg, #14532d, #16a34a); height: 160px; display:flex; align-items:center; justify-content:center; color:#4ade80; font-size:22px; grid-row: span 2;">🎥</div>
+      <div style="background: linear-gradient(135deg, #7c2d12, #ea580c); height: 110px; display:flex; align-items:center; justify-content:center; color:#fdba74; font-size:22px;">📸</div>
+      <div style="background: linear-gradient(135deg, #581c87, #9333ea); height: 130px; display:flex; align-items:center; justify-content:center; color:#d8b4fe; font-size:22px;">📸</div>
+      <div style="background: linear-gradient(135deg, #1e3a5f, #0ea5e9); height: 100px; display:flex; align-items:center; justify-content:center; color:#7dd3fc; font-size:22px;">📸</div>
+      <div style="background: linear-gradient(135deg, #14532d, #22c55e); height: 100px; display:flex; align-items:center; justify-content:center; color:#86efac; font-size:22px;">🎥</div>
+    </div>
+  </div>
+
+</div>

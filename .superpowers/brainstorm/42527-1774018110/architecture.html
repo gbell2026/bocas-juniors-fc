@@ -1,0 +1,89 @@
+<h2>Bocas Juniors FC — System Architecture</h2>
+<p class="subtitle">How the pieces fit together</p>
+
+<div style="display: flex; flex-direction: column; gap: 20px; margin-top: 24px;">
+
+  <!-- User Layer -->
+  <div style="background: #1e293b; border-radius: 12px; padding: 20px;">
+    <div class="label" style="margin-bottom: 12px; color: #94a3b8;">Users</div>
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+      <div style="background: #0f172a; border-radius: 8px; padding: 12px 20px; text-align: center; flex: 1; min-width: 100px;">
+        <div style="font-size: 24px;">👨‍👩‍👧</div>
+        <div style="font-weight: 600; margin-top: 6px;">Parents</div>
+        <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Pay, upload, view</div>
+      </div>
+      <div style="background: #0f172a; border-radius: 8px; padding: 12px 20px; text-align: center; flex: 1; min-width: 100px;">
+        <div style="font-size: 24px;">⚽</div>
+        <div style="font-weight: 600; margin-top: 6px;">Players</div>
+        <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Update profile, view schedule</div>
+      </div>
+      <div style="background: #0f172a; border-radius: 8px; padding: 12px 20px; text-align: center; flex: 1; min-width: 100px;">
+        <div style="font-size: 24px;">🧑‍🏫</div>
+        <div style="font-weight: 600; margin-top: 6px;">Coaches</div>
+        <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Post, message, manage</div>
+      </div>
+      <div style="background: #0f172a; border-radius: 8px; padding: 12px 20px; text-align: center; flex: 1; min-width: 100px;">
+        <div style="font-size: 24px;">🛡️</div>
+        <div style="font-weight: 600; margin-top: 6px;">Admin</div>
+        <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Full access</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Arrow -->
+  <div style="text-align: center; color: #475569; font-size: 20px;">↕</div>
+
+  <!-- Frontend Layer -->
+  <div style="background: #1e3a5f; border-radius: 12px; padding: 20px; border: 2px solid #3b82f6;">
+    <div class="label" style="margin-bottom: 8px; color: #93c5fd;">Frontend — Next.js (deployed on Vercel)</div>
+    <div style="color: #cbd5e1; font-size: 14px;">React pages, server-side rendering, API routes, your brand &amp; kit colors baked in</div>
+  </div>
+
+  <!-- Arrow -->
+  <div style="text-align: center; color: #475569; font-size: 20px;">↕</div>
+
+  <!-- Services Layer -->
+  <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+    <div style="background: #1e293b; border-radius: 12px; padding: 16px; flex: 1; min-width: 140px; border-left: 4px solid #22c55e;">
+      <div class="label" style="color: #86efac; margin-bottom: 8px;">Supabase</div>
+      <div style="font-size: 13px; color: #94a3b8; line-height: 1.6;">
+        • User accounts &amp; login<br>
+        • Player profiles<br>
+        • Announcements<br>
+        • Messages<br>
+        • Database
+      </div>
+    </div>
+    <div style="background: #1e293b; border-radius: 12px; padding: 16px; flex: 1; min-width: 140px; border-left: 4px solid #a855f7;">
+      <div class="label" style="color: #d8b4fe; margin-bottom: 8px;">Stripe</div>
+      <div style="font-size: 13px; color: #94a3b8; line-height: 1.6;">
+        • Membership fees<br>
+        • CC + PayPal<br>
+        • Payment history<br>
+        • Invoices<br>
+        • Future: shop
+      </div>
+    </div>
+    <div style="background: #1e293b; border-radius: 12px; padding: 16px; flex: 1; min-width: 140px; border-left: 4px solid #f59e0b;">
+      <div class="label" style="color: #fcd34d; margin-bottom: 8px;">Cloudinary</div>
+      <div style="font-size: 13px; color: #94a3b8; line-height: 1.6;">
+        • Photo storage<br>
+        • Video storage<br>
+        • CDN delivery<br>
+        • Auto-resize<br>
+        • Parent uploads
+      </div>
+    </div>
+    <div style="background: #1e293b; border-radius: 12px; padding: 16px; flex: 1; min-width: 140px; border-left: 4px solid #06b6d4;">
+      <div class="label" style="color: #67e8f9; margin-bottom: 8px;">Heja (future)</div>
+      <div style="font-size: 13px; color: #94a3b8; line-height: 1.6;">
+        • Embed schedule<br>
+        • Keep using app<br>
+        • No rebuild needed<br>
+        <br>
+        • Phase 2
+      </div>
+    </div>
+  </div>
+
+</div>

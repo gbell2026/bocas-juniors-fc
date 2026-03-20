@@ -1,0 +1,77 @@
+<h2>Registration & Payment Flow</h2>
+<p class="subtitle">What a parent sees when joining the club</p>
+
+<div style="display: flex; flex-direction: column; gap: 0; margin-top: 28px;">
+
+  <!-- Step 1 -->
+  <div style="display: flex; gap: 16px; align-items: flex-start;">
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 0;">
+      <div style="width: 36px; height: 36px; border-radius: 50%; background: #22c55e; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #000; flex-shrink: 0;">1</div>
+      <div style="width: 2px; background: #1e293b; flex: 1; min-height: 40px;"></div>
+    </div>
+    <div style="background: #1e293b; border-radius: 10px; padding: 16px 20px; margin-bottom: 8px; flex: 1;">
+      <div style="font-weight: 700; color: #e2e8f0;">Parent visits <span style="color: #22c55e;">Register</span> page</div>
+      <div style="font-size: 13px; color: #94a3b8; margin-top: 6px;">Clicks "Register your child" — fills in player name, age, position, parent contact info</div>
+    </div>
+  </div>
+
+  <!-- Step 2 -->
+  <div style="display: flex; gap: 16px; align-items: flex-start;">
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 0;">
+      <div style="width: 36px; height: 36px; border-radius: 50%; background: #22c55e; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #000; flex-shrink: 0;">2</div>
+      <div style="width: 2px; background: #1e293b; flex: 1; min-height: 40px;"></div>
+    </div>
+    <div style="background: #1e293b; border-radius: 10px; padding: 16px 20px; margin-bottom: 8px; flex: 1;">
+      <div style="font-weight: 700; color: #e2e8f0;">Account created</div>
+      <div style="font-size: 13px; color: #94a3b8; margin-top: 6px;">Supabase creates a parent account. They get an email to verify &amp; set password.</div>
+    </div>
+  </div>
+
+  <!-- Step 3 -->
+  <div style="display: flex; gap: 16px; align-items: flex-start;">
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 0;">
+      <div style="width: 36px; height: 36px; border-radius: 50%; background: #a855f7; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; flex-shrink: 0;">3</div>
+      <div style="width: 2px; background: #1e293b; flex: 1; min-height: 40px;"></div>
+    </div>
+    <div style="background: #1e293b; border-radius: 10px; padding: 16px 20px; margin-bottom: 8px; flex: 1;">
+      <div style="font-weight: 700; color: #e2e8f0;">Payment page <span style="color: #a855f7;">(Stripe)</span></div>
+      <div style="font-size: 13px; color: #94a3b8; margin-top: 6px;">Shown the membership fee. Pays by credit card or PayPal. Stripe handles everything securely — card details never touch your server.</div>
+      <div style="display: flex; gap: 10px; margin-top: 10px;">
+        <div style="background: #0f172a; border-radius: 6px; padding: 8px 14px; font-size: 12px; color: #a78bfa; border: 1px solid #6d28d9;">💳 Credit / Debit Card</div>
+        <div style="background: #0f172a; border-radius: 6px; padding: 8px 14px; font-size: 12px; color: #60a5fa; border: 1px solid #1d4ed8;">🅿️ PayPal</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 4 -->
+  <div style="display: flex; gap: 16px; align-items: flex-start;">
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 0;">
+      <div style="width: 36px; height: 36px; border-radius: 50%; background: #22c55e; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #000; flex-shrink: 0;">4</div>
+      <div style="width: 2px; background: #1e293b; flex: 1; min-height: 40px;"></div>
+    </div>
+    <div style="background: #1e293b; border-radius: 10px; padding: 16px 20px; margin-bottom: 8px; flex: 1;">
+      <div style="font-weight: 700; color: #e2e8f0;">Payment confirmed</div>
+      <div style="font-size: 13px; color: #94a3b8; margin-top: 6px;">Stripe notifies your site (webhook). Player is marked as <span style="color: #22c55e; font-weight: 600;">active member</span>. Parent gets a receipt by email automatically.</div>
+    </div>
+  </div>
+
+  <!-- Step 5 -->
+  <div style="display: flex; gap: 16px; align-items: flex-start;">
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 0;">
+      <div style="width: 36px; height: 36px; border-radius: 50%; background: #3b82f6; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; flex-shrink: 0;">5</div>
+    </div>
+    <div style="background: #1e293b; border-radius: 10px; padding: 16px 20px; flex: 1;">
+      <div style="font-weight: 700; color: #e2e8f0;">Access to member area</div>
+      <div style="font-size: 13px; color: #94a3b8; margin-top: 6px;">Parent &amp; player can now log in to see their profile, payment history, and (later) announcements, schedule, and messaging.</div>
+    </div>
+  </div>
+
+  <!-- Admin view -->
+  <div style="margin-top: 28px; background: #3b1e1e; border-radius: 10px; padding: 16px 20px; border-left: 4px solid #ef4444;">
+    <div style="font-weight: 700; color: #fca5a5;">🛡️ Meanwhile — you see it all in the Admin Dashboard</div>
+    <div style="font-size: 13px; color: #94a3b8; margin-top: 8px;">
+      List of all registered players · Payment status (paid / unpaid) · Total revenue · One-click to mark someone as paid manually (if they pay cash)
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,7 @@
+{"type":"server-started","port":60587,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:60587","screen_dir":"/Users/gillesbell/bocas-juniors-fc/.superpowers/brainstorm/42527-1774018110"}
+{"type":"screen-added","file":"/Users/gillesbell/bocas-juniors-fc/.superpowers/brainstorm/42527-1774018110/architecture.html"}
+{"type":"screen-added","file":"/Users/gillesbell/bocas-juniors-fc/.superpowers/brainstorm/42527-1774018110/sitemap.html"}
+{"type":"screen-added","file":"/Users/gillesbell/bocas-juniors-fc/.superpowers/brainstorm/42527-1774018110/registration-flow.html"}
+{"type":"screen-added","file":"/Users/gillesbell/bocas-juniors-fc/.superpowers/brainstorm/42527-1774018110/gallery-layouts.html"}
+{"type":"screen-added","file":"/Users/gillesbell/bocas-juniors-fc/.superpowers/brainstorm/42527-1774018110/gallery-gaps.html"}
+{"type":"server-stopped","reason":"idle timeout"}
