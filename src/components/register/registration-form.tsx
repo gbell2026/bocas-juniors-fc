@@ -24,7 +24,7 @@ export function RegistrationForm({ onSuccess }: Props) {
     })
     setLoading(false)
     if (result.error) { setError(result.error); return }
-    onSuccess(result.playerId, result.parentId, fd.get('parentName') as string, fd.get('playerName') as string)
+    onSuccess(result.playerId!, result.parentId!, fd.get('parentName') as string, fd.get('playerName') as string)
   }
 
   return (

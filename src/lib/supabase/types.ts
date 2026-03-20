@@ -378,3 +378,17 @@ export const Constants = {
     },
   },
 } as const
+
+// Convenience type aliases derived from generated schema
+export type Player = Database['public']['Tables']['players']['Row']
+export type Parent = Database['public']['Tables']['parents']['Row']
+export type Payment = Database['public']['Tables']['payments']['Row']
+export type Media = Database['public']['Tables']['media']['Row']
+export type UserRoleRow = Database['public']['Tables']['user_roles']['Row']
+export type Setting = Database['public']['Tables']['settings']['Row']
+
+export type PlayerStatus = Database['public']['Enums']['player_status']
+export type PaymentMethod = Database['public']['Enums']['payment_method_type']
+export type PaymentStatus = Database['public']['Enums']['payment_status_type']
+export type MediaType = Database['public']['Enums']['media_type']
+export type UserRole = Database['public']['Enums']['user_role_type']
