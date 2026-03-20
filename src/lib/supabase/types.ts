@@ -1,43 +1,380 @@
-// Generated after running: npx supabase gen types typescript --linked > src/lib/supabase/types.ts
-// This file will be overwritten — do not edit manually after schema is applied.
-
-export type PlayerStatus = 'active' | 'inactive' | 'injured' | 'away'
-export type PaymentMethod = 'paypal' | 'monzo' | 'revolut' | 'cash'
-export type PaymentStatus = 'succeeded' | 'pending' | 'failed'
-export type MediaType = 'photo' | 'video'
-export type UserRole = 'parent' | 'coach' | 'admin' | 'player'
-
-export type Player = {
-  id: string; user_id: string | null; parent_id: string
-  name: string; date_of_birth: string; position: string
-  status: PlayerStatus; return_date: string | null; created_at: string
-}
-export type Parent = {
-  id: string; user_id: string; name: string
-  email: string; phone: string; created_at: string
-}
-export type Payment = {
-  id: string; parent_id: string; player_id: string
-  payment_method: PaymentMethod; amount: number; currency: string
-  status: PaymentStatus; paid_at: string | null; notes: string | null
-}
-export type Media = {
-  id: string; cloudinary_public_id: string; type: MediaType
-  caption: string | null; pinned: boolean
-  uploaded_by: string; uploaded_at: string; published: boolean
-}
-export type UserRoleRow = { user_id: string; role: UserRole }
-export type Setting = { key: string; value: string; updated_at: string }
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.4"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
-      players: { Row: Player; Insert: Omit<Player, 'id' | 'created_at'>; Update: Partial<Player> }
-      parents: { Row: Parent; Insert: Omit<Parent, 'id' | 'created_at'>; Update: Partial<Parent> }
-      payments: { Row: Payment; Insert: Omit<Payment, 'id'>; Update: Partial<Payment> }
-      media: { Row: Media; Insert: Omit<Media, 'id'>; Update: Partial<Media> }
-      user_roles: { Row: UserRoleRow; Insert: UserRoleRow; Update: Partial<UserRoleRow> }
-      settings: { Row: Setting; Insert: Setting; Update: Partial<Setting> }
+      media: {
+        Row: {
+          caption: string | null
+          cloudinary_public_id: string
+          id: string
+          pinned: boolean
+          published: boolean
+          type: Database["public"]["Enums"]["media_type"]
+          uploaded_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          caption?: string | null
+          cloudinary_public_id: string
+          id?: string
+          pinned?: boolean
+          published?: boolean
+          type: Database["public"]["Enums"]["media_type"]
+          uploaded_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          caption?: string | null
+          cloudinary_public_id?: string
+          id?: string
+          pinned?: boolean
+          published?: boolean
+          type?: Database["public"]["Enums"]["media_type"]
+          uploaded_at?: string
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
+      parents: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+          phone: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          phone: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          phone?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      payments: {
+        Row: {
+          amount: number
+          currency: string
+          id: string
+          notes: string | null
+          paid_at: string | null
+          parent_id: string
+          payment_method: Database["public"]["Enums"]["payment_method_type"]
+          player_id: string
+          status: Database["public"]["Enums"]["payment_status_type"]
+        }
+        Insert: {
+          amount: number
+          currency?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          parent_id: string
+          payment_method: Database["public"]["Enums"]["payment_method_type"]
+          player_id: string
+          status?: Database["public"]["Enums"]["payment_status_type"]
+        }
+        Update: {
+          amount?: number
+          currency?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          parent_id?: string
+          payment_method?: Database["public"]["Enums"]["payment_method_type"]
+          player_id?: string
+          status?: Database["public"]["Enums"]["payment_status_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "parents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      players: {
+        Row: {
+          created_at: string
+          date_of_birth: string
+          id: string
+          name: string
+          parent_id: string
+          position: string
+          return_date: string | null
+          status: Database["public"]["Enums"]["player_status"]
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          date_of_birth: string
+          id?: string
+          name: string
+          parent_id: string
+          position: string
+          return_date?: string | null
+          status?: Database["public"]["Enums"]["player_status"]
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          date_of_birth?: string
+          id?: string
+          name?: string
+          parent_id?: string
+          position?: string
+          return_date?: string | null
+          status?: Database["public"]["Enums"]["player_status"]
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "players_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "parents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          role: Database["public"]["Enums"]["user_role_type"]
+          user_id: string
+        }
+        Insert: {
+          role: Database["public"]["Enums"]["user_role_type"]
+          user_id: string
+        }
+        Update: {
+          role?: Database["public"]["Enums"]["user_role_type"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      media_type: "photo" | "video"
+      payment_method_type: "paypal" | "monzo" | "revolut" | "cash"
+      payment_status_type: "succeeded" | "pending" | "failed"
+      player_status: "active" | "inactive" | "injured" | "away"
+      user_role_type: "parent" | "coach" | "admin" | "player"
+    }
+    CompositeTypes: {
+      [_ in never]: never
     }
   }
 }
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
+  public: {
+    Enums: {
+      media_type: ["photo", "video"],
+      payment_method_type: ["paypal", "monzo", "revolut", "cash"],
+      payment_status_type: ["succeeded", "pending", "failed"],
+      player_status: ["active", "inactive", "injured", "away"],
+      user_role_type: ["parent", "coach", "admin", "player"],
+    },
+  },
+} as const
