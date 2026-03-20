@@ -26,6 +26,6 @@ it('returns 403 if user is not admin', async () => {
     single: jest.fn().mockResolvedValue({ data: { role: 'parent' }, error: null }),
   })
   const req = new Request('http://localhost/api/cloudinary/sign', { method: 'POST', body: '{}' })
-  const res = await POST(req)
+  const res = await POST(req as any)
   expect(res.status).toBe(403)
 })
