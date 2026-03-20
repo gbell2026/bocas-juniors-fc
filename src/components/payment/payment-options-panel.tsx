@@ -38,7 +38,7 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
   return (
     <div className="max-w-lg mx-auto py-8 px-4 space-y-6">
       <h2 className="text-xl font-bold">Pay Membership Fee — {fee}</h2>
-      <p className="text-gray-600 text-sm">Choose a payment method below. Once you've paid, click the confirmation button so the admin can verify your payment.</p>
+      <p className="text-gray-600 text-sm">Choose a payment method below. Once you&apos;ve paid, click the confirmation button so the admin can verify your payment.</p>
 
       {/* PayPal / Card */}
       <div className="border rounded-lg p-4 space-y-3">
@@ -62,10 +62,9 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
             {methodState.paypal === 'awaiting_confirm' && (
               <button
                 onClick={() => handleConfirm('paypal')}
-                disabled={methodState.paypal === 'loading' as any}
                 className="btn-secondary text-sm"
               >
-                I've paid
+                I&apos;ve paid
               </button>
             )}
           </div>
@@ -94,7 +93,7 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
             disabled={methodState.monzo === 'loading'}
             className="btn-secondary text-sm"
           >
-            {methodState.monzo === 'loading' ? 'Sending…' : "I've sent the transfer"}
+            {methodState.monzo === 'loading' ? 'Sending…' : "I&apos;ve sent the transfer"}
           </button>
         )}
       </div>
@@ -121,7 +120,7 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
             disabled={methodState.revolut === 'loading'}
             className="btn-secondary text-sm"
           >
-            {methodState.revolut === 'loading' ? 'Sending…' : "I've sent the transfer"}
+            {methodState.revolut === 'loading' ? 'Sending…' : "I&apos;ve sent the transfer"}
           </button>
         )}
       </div>
@@ -140,7 +139,7 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
             disabled={methodState.cash === 'loading'}
             className="btn-secondary text-sm"
           >
-            {methodState.cash === 'loading' ? 'Sending…' : "I'll pay cash at training"}
+            {methodState.cash === 'loading' ? 'Sending\u2026' : "I\u2019ll pay cash at training"}
           </button>
         )}
       </div>

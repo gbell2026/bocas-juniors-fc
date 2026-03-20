@@ -13,7 +13,7 @@ const links = [
 
 export function Nav() {
   const pathname = usePathname()
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<{ id: string } | null>(null)
 
   useEffect(() => {
     const supabase = createBrowserClient()

@@ -20,7 +20,7 @@ export function PlayersTable({ players }: { players: PlayerWithParent[] }) {
   async function handleStatusSave(p: PlayerWithParent) {
     const { status, returnDate } = getEdit(p)
     setUpdating(p.id)
-    await updatePlayerStatus(p.id, status as any, returnDate || undefined)
+    await updatePlayerStatus(p.id, status as import('@/lib/supabase/types').PlayerStatus, returnDate || undefined)
     setUpdating(null)
     window.location.reload()
   }

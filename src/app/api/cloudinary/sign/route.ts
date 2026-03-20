@@ -8,7 +8,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 })
 
-export async function POST(req: NextRequest) {
+export async function POST(_req: NextRequest) {
   // Verify session with user client
   const supabaseUser = await createSupabaseServerClient()
   const { data: { user } } = await supabaseUser.auth.getUser()
