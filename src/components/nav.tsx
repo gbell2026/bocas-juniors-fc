@@ -27,8 +27,8 @@ export function Nav() {
   }
 
   return (
-    <nav className="bg-brand-primary text-white px-4 py-3 flex items-center justify-between">
-      <Link href="/" className="font-bold text-lg">Bocas Juniors FC</Link>
+    <nav className="bg-brand-secondary text-white px-4 py-3 flex items-center justify-between">
+      <Link href="/" className="font-heading font-bold text-lg tracking-wide">Bocas Juniors FC</Link>
       <div className="flex items-center gap-4 text-sm">
         {links.map(({ href, label }) => (
           <Link

@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Anton, Montserrat } from 'next/font/google'
 import { Nav } from '@/components/nav'
 import './globals.css'
 
-const inter = Inter({ subsets: ['latin'] })
+const anton = Anton({ subsets: ['latin'], weight: '400', variable: '--font-anton' })
+const montserrat = Montserrat({ subsets: ['latin'], variable: '--font-montserrat' })
 
 export const metadata: Metadata = {
   title: 'Bocas Juniors FC',
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${anton.variable} ${montserrat.variable} font-body`}>
         <Nav />
         {children}
       </body>

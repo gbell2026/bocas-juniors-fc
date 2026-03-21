@@ -8,13 +8,20 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        heading: ['var(--font-anton)', 'sans-serif'],
+        body: ['var(--font-montserrat)', 'sans-serif'],
+      },
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
         brand: {
-          primary: '#1a5276',   // REPLACE with actual club primary colour
-          secondary: '#f39c12', // REPLACE with actual club secondary colour
-          accent: '#ffffff',
+          primary: '#D8405F',   // Bocas Pink — primary buttons, hero sections
+          secondary: '#30407E', // Bocas Blue — nav, headings, backgrounds
+          gold: '#AC8D4E',      // Sand Gold — accents, highlights
+          teal: '#579BA6',      // Sea Teal — secondary buttons, outlines
+          white: '#FFFFFF',
+          black: '#111111',
         },
       },
     },
