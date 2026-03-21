@@ -1,7 +1,23 @@
-// Contact details — update these directly in this file or move to Supabase Studio (settings table)
+// Contact details — update this file to add/change staff contacts
 const contacts = [
-  { name: 'Head Coach', role: 'Head Coach', email: 'coach@bocasjuniorsfc.com', phone: '+507 555 0001' },
-  { name: 'Club Admin', role: 'Administrator', email: 'admin@bocasjuniorsfc.com', phone: '+507 555 0002' },
+  {
+    name: 'Gilles Benyon-Bell',
+    role: 'Manager',
+    email: 'g.bell2010@gmail.com',
+    phone: '+44 7462 557960 (WhatsApp)',
+  },
+  {
+    name: 'Josh Floryance',
+    role: 'Coach',
+    email: null,
+    phone: null,
+  },
+  {
+    name: 'Jorge Vega',
+    role: 'Coach',
+    email: null,
+    phone: null,
+  },
 ]
 
 export default function ContactPage() {
@@ -10,11 +26,13 @@ export default function ContactPage() {
       <h1 className="text-2xl font-bold mb-6">Contact Us</h1>
       <div className="space-y-4">
         {contacts.map(c => (
-          <div key={c.email} className="bg-gray-50 rounded-lg p-5">
+          <div key={c.name} className="bg-gray-50 rounded-lg p-5">
             <h2 className="font-semibold text-lg">{c.name}</h2>
             <p className="text-gray-500 text-sm mb-3">{c.role}</p>
-            <p><a href={`mailto:${c.email}`} className="text-brand-primary underline">{c.email}</a></p>
-            <p>{c.phone}</p>
+            {c.email && (
+              <p><a href={`mailto:${c.email}`} className="text-brand-primary underline">{c.email}</a></p>
+            )}
+            {c.phone && <p>{c.phone}</p>}
           </div>
         ))}
       </div>
