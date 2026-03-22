@@ -16,12 +16,13 @@ const config: Config = {
         background: "var(--background)",
         foreground: "var(--foreground)",
         brand: {
-          primary: '#D8405F',   // Bocas Pink — primary buttons, hero sections
-          secondary: '#30407E', // Bocas Blue — nav, headings, backgrounds
-          gold: '#AC8D4E',      // Sand Gold — accents, highlights
-          teal: '#579BA6',      // Sea Teal — secondary buttons, outlines
-          white: '#FFFFFF',
-          black: '#111111',
+          primary: '#FF0055',   // Hot pink — primary buttons, left-border accents
+          cyan:    '#00E5FF',   // Electric cyan — active states, labels, outlines, borders
+          gold:    '#AC8D4E',   // Sand Gold — nav active underline (unchanged)
+          dark:    '#0A0A0A',   // Near-black — page and nav backgrounds
+          surface: '#111111',   // Dark card/section backgrounds
+          border:  '#1E1E1E',   // Subtle dividers
+          white:   '#FFFFFF',
         },
       },
     },
