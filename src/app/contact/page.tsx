@@ -1,4 +1,5 @@
-// Contact details — update this file to add/change staff contacts
+import { PageHeader } from '@/components/page-header'
+
 const contacts = [
   {
     name: 'Gilles Benyon-Bell',
@@ -22,17 +23,24 @@ const contacts = [
 
 export default function ContactPage() {
   return (
-    <main className="max-w-2xl mx-auto py-12 px-4">
-      <h1 className="text-2xl font-bold mb-6">Contact Us</h1>
-      <div className="space-y-4">
+    <main className="bg-brand-dark min-h-screen">
+      <PageHeader title="Contact Us" subtitle="Get in touch with the team" />
+      <div className="max-w-2xl mx-auto py-8 px-4 space-y-4">
         {contacts.map(c => (
-          <div key={c.name} className="bg-gray-50 rounded-lg p-5">
-            <h2 className="font-semibold text-lg">{c.name}</h2>
-            <p className="text-gray-500 text-sm mb-3">{c.role}</p>
+          <div
+            key={c.name}
+            className="bg-brand-surface border border-brand-border border-l-[3px] border-l-brand-primary rounded p-5"
+          >
+            <h2 className="text-white font-black text-base">{c.name}</h2>
+            <p className="text-brand-cyan font-bold uppercase tracking-widest text-xs mt-1 mb-2">{c.role}</p>
             {c.email && (
-              <p><a href={`mailto:${c.email}`} className="text-brand-primary underline">{c.email}</a></p>
+              <p className="text-sm">
+                <a href={`mailto:${c.email}`} className="text-brand-primary underline">
+                  {c.email}
+                </a>
+              </p>
             )}
-            {c.phone && <p>{c.phone}</p>}
+            {c.phone && <p className="text-white/50 text-sm mt-1">{c.phone}</p>}
           </div>
         ))}
       </div>
