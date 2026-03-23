@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { PageHeader } from '@/components/page-header'
 import { GalleryClient } from '@/components/gallery/gallery-client'
 
 export default async function GalleryPage() {
@@ -11,8 +12,8 @@ export default async function GalleryPage() {
     .order('uploaded_at', { ascending: false })
 
   return (
-    <main>
-      <h1 className="text-2xl font-bold px-4 py-6">Gallery</h1>
+    <main className="bg-brand-dark min-h-screen">
+      <PageHeader title="Gallery" subtitle="Photos & videos from the pitch" />
       <GalleryClient items={media ?? []} />
     </main>
   )

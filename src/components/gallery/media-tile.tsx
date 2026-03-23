@@ -14,16 +14,22 @@ type Props = { item: Media; onClick: () => void }
 
 export function MediaTile({ item, onClick }: Props) {
   const isVideo = item.type === 'video'
-  const src = isVideo ? cloudinaryVideoThumb(item.cloudinary_public_id) : cloudinaryUrl(item.cloudinary_public_id, 600)
+  const src = isVideo
+    ? cloudinaryVideoThumb(item.cloudinary_public_id)
+    : cloudinaryUrl(item.cloudinary_public_id, 600)
 
   return (
-    <button onClick={onClick} className="relative block w-full overflow-hidden group">
+    <button
+      onClick={onClick}
+      className="relative block w-full overflow-hidden group bg-brand-surface transition-transform hover:scale-[1.02]"
+    >
       <img
         src={src}
         alt={item.caption ?? ''}
         className="w-full h-auto block"
         loading="lazy"
       />
+      <div className="absolute inset-0 bg-brand-primary/0 group-hover:bg-brand-primary/20 transition" />
       {isVideo && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition">
           <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
