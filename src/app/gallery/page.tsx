@@ -1,6 +1,6 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/page-header'
-import { GalleryClient } from '@/components/gallery/gallery-client'
+import { GalleryPageClient } from '@/components/gallery/gallery-page-client'
 
 export default async function GalleryPage() {
   const supabase = await createSupabaseServerClient()
@@ -14,7 +14,7 @@ export default async function GalleryPage() {
   return (
     <main className="bg-brand-dark min-h-screen">
       <PageHeader title="Gallery" subtitle="Photos & videos from the pitch" />
-      <GalleryClient items={media ?? []} />
+      <GalleryPageClient items={media ?? []} />
     </main>
   )
 }
