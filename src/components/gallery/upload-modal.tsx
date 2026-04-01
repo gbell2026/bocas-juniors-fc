@@ -1,5 +1,5 @@
 'use client'
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState } from 'react'
 import { submitMediaRecord } from '@/app/actions/media-submissions'
 
 const MAX_BYTES = 50 * 1024 * 1024 // 50MB
@@ -68,8 +68,10 @@ export function UploadModal({ open, onClose }: { open: boolean; onClose: () => v
   const [isDragging, setIsDragging] = useState(false)
 
   function reset() {
-    files.forEach(f => { if (f.preview) URL.revokeObjectURL(f.preview) })
-    setFiles([])
+    setFiles(prev => {
+      prev.forEach(f => { if (f.preview) URL.revokeObjectURL(f.preview) })
+      return []
+    })
     setSubmitterName('')
     setPhase('selecting')
     setSizeErrors([])
@@ -80,7 +82,7 @@ export function UploadModal({ open, onClose }: { open: boolean; onClose: () => v
     onClose()
   }
 
-  const addFiles = useCallback((incoming: File[]) => {
+  function addFiles(incoming: File[]) {
     const rejected: string[] = []
     const valid: FileEntry[] = []
     for (const f of incoming) {
@@ -89,7 +91,7 @@ export function UploadModal({ open, onClose }: { open: boolean; onClose: () => v
     }
     setSizeErrors(rejected.length ? [`${rejected.join(', ')} too large (max 50MB)`] : [])
     if (valid.length) setFiles(prev => [...prev, ...valid])
-  }, [])
+  }
 
   function removeFile(id: string) {
     setFiles(prev => {
@@ -107,6 +109,7 @@ export function UploadModal({ open, onClose }: { open: boolean; onClose: () => v
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!
     const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!
     setPhase('uploading')
+    let anySucceeded = false
 
     for (const entry of files) {
       updateEntry(entry.id, { status: 'uploading' })
@@ -128,10 +131,14 @@ export function UploadModal({ open, onClose }: { open: boolean; onClose: () => v
         submitterName: submitterName || undefined,
       })
       if (dbError) updateEntry(entry.id, { status: 'error', error: dbError, progress: 100 })
-      else updateEntry(entry.id, { status: 'done', progress: 100 })
+      else {
+        updateEntry(entry.id, { status: 'done', progress: 100 })
+        anySucceeded = true
+      }
     }
 
-    setPhase('complete')
+    if (anySucceeded) setPhase('complete')
+    // else stay in 'uploading' so users can see their errors
   }
 
   if (!open) return null
@@ -185,8 +192,8 @@ export function UploadModal({ open, onClose }: { open: boolean; onClose: () => v
               />
 
               {/* Size errors */}
-              {sizeErrors.map((err, i) => (
-                <p key={i} className="text-brand-primary text-xs mt-2">{err}</p>
+              {sizeErrors.map((err) => (
+                <p key={err} className="text-brand-primary text-xs mt-2">{err}</p>
               ))}
 
               {/* File previews */}
