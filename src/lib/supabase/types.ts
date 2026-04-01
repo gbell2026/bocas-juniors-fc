@@ -46,9 +46,10 @@ export type Database = {
           id: string
           pinned: boolean
           published: boolean
+          submitter_name: string | null
           type: Database["public"]["Enums"]["media_type"]
           uploaded_at: string
-          uploaded_by: string
+          uploaded_by: string | null
         }
         Insert: {
           caption?: string | null
@@ -56,9 +57,10 @@ export type Database = {
           id?: string
           pinned?: boolean
           published?: boolean
+          submitter_name?: string | null
           type: Database["public"]["Enums"]["media_type"]
           uploaded_at?: string
-          uploaded_by: string
+          uploaded_by?: string | null
         }
         Update: {
           caption?: string | null
@@ -66,9 +68,10 @@ export type Database = {
           id?: string
           pinned?: boolean
           published?: boolean
+          submitter_name?: string | null
           type?: Database["public"]["Enums"]["media_type"]
           uploaded_at?: string
-          uploaded_by?: string
+          uploaded_by?: string | null
         }
         Relationships: []
       }
