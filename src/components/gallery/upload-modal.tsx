@@ -137,7 +137,7 @@ export function UploadModal({ open, onClose }: { open: boolean; onClose: () => v
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-end sm:items-center justify-center">
       <div className="bg-brand-surface w-full sm:max-w-xl sm:rounded-lg max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-brand-border">
