@@ -138,7 +138,7 @@ export function UploadModal({ open, onClose }: { open: boolean; onClose: () => v
     }
 
     if (anySucceeded) setPhase('complete')
-    // else stay in 'uploading' so users can see their errors
+    else setPhase('selecting')
   }
 
   if (!open) return null
