@@ -1,6 +1,6 @@
 'use server'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
-import type { PlayerStatus } from '@/lib/supabase/types'
+import type { PlayerStatus, Media } from '@/lib/supabase/types'
 
 export async function updatePlayerStatus(
   playerId: string,
@@ -60,4 +60,40 @@ export async function getTotalRevenue() {
     .select('amount')
     .eq('status', 'succeeded')
   return (data ?? []).reduce((sum, p) => sum + p.amount, 0)
+}
+
+export async function getPendingSubmissions(): Promise<Media[]> {
+  const supabase = createSupabaseServiceClient()
+  const { data } = await supabase
+    .from('media')
+    .select('*')
+    .eq('published', false)
+    .order('uploaded_at', { ascending: true })
+  return data ?? []
+}
+
+export async function approveSubmission(id: string): Promise<void> {
+  const supabase = createSupabaseServiceClient()
+  await supabase.from('media').update({ published: true }).eq('id', id)
+}
+
+export async function rejectSubmission(
+  id: string,
+  cloudinaryPublicId: string,
+  resourceType: 'image' | 'video'
+): Promise<void> {
+  // Delete from Cloudinary first (fail open — proceed to DB delete even if this fails)
+  try {
+    const { v2: cloudinary } = await import('cloudinary')
+    cloudinary.config({
+      cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+    })
+    await cloudinary.uploader.destroy(cloudinaryPublicId, { resource_type: resourceType })
+  } catch (err) {
+    console.error('Cloudinary delete failed (proceeding to DB delete):', err)
+  }
+  const supabase = createSupabaseServiceClient()
+  await supabase.from('media').delete().eq('id', id)
 }
