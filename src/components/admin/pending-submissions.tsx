@@ -17,6 +17,7 @@ export function PendingSubmissions({ submissions: initial }: { submissions: Medi
   const cloud = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
 
   async function handleApprove(id: string) {
+    setError(null)
     setProcessing(prev => new Set(prev).add(id))
     try {
       await approveSubmission(id)
@@ -32,6 +33,7 @@ export function PendingSubmissions({ submissions: initial }: { submissions: Medi
     // Note: window.confirm is synchronous and works correctly here because it runs
     // before the first await. Browsers may suppress this in iframe/PWA contexts.
     if (!window.confirm('Reject and delete this submission?')) return
+    setError(null)
     setProcessing(prev => new Set(prev).add(item.id))
     try {
       const resourceType = item.type === 'video' ? 'video' : 'image'
