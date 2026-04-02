@@ -3,17 +3,19 @@ import { redirect } from 'next/navigation'
 import { PlayersTable } from '@/components/admin/players-table'
 import { PendingPayments } from '@/components/admin/pending-payments'
 import { MediaUploader } from '@/components/admin/media-uploader'
-import { getPendingPayments, getAllPlayers, getTotalRevenue } from '@/app/actions/admin'
+import { PendingSubmissions } from '@/components/admin/pending-submissions'
+import { getPendingPayments, getAllPlayers, getTotalRevenue, getPendingSubmissions } from '@/app/actions/admin'
 
 export default async function AdminPage() {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [players, pendingPayments, totalRevenueCents] = await Promise.all([
+  const [players, pendingPayments, totalRevenueCents, pendingSubmissions] = await Promise.all([
     getAllPlayers(),
     getPendingPayments(),
     getTotalRevenue(),
+    getPendingSubmissions(),
   ])
 
   return (
@@ -31,6 +33,8 @@ export default async function AdminPage() {
         <h2 className="text-lg font-semibold mb-3">Players ({players.length})</h2>
         <PlayersTable players={players as any} />
       </section>
+
+      <PendingSubmissions submissions={pendingSubmissions as any} />
 
       <section>
         <h2 className="text-lg font-semibold mb-3">Upload Media</h2>
