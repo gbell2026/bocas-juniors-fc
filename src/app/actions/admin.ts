@@ -75,6 +75,7 @@ export async function getPendingSubmissions(): Promise<Media[]> {
     .from('media')
     .select('*')
     .eq('published', false)
+    .is('uploaded_by', null)
     .order('uploaded_at', { ascending: true })
   return data ?? []
 }
