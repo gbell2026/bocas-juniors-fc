@@ -71,4 +71,25 @@ describe('PendingSubmissions', () => {
       expect(actions.rejectSubmission).not.toHaveBeenCalled()
     })
   })
+
+  it('shows error message and keeps item when approveSubmission throws', async () => {
+    ;(actions.approveSubmission as jest.Mock).mockRejectedValueOnce(new Error('DB error'))
+    render(<PendingSubmissions submissions={[submission]} />)
+    fireEvent.click(screen.getByRole('button', { name: /approve/i }))
+    await waitFor(() => {
+      expect(screen.getByText(/approval failed/i)).toBeInTheDocument()
+      expect(screen.getByText('Jane Doe')).toBeInTheDocument()
+    })
+  })
+
+  it('shows error message and keeps item when rejectSubmission throws', async () => {
+    window.confirm = jest.fn().mockReturnValue(true)
+    ;(actions.rejectSubmission as jest.Mock).mockRejectedValueOnce(new Error('DB error'))
+    render(<PendingSubmissions submissions={[submission]} />)
+    fireEvent.click(screen.getByRole('button', { name: /reject/i }))
+    await waitFor(() => {
+      expect(screen.getByText(/rejection failed/i)).toBeInTheDocument()
+      expect(screen.getByText('Jane Doe')).toBeInTheDocument()
+    })
+  })
 })
