@@ -34,7 +34,7 @@ export default async function AdminPage() {
         <PlayersTable players={players as any} />
       </section>
 
-      <PendingSubmissions submissions={pendingSubmissions as any} />
+      <PendingSubmissions submissions={pendingSubmissions} />
 
       <section>
         <h2 className="text-lg font-semibold mb-3">Upload Media</h2>
