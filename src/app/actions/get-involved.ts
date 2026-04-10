@@ -1,8 +1,5 @@
 'use server'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
-import { Resend } from 'resend'
-
-const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function submitGetInvolved({
   name,
@@ -31,7 +28,10 @@ export async function submitGetInvolved({
   })
   if (dbError) return { error: dbError.message }
 
+  // Send email notification (non-blocking — don't let email failures break the form)
   try {
+    const { Resend } = await import('resend')
+    const resend = new Resend(process.env.RESEND_API_KEY)
     const { error: emailError } = await resend.emails.send({
       from: 'Bocas Juniors FC <onboarding@resend.dev>',
       to: ['g.bell2010@gmail.com'],
