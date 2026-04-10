@@ -1,12 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 
-// Replace SPONSOR_1 etc. with actual Cloudinary public IDs after uploading sponsor logos
-const sponsors: string[] = []
-
 export default function HomePage() {
-  const cloud = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
-
   return (
     <main>
       {/* Hero */}
@@ -55,21 +50,27 @@ export default function HomePage() {
       </section>
 
       {/* Sponsors */}
-      {sponsors.length > 0 && (
-        <section className="py-12 px-4 text-center bg-brand-surface">
-          <h2 className="text-xs font-bold text-white/40 mb-6 uppercase tracking-widest">Our Sponsors</h2>
-          <div className="flex flex-wrap justify-center gap-8 items-center">
-            {sponsors.map((id, i) => (
-              <img
-                key={i}
-                src={`https://res.cloudinary.com/${cloud}/image/upload/h_80,q_auto,f_auto/${id}`}
-                alt={`Sponsor ${i + 1}`}
-                className="h-16 object-contain grayscale hover:grayscale-0 transition"
-              />
-            ))}
-          </div>
-        </section>
-      )}
+      <section className="py-12 px-4 text-center bg-brand-surface">
+        <h2 className="text-xs font-bold text-white/40 mb-6 uppercase tracking-widest">Our Sponsors</h2>
+        <div className="flex flex-wrap justify-center gap-8 items-center">
+          <Image
+            src="/bocas%20dance%20logo.png"
+            alt="Bocas Dance Collective"
+            width={120}
+            height={64}
+            className="h-16 w-auto object-contain"
+          />
+        </div>
+      </section>
+
+      {/* Get Involved CTA */}
+      <section className="py-14 px-4 bg-brand-dark border-t border-brand-border text-center">
+        <h2 className="font-heading text-white text-4xl uppercase tracking-wider mb-3">Get Involved</h2>
+        <p className="text-white/60 mb-7 max-w-md mx-auto">
+          Want to support Bocas Juniors FC? We&apos;re looking for sponsors, volunteers, and partners to help grow the club.
+        </p>
+        <Link href="/get-involved" className="btn-primary">Become a Supporter</Link>
+      </section>
 
       {/* WhatsApp floating button */}
       <a
