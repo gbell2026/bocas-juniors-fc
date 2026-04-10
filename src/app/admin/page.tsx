@@ -4,18 +4,20 @@ import { PlayersTable } from '@/components/admin/players-table'
 import { PendingPayments } from '@/components/admin/pending-payments'
 import { MediaUploader } from '@/components/admin/media-uploader'
 import { PendingSubmissions } from '@/components/admin/pending-submissions'
-import { getPendingPayments, getAllPlayers, getTotalRevenue, getPendingSubmissions } from '@/app/actions/admin'
+import { GetInvolvedSubmissions } from '@/components/admin/get-involved-submissions'
+import { getPendingPayments, getAllPlayers, getTotalRevenue, getPendingSubmissions, getGetInvolvedSubmissions } from '@/app/actions/admin'
 
 export default async function AdminPage() {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [players, pendingPayments, totalRevenueCents, pendingSubmissions] = await Promise.all([
+  const [players, pendingPayments, totalRevenueCents, pendingSubmissions, getInvolvedSubmissions] = await Promise.all([
     getAllPlayers(),
     getPendingPayments(),
     getTotalRevenue(),
     getPendingSubmissions(),
+    getGetInvolvedSubmissions(),
   ])
 
   return (
@@ -26,6 +28,8 @@ export default async function AdminPage() {
           Total Revenue: ${(totalRevenueCents / 100).toFixed(2)}
         </p>
       </div>
+
+      <GetInvolvedSubmissions submissions={getInvolvedSubmissions} />
 
       <PendingPayments payments={pendingPayments as any} />
 
