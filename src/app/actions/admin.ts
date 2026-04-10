@@ -1,6 +1,6 @@
 'use server'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
-import type { PlayerStatus, Media } from '@/lib/supabase/types'
+import type { PlayerStatus, Media, GetInvolvedSubmission } from '@/lib/supabase/types'
 import { v2 as cloudinary } from 'cloudinary'
 
 cloudinary.config({
@@ -99,5 +99,24 @@ export async function rejectSubmission(
   }
   const supabase = createSupabaseServiceClient()
   const { error } = await supabase.from('media').delete().eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
+export async function getGetInvolvedSubmissions(): Promise<GetInvolvedSubmission[]> {
+  const supabase = createSupabaseServiceClient()
+  const { data, error } = await supabase
+    .from('get_involved_submissions')
+    .select('*')
+    .order('submitted_at', { ascending: false })
+  if (error) throw new Error(error.message)
+  return data ?? []
+}
+
+export async function markSubmissionHandled(id: string): Promise<void> {
+  const supabase = createSupabaseServiceClient()
+  const { error } = await supabase
+    .from('get_involved_submissions')
+    .update({ handled: true })
+    .eq('id', id)
   if (error) throw new Error(error.message)
 }
