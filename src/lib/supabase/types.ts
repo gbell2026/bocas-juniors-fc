@@ -75,6 +75,39 @@ export type Database = {
         }
         Relationships: []
       }
+      get_involved_submissions: {
+        Row: {
+          id: string
+          name: string
+          email: string
+          organisation: string | null
+          interests: string[]
+          message: string | null
+          submitted_at: string
+          handled: boolean
+        }
+        Insert: {
+          id?: string
+          name: string
+          email: string
+          organisation?: string | null
+          interests: string[]
+          message?: string | null
+          submitted_at?: string
+          handled?: boolean
+        }
+        Update: {
+          id?: string
+          name?: string
+          email?: string
+          organisation?: string | null
+          interests?: string[]
+          message?: string | null
+          submitted_at?: string
+          handled?: boolean
+        }
+        Relationships: []
+      }
       parents: {
         Row: {
           created_at: string
@@ -395,3 +428,4 @@ export type PaymentMethod = Database['public']['Enums']['payment_method_type']
 export type PaymentStatus = Database['public']['Enums']['payment_status_type']
 export type MediaType = Database['public']['Enums']['media_type']
 export type UserRole = Database['public']['Enums']['user_role_type']
+export type GetInvolvedSubmission = Database['public']['Tables']['get_involved_submissions']['Row']
