@@ -35,19 +35,24 @@ export function GetInvolvedForm() {
     setStatus('submitting')
     setErrorMessage(null)
 
-    const { error } = await submitGetInvolved({
-      name: name.trim(),
-      email: email.trim(),
-      organisation: organisation.trim() || undefined,
-      interests,
-      message: message.trim() || undefined,
-    })
+    try {
+      const { error } = await submitGetInvolved({
+        name: name.trim(),
+        email: email.trim(),
+        organisation: organisation.trim() || undefined,
+        interests,
+        message: message.trim() || undefined,
+      })
 
-    if (error) {
+      if (error) {
+        setStatus('error')
+        setErrorMessage(error)
+      } else {
+        setStatus('success')
+      }
+    } catch {
       setStatus('error')
-      setErrorMessage(error)
-    } else {
-      setStatus('success')
+      setErrorMessage('Something went wrong. Please try again.')
     }
   }
 
