@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import Link from 'next/link'
 import { submitGetInvolved } from '@/app/actions/get-involved'
 
 const INTEREST_OPTIONS = [
@@ -60,7 +61,8 @@ export function GetInvolvedForm() {
     return (
       <div className="text-center py-12">
         <p className="text-white font-bold text-lg mb-2">Thanks for getting in touch!</p>
-        <p className="text-white/50 text-sm">We&apos;ll be in contact soon.</p>
+        <p className="text-white/50 text-sm mb-6">We&apos;ll be in contact soon.</p>
+        <Link href="/" className="btn-secondary">Back to Home</Link>
       </div>
     )
   }
