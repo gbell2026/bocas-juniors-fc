@@ -61,9 +61,9 @@ export default function HomePage() {
           <Image
             src="/bocas-dance-logo.png"
             alt="Bocas Dance Collective"
-            width={100}
-            height={54}
-            className="h-12 w-auto object-contain mx-auto"
+            width={160}
+            height={86}
+            className="h-20 w-auto object-contain mx-auto"
           />
         </div>
       </section>
