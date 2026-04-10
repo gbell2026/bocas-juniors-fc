@@ -56,18 +56,14 @@ export default function HomePage() {
           Want to support Bocas Juniors FC? We&apos;re looking for sponsors, volunteers, and partners to help grow the club.
         </p>
         <Link href="/get-involved" className="btn-primary">Become a Supporter</Link>
-      </section>
-
-      {/* Sponsors */}
-      <section className="py-12 px-4 text-center bg-brand-surface">
-        <h2 className="text-xs font-bold text-white/40 mb-6 uppercase tracking-widest">Our Sponsors</h2>
-        <div className="flex flex-wrap justify-center gap-8 items-center">
+        <div className="mt-10 pt-8 border-t border-brand-border">
+          <p className="text-xs text-white/30 uppercase tracking-widest mb-3">Proudly supported by</p>
           <Image
             src="/bocas-dance-logo.png"
             alt="Bocas Dance Collective"
-            width={120}
-            height={64}
-            className="h-16 w-auto object-contain"
+            width={100}
+            height={54}
+            className="h-12 w-auto object-contain mx-auto"
           />
         </div>
       </section>
