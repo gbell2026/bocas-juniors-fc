@@ -130,6 +130,24 @@ structure inside this app.
   the new tangerine RGB, or removing if the new brand doesn't call for a
   glow shadow.
 
+**Repo-wide token class usage — not just `globals.css`.** The
+`brand-surface`/`brand-border`/`brand-dark`/`brand-cyan` Tailwind classes
+being renamed or retired above are used directly in JSX across 15 files, not
+only in `globals.css`:
+`src/app/{contact,gallery,get-involved,page,register}.tsx`,
+`src/components/nav.tsx`, `src/components/page-header.tsx`,
+`src/components/payment/payment-options-panel.tsx`,
+`src/components/register/registration-form.tsx`,
+`src/components/get-involved/get-involved-form.tsx`,
+`src/components/admin/{get-involved-submissions,pending-submissions}.tsx`,
+`src/components/gallery/{gallery-client,media-tile,upload-modal}.tsx`. Since
+an unrecognized Tailwind class compiles to nothing (no build error, just
+silently unstyled elements), every one of these needs its old class names
+swapped to the new tokens (`brand-surface`→`brand-charcoal`,
+`brand-border`→`brand-line`, `brand-dark`→`brand-ink`, and `brand-cyan`
+usages redesigned since there's no direct replacement) as part of the same
+pass — this isn't limited to `globals.css`.
+
 ## 3. Logo & favicon
 
 - `public/logo.png` → transparent toucan badge
