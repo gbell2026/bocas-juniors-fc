@@ -134,7 +134,9 @@ structure inside this app.
 `brand-surface`/`brand-border`/`brand-dark`/`brand-cyan` Tailwind classes
 being renamed or retired above are used directly in JSX across 15 files, not
 only in `globals.css`:
-`src/app/{contact,gallery,get-involved,page,register}.tsx`,
+`src/app/contact/page.tsx`, `src/app/gallery/page.tsx`,
+`src/app/get-involved/page.tsx`, `src/app/page.tsx`,
+`src/app/register/page.tsx`,
 `src/components/nav.tsx`, `src/components/page-header.tsx`,
 `src/components/payment/payment-options-panel.tsx`,
 `src/components/register/registration-form.tsx`,
