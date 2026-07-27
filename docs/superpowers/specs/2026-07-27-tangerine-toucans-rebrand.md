@@ -16,11 +16,21 @@ white-background versions of the same circular toucan/sunset badge with
 conversation. See token values below; the raw `tokens.json` content is
 reproduced in full in the Appendix for reference.
 
-**Open dependency:** the two logo image files were shared as chat attachments,
-not as files in the repo. They need to land in the repo (e.g.
-`public/logo.png` transparent, `public/logo-white-bg.png`) before
-implementation can proceed — either the user adds them directly, or provides
-a reachable path/URL.
+**Logo source files** are on disk at
+`~/Downloads/tangerine_toucans_logo_files/`:
+- `tangerine_toucans_logo.png` — white background
+- `tangerine_toucans_logo_transparent.png` — transparent, dark text/ink badge
+- `tangerine_toucans_logo.svg` — scalable vector, same badge
+- `tangerine_toucans_white_text.svg` / `tangerine_toucans_white_text_transparent.png`
+  — white-text variant, for use on dark backgrounds
+
+A third variant, `tangerine_toucans_white_text.png`, is at
+`~/Downloads/tangerine_toucans_white_text_logo_pack/` (white text, not
+transparent — likely superseded by the transparent version above for web
+use). This gives the site a proper light-background badge (main use, given
+the new cream theme) and a white-text variant for the remaining dark
+sections, beyond what the spec originally assumed (just one transparent +
+one white-bg PNG).
 
 ## 1. Renaming
 
@@ -152,10 +162,21 @@ pass — this isn't limited to `globals.css`.
 
 ## 3. Logo & favicon
 
-- `public/logo.png` → transparent toucan badge
-- New `public/logo-white-bg.png` → white-background version, for contexts
-  needing a light backdrop (e.g. social/OG previews)
-- `src/app/favicon.ico` regenerated from the transparent badge
+- `public/logo.png` ← `tangerine_toucans_logo_transparent.png` (transparent,
+  dark-ink text) — main use across nav/hero on the new cream/light theme
+- `public/logo-white-bg.png` ← `tangerine_toucans_logo.png` (white
+  background) — for contexts needing a light backdrop (e.g. social/OG
+  previews)
+- `public/logo-white-text.png` ← `tangerine_toucans_white_text_transparent.png`
+  (transparent, white text) — for the remaining dark sections (see Section
+  2's ink/charcoal tokens)
+- `src/app/favicon.ico` regenerated from `tangerine_toucans_logo_transparent.png`
+- SVG originals (`tangerine_toucans_logo.svg`,
+  `tangerine_toucans_white_text.svg`) are not directly needed by the current
+  PNG-based usage, but worth keeping in the repo (e.g.
+  `public/brand/` or similar) as the higher-fidelity source for any future
+  need (e.g. print, large-format display) — implementer's call on exact
+  location.
 
 No separate small-size icon crop for now (per prior decision) — the full
 badge is used at all sizes, including favicon and nav. Revisit with a
