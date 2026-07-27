@@ -21,7 +21,9 @@ The spec defines the token *values* but not how every existing dark-theme utilit
 | `bg-brand-dark` (page/section background, default) | `bg-brand-cream` | New page default per spec |
 | `bg-brand-dark` (Nav bar, homepage "Get Involved CTA" band) | `bg-brand-ink` | These two are kept as intentional dark accent bands — matches spec's "dark sections" allowance for `ink`/`charcoal`, and gives the light theme visual rhythm instead of using `ink`/`charcoal` nowhere |
 | `bg-brand-surface` (cards/panels) | `bg-brand-tint` | Tint's documented role is "pale orange highlight cards" — direct fit for elevated cards on the cream page |
+| `bg-brand-surface` (the Upload modal's floating container specifically — see Chunk 5, Task 23) | `bg-white` | Exception to the row above: a modal floats over a `bg-black/80` backdrop, not the page — pure white reads as "elevated above everything" and distinguishes it from in-page tint cards, which sit directly on the cream background |
 | `bg-brand-border` (chip/pill fills, thumbnail placeholders, progress-bar track) | `bg-brand-creamAlt` | Neutral secondary fill, distinct from card tint |
+| `bg-brand-dark` (small monospace detail insets — Monzo/Revolut boxes in the Payment panel) | `bg-brand-creamAlt` | Same neutral-fill reasoning as above; this is the one non-page/non-Nav use of the old dark token, confirmed via `grep -rn "bg-brand-dark" src/` to be the only occurrence outside the two rows above |
 | `border-brand-border` | `border-brand-line` | Direct token replacement |
 | `text-white` (primary text, on cream/tint) | `text-brand-ink` | Direct token replacement |
 | `text-white/80`, `/75`, `/70` (secondary text, on cream/tint) | `text-brand-ink/80` etc. | Keep opacity modifier, swap base colour |
@@ -32,7 +34,7 @@ The spec defines the token *values* but not how every existing dark-theme utilit
 | `border-brand-cyan` / hover accents | `border-brand-primary` / `hover:border-brand-primary` | Same reasoning as above |
 | `bg-brand-cyan` (hover fill on `.btn-secondary`) | `bg-brand-primary` | Same |
 | Text that sits on the **hero photo's dark gradient scrim** (`page.tsx` hero only) | Stays `text-white` | That text isn't on the cream page background — it's on a photo with a dark overlay for legibility, unrelated to the global theme swap |
-| `.input`, `.btn-primary`, `.btn-secondary` (globals.css) | See Chunk 1, Task 4 | Retheme once, globally, rather than per-file |
+| `.input`, `.btn-primary`, `.btn-secondary` (globals.css) | See Chunk 1, Task 5 | Retheme once, globally, rather than per-file |
 | `accent-[#FF0055]` (checkbox accent, get-involved-form.tsx) | `accent-[#F26522]` | Hardcoded old hex, swap to tangerine hex |
 | WhatsApp button `#25D366`, hero gradient `rgba(8,4,24,...)` scrim | **Unchanged** | Third-party brand colour / local dark-scrim-over-photo technique, not part of our palette |
 | `.btn-success` / `.btn-danger` (green-600/red-600) | **Unchanged** | Semantic status colours, not brand tokens — out of scope |
@@ -273,6 +275,7 @@ git commit -m "feat: retheme globals.css to light Tangerine Toucans theme"
 
 **Files:**
 - Modify: `package.json:2`
+- Modify: `package-lock.json` (regenerated, not hand-edited — see Step 2)
 
 - [ ] **Step 1: Change the `name` field**
 
@@ -280,10 +283,15 @@ git commit -m "feat: retheme globals.css to light Tangerine Toucans theme"
   "name": "tangerine-toucans-fc",
 ```
 
-- [ ] **Step 2: Commit**
+- [ ] **Step 2: Regenerate the lockfile so it doesn't retain the old package name**
+
+Run: `npm install`
+Expected: `package-lock.json` updates its `name` fields (lines 2 and 8) to `tangerine-toucans-fc`; no dependency versions change.
+
+- [ ] **Step 3: Commit**
 
 ```bash
-git add package.json
+git add package.json package-lock.json
 git commit -m "chore: rename npm package to tangerine-toucans-fc"
 ```
 
@@ -659,10 +667,10 @@ type Ids = { playerId: string; parentId: string; parentName: string; playerName:
 function StepIndicator({ step }: { step: Step }) {
   return (
     <div className="flex">
-      <div className={`flex-1 py-2 text-center text-xs font-bold uppercase tracking-wider ${step === 'register' ? 'bg-brand-primary text-white' : 'bg-brand-tint text-brand-muted'}`}>
+      <div className={`flex-1 py-2 text-center text-xs font-bold uppercase tracking-wider ${step === 'register' ? 'bg-brand-primary text-white' : 'bg-brand-tint text-brand-mutedWarm'}`}>
         1. Player Info
       </div>
-      <div className={`flex-1 py-2 text-center text-xs font-bold uppercase tracking-wider ${step === 'pay' ? 'bg-brand-primary text-white' : 'bg-brand-tint text-brand-muted'}`}>
+      <div className={`flex-1 py-2 text-center text-xs font-bold uppercase tracking-wider ${step === 'pay' ? 'bg-brand-primary text-white' : 'bg-brand-tint text-brand-mutedWarm'}`}>
         2. Payment
       </div>
     </div>
@@ -888,7 +896,18 @@ git commit -m "feat: retheme Get Involved form"
 **Files:**
 - Modify: `src/components/payment/payment-options-panel.tsx`
 
-- [ ] **Step 1: Replace the heading and intro text (around line 40)**
+- [ ] **Step 1: Replace the loading-state text colour (line 22)**
+
+Old:
+```tsx
+  if (!settings) return <p className="text-white/60 py-8 text-center">Loading payment options…</p>
+```
+New:
+```tsx
+  if (!settings) return <p className="text-brand-muted py-8 text-center">Loading payment options…</p>
+```
+
+- [ ] **Step 2: Replace the heading and intro text (around line 40)**
 
 Old:
 ```tsx
@@ -901,7 +920,7 @@ New:
       <p className="text-sm text-brand-muted">Choose a payment method below. Once you&apos;ve paid, click the confirmation button so the admin can verify your payment.</p>
 ```
 
-- [ ] **Step 2: Replace all four payment-method card wrappers' classes**
+- [ ] **Step 3: Replace all four payment-method card wrappers' classes**
 
 Old (appears 4x — PayPal, Monzo, Revolut, Cash cards):
 ```tsx
@@ -912,7 +931,7 @@ New:
       <div className="border border-brand-line rounded p-4 space-y-3 bg-brand-tint">
 ```
 
-- [ ] **Step 3: Replace each card's heading and description text colours**
+- [ ] **Step 4: Replace each card's heading and description text colours**
 
 Old (pattern repeated per card, e.g. PayPal card):
 ```tsx
@@ -924,9 +943,21 @@ New:
         <h3 className="font-bold text-brand-ink">Pay via PayPal or Credit/Debit Card</h3>
         <p className="text-sm text-brand-muted">Opens PayPal. You can pay with PayPal balance, bank account, or credit/debit card — no PayPal account required for card payments.</p>
 ```
-Apply the same `text-white` → `text-brand-ink` and `text-white/60` → `text-brand-muted` swap to the Monzo (`<h3 className="font-bold text-white">Pay via Monzo bank transfer</h3>`), Revolut (`<h3 className="font-bold text-white">Pay via Revolut bank transfer</h3>`), and Cash (`<h3 className="font-bold text-white">Pay by Cash</h3>` and its description paragraph) card headings.
+Apply the same `text-white` → `text-brand-ink` swap to the Monzo heading (`<h3 className="font-bold text-white">Pay via Monzo bank transfer</h3>` → `<h3 className="font-bold text-brand-ink">Pay via Monzo bank transfer</h3>`) and the Revolut heading (`<h3 className="font-bold text-white">Pay via Revolut bank transfer</h3>` → `<h3 className="font-bold text-brand-ink">Pay via Revolut bank transfer</h3>`).
 
-- [ ] **Step 4: Replace the Monzo/Revolut detail boxes (dark inset with copy button)**
+For the Cash card, apply both swaps:
+Old:
+```tsx
+        <h3 className="font-bold text-white">Pay by Cash</h3>
+        <p className="text-sm text-white/60">Bring cash to the next training session. Click below to notify the admin.</p>
+```
+New:
+```tsx
+        <h3 className="font-bold text-brand-ink">Pay by Cash</h3>
+        <p className="text-sm text-brand-muted">Bring cash to the next training session. Click below to notify the admin.</p>
+```
+
+- [ ] **Step 5: Replace the Monzo/Revolut detail boxes (dark inset with copy button)**
 
 Old (appears 2x — Monzo and Revolut):
 ```tsx
@@ -937,7 +968,7 @@ New:
         <div className="bg-brand-creamAlt rounded p-3 font-mono text-sm flex items-center justify-between gap-3 text-brand-ink/80">
 ```
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add src/components/payment/payment-options-panel.tsx
@@ -1342,7 +1373,7 @@ Expected: light cream/tint cards throughout, filter tabs and upload modal match 
 - [ ] **Step 2: Run the full test suite**
 
 Run: `npx jest`
-Expected: all suites pass (18 tests / 10 suites, per the spec's baseline — same count, updated fixtures).
+Expected: all 17 suites pass (same suite count as before this chunk — no test files added or removed, only fixture values updated).
 
 ---
 
@@ -1560,7 +1591,10 @@ git commit -m "feat: migrate payment account handles to Tangerine Toucans"
 ```typescript
 // One-off script: move all assets from the 'bocas-juniors' Cloudinary folder
 // to 'tangerine-toucans'. Safe to re-run — skips assets already in the target folder.
+// Writes the pre-migration resource list to disk so the move is auditable/reversible
+// (rename each entry back to its original public_id if something goes wrong).
 import { v2 as cloudinary } from 'cloudinary'
+import { writeFileSync } from 'fs'
 
 const OLD_FOLDER = 'bocas-juniors'
 const NEW_FOLDER = 'tangerine-toucans'
@@ -1571,13 +1605,30 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 })
 
+// Cloudinary paginates at 500 results max per call — must follow next_cursor
+// until exhausted, or a folder with >500 assets silently only gets partially counted.
+async function listAllResources(prefix: string) {
+  const all: { public_id: string; resource_type: string }[] = []
+  let cursor: string | undefined
+  do {
+    const page = await cloudinary.api.resources({
+      type: 'upload', prefix, max_results: 500, next_cursor: cursor,
+    })
+    all.push(...page.resources)
+    cursor = page.next_cursor
+  } while (cursor)
+  return all
+}
+
 async function main() {
-  const before = await cloudinary.api.resources({ type: 'upload', prefix: OLD_FOLDER, max_results: 500 })
-  console.log(`Found ${before.resources.length} assets in '${OLD_FOLDER}'`)
+  const before = await listAllResources(OLD_FOLDER)
+  console.log(`Found ${before.resources?.length ?? before.length} assets in '${OLD_FOLDER}'`)
+  writeFileSync('cloudinary-migration-before.json', JSON.stringify(before, null, 2))
+  console.log(`Wrote pre-migration list to cloudinary-migration-before.json (needed to roll back)`)
 
   let moved = 0
   let skipped = 0
-  for (const resource of before.resources) {
+  for (const resource of before) {
     const newPublicId = resource.public_id.replace(`${OLD_FOLDER}/`, `${NEW_FOLDER}/`)
     try {
       await cloudinary.uploader.rename(resource.public_id, newPublicId, { resource_type: resource.resource_type })
@@ -1592,11 +1643,11 @@ async function main() {
   }
   console.log(`Moved ${moved}, skipped ${skipped} (already migrated)`)
 
-  const after = await cloudinary.api.resources({ type: 'upload', prefix: NEW_FOLDER, max_results: 500 })
-  console.log(`'${NEW_FOLDER}' now contains ${after.resources.length} assets`)
+  const after = await listAllResources(NEW_FOLDER)
+  console.log(`'${NEW_FOLDER}' now contains ${after.length} assets`)
 
-  if (after.resources.length < before.resources.length) {
-    console.error(`WARNING: count mismatch — before had ${before.resources.length}, after has ${after.resources.length}. Do not delete the old folder yet.`)
+  if (after.length < before.length) {
+    console.error(`WARNING: count mismatch — before had ${before.length}, after has ${after.length}. Do NOT proceed to Step 4 (do not point the app at the new folder) until this is resolved.`)
     process.exitCode = 1
   }
 }
@@ -1607,11 +1658,11 @@ main()
 - [ ] **Step 2: Run the script**
 
 Run: `npx ts-node --project tsconfig.json scripts/migrate-cloudinary-folder.ts`
-Expected: logs the count found in `bocas-juniors`, then the count in `tangerine-toucans` after migration, with the two matching. If Cloudinary's `rename` API isn't available on this account's plan, the script will fail on the first `rename` call — in that case, fall back to downloading + re-uploading each resource under the new public ID instead (same before/after count verification applies).
+Expected: logs the count found in `bocas-juniors`, then the count in `tangerine-toucans` after migration, with the two matching, and no WARNING line. If Cloudinary's `rename` API isn't available on this account's plan, the script will fail on the first `rename` call — in that case, fall back to downloading + re-uploading each resource under the new public ID instead (same before/after count verification applies, same pre-migration list saved for rollback).
 
-- [ ] **Step 3: Verify the counts match**
+- [ ] **Step 3: Verify the counts match — hard gate before Step 4**
 
-Check the script's final log line — it should NOT print the WARNING. If assets remain in `bocas-juniors` afterward, investigate before proceeding (don't assume the migration fully succeeded).
+Check the script's final log line — it should NOT print the WARNING, and `process.exitCode` should be `0` (check with `echo $?` right after running). **If the count mismatches, stop here.** Do not proceed to Step 4 — leave `src/app/api/cloudinary/sign/route.ts` pointed at `bocas-juniors` so uploads/reads keep working against the folder that's confirmed complete, and investigate the mismatch (check Cloudinary's dashboard directly, re-run the script — it's idempotent — or manually rename the missing assets via the Cloudinary console using the `cloudinary-migration-before.json` list as the source of truth for what should exist). Only move to Step 4 once counts match exactly.
 
 - [ ] **Step 4: Update the app to read from the new folder**
 
@@ -1649,34 +1700,41 @@ git commit -m "feat: migrate Cloudinary upload folder to tangerine-toucans"
 
 - [ ] **Step 1: Confirm no unintended "Bocas" references remain**
 
-Run: `grep -rn "Bocas Juniors\|bocas-juniors" --include="*.ts" --include="*.tsx" src/ supabase/ package.json`
-Expected: zero results, or only the intentionally-kept ones if any were missed by earlier tasks — cross-check any hits against spec Section 1's explicit exclusions (`bocas-dance-logo.png`, "Bocas del Toro" location text, Cloudinary folder already handled in Chunk 7).
+Run: `grep -rn "Bocas Juniors\|bocas-juniors" --include="*.ts" --include="*.tsx" src/ supabase/ package.json package-lock.json`
+Expected: zero results, or only the intentionally-kept ones if any were missed by earlier tasks — cross-check any hits against spec Section 1's explicit exclusions (`bocas-dance-logo.png`, "Bocas del Toro" location text, Cloudinary folder already handled in Chunk 7). `package-lock.json` is included here as a backstop in case Task 6's `npm install` step was skipped.
+
+Also check `supabase/config.toml`'s `project_id = "bocas-juniors-fc"` — this is a local Supabase CLI project identifier, not user-facing copy, and isn't in the spec's renaming scope. Confirm with the user whether it should be renamed too (it's a low-risk rename since it's purely local tooling config) or left as-is; don't change it silently either way.
 
 - [ ] **Step 2: Confirm no leftover old hex colours**
 
-Run: `grep -rn "#FF0055\|#00E5FF\|#0A0A0A\|#111111\|#1E1E1E" --include="*.ts" --include="*.tsx" --include="*.css" src/`
-Expected: zero results (all four old brand colours retired in Chunk 1–6; `#111111`/`#1E1E1E` were the old `brand.surface`/`brand.border` hex values baked into the removed Tailwind config, not referenced as literal strings elsewhere, but worth confirming).
+Run: `grep -rn "#FF0055\|#00E5FF\|#0A0A0A\|#111111\|#1E1E1E\|#AC8D4E\|rgba(255, *0, *85" --include="*.ts" --include="*.tsx" --include="*.css" src/ tailwind.config.ts`
+Expected: zero results. This includes the old `brand.gold` hex (`#AC8D4E`, retired in favour of `brand.accent` `#FFB627` per spec Section 2) and the old hot-pink `box-shadow` RGB literal from `globals.css`'s `.btn-primary`, in addition to the four dark-theme hex values — and now scans `tailwind.config.ts` directly, since that's where the entire old `brand.*` block lived and where a partial edit would most plausibly leave a leftover value.
 
 - [ ] **Step 3: Confirm no leftover `brand-dark`, `brand-surface`, `brand-border`, `brand-cyan` class references**
 
 Run: `grep -rln "brand-dark\|brand-surface\|brand-border\|brand-cyan" --include="*.tsx" --include="*.css" src/`
 Expected: zero results — every file from the spec's 15-file list plus `globals.css` should have been updated by Chunks 1–6.
 
-- [ ] **Step 4: Full test suite**
+- [ ] **Step 4: Confirm no leftover old font names or CSS variables**
+
+Run: `grep -rn "Anton\|Montserrat\|font-anton\|font-montserrat" --include="*.ts" --include="*.tsx" --include="*.css" src/`
+Expected: zero results — `src/app/layout.tsx` (the `next/font/google` import and variable names) and `src/app/globals.css` (the hardcoded `h1, h2, h3` font-family rule) both referenced the old font names directly, not just via the `font-heading`/`font-body` Tailwind classes, and must have been updated in Chunk 1.
+
+- [ ] **Step 5: Full test suite**
 
 Run: `npx jest`
 Expected: all suites pass.
 
-- [ ] **Step 5: Full build**
+- [ ] **Step 6: Full build**
 
 Run: `npm run build`
 Expected: build succeeds with no type errors.
 
-- [ ] **Step 6: Final manual walkthrough**
+- [ ] **Step 7: Final manual walkthrough**
 
-Click through every page in the dev server (`/`, `/contact`, `/gallery`, `/register`, `/get-involved`, `/login`, `/profile`, `/admin`) and confirm: consistent cream/tangerine theme, new logo everywhere, "Tangerine Toucans" name throughout, no leftover dark-theme cards or "Bocas" text.
+Click through every page in the dev server (`/`, `/contact`, `/gallery`, `/register`, `/get-involved`, `/login`, `/profile`, `/admin`) and confirm: consistent cream/tangerine theme, new logo everywhere, "Tangerine Toucans" name throughout, Barlow Condensed headings and Inter body text rendering (not falling back to a system sans-serif), no leftover dark-theme cards or "Bocas" text.
 
-- [ ] **Step 7: Commit any final cleanup**
+- [ ] **Step 8: Commit any final cleanup**
 
 ```bash
 git add -A
