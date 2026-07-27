@@ -40,6 +40,12 @@ Location copy ("Youth Football · Bocas del Toro, Panama") is **not** renamed
 ("Bocas Dance Collective") — this is a sponsor's own logo/name, coincidentally
 similar, unrelated to the club's branding.
 
+**Test fixtures:** `masonry-grid.test.tsx`, `pending-submissions.test.tsx`,
+and `payment-options-panel.test.tsx` all use `bocas`/`bocas-juniors`-based
+mock IDs and values. Update these alongside their corresponding source files
+so test expectations stay in sync with the rename — no special handling
+needed beyond that.
+
 **Cloudinary folder migration:** the upload folder `bocas-juniors`
 (`src/app/api/cloudinary/sign/route.ts`) is renamed to `tangerine-toucans`,
 with existing media migrated to the new folder via a one-off script against
@@ -49,6 +55,22 @@ touches live production media. If Cloudinary's API doesn't support an
 in-place rename/move for the account's plan, fall back to listing existing
 assets and re-uploading them into the new folder, then confirm the app reads
 from the new folder before considering old-folder assets safe to ignore.
+
+**Payment account handles — real external dependency, same category as
+Cloudinary:** `paypal_me_url` (`https://paypal.me/bocasjuniorsfc`) and
+`revolut_details` (`@bocasjuniorsfc on Revolut`) are seeded in
+`supabase/migrations/002_seed_settings.sql` and rendered as live payment
+links/text in `src/components/payment/payment-options-panel.tsx` (via
+`src/app/actions/payment.ts`). These are real external account handles, not
+just code strings — renaming them requires actually creating/renaming a
+`paypal.me/tangerinetoucans`-style link and Revolut handle under the new
+brand name *outside* this codebase first. Since `002_seed_settings.sql`
+already ran against the production database, updating it won't affect
+existing rows — a **new migration** (`UPDATE settings SET value = ... WHERE
+key IN ('paypal_me_url', 'revolut_details')`) is required instead. Treat this
+as blocked until the user confirms the new PayPal/Revolut handles exist.
+Test fixtures in `payment-options-panel.test.tsx` reference the old handle
+and should be updated to match.
 
 ## 2. Visual tokens
 
@@ -72,8 +94,12 @@ Text tokens added: muted (`#6E665B`), mutedWarm (`#8A8175`), mutedLight
 (`#C9BFB2`, for the remaining dark sections).
 
 Fonts: `font-heading` Anton → **Barlow Condensed**; `font-body` Montserrat →
-**Inter**, both loaded the same way (`next/font/google`, CSS var + Tailwind
-class), just swapping the font names.
+**Inter**. The CSS variable names change along with the fonts —
+`--font-anton` → `--font-barlow-condensed`, `--font-montserrat` →
+`--font-inter` — updated everywhere they're set up
+(`src/app/layout.tsx`'s `next/font/google` calls) and everywhere they're
+referenced directly (see `globals.css` below), not just in the Tailwind
+`font-heading`/`font-body` class mapping.
 
 These become Tailwind config values directly (matching the existing
 convention already used in this codebase for `--font-anton` etc.) rather than
@@ -81,6 +107,28 @@ introducing a separate `tokens.css`/CSS-custom-property layer — the brand
 pack's "keep 3 files in sync" note describes the source design system used
 across the club's other materials, not a requirement to mirror that file
 structure inside this app.
+
+**`src/app/globals.css` also needs updating** — it's not just
+`tailwind.config.ts` and `layout.tsx`:
+- `body { color: #ffffff; background: #0A0A0A; }` is the old dark-theme
+  default and must change to the new light theme (cream background, dark
+  text) — currently the exact opposite of the new default.
+- `h1, h2, h3 { font-family: var(--font-anton), sans-serif; ... }` hardcodes
+  the old font variable name directly (not via the `font-heading` Tailwind
+  class) and must be updated to the new variable name.
+- The `@layer components` block's `.input` and `.btn-primary` classes
+  reference `brand-border` and `brand-surface`, which are being repurposed
+  for dark-section-only use (see table above) — check these against the new
+  light-theme default rather than assuming they still apply the same way.
+- `.btn-secondary` uses `border-brand-cyan` / `text-brand-cyan` /
+  `hover:bg-brand-cyan` — `brand.cyan` is retired with no replacement in the
+  new pack (see table above), so this class needs a new treatment (e.g. an
+  outlined tangerine or ink style) or it silently renders unstyled
+  (an unknown Tailwind class compiles to nothing, not a build error).
+- `.btn-primary`'s inline `box-shadow: 0 4px 16px rgba(255, 0, 85, 0.4)` is
+  the old hot-pink RGB value hardcoded outside Tailwind and needs updating to
+  the new tangerine RGB, or removing if the new brand doesn't call for a
+  glow shadow.
 
 ## 3. Logo & favicon
 
