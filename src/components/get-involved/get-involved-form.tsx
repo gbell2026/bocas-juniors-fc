@@ -60,8 +60,8 @@ export function GetInvolvedForm() {
   if (status === 'success') {
     return (
       <div className="text-center py-12">
-        <p className="text-white font-bold text-lg mb-2">Thanks for getting in touch!</p>
-        <p className="text-white/50 text-sm mb-6">We&apos;ll be in contact soon.</p>
+        <p className="text-brand-ink font-bold text-lg mb-2">Thanks for getting in touch!</p>
+        <p className="text-brand-muted text-sm mb-6">We&apos;ll be in contact soon.</p>
         <Link href="/" className="btn-secondary">Back to Home</Link>
       </div>
     )
@@ -72,7 +72,7 @@ export function GetInvolvedForm() {
       {errorMessage && <p className="text-brand-primary text-sm">{errorMessage}</p>}
 
       <div>
-        <label className="text-brand-cyan font-bold uppercase tracking-wider text-xs mb-1 block">
+        <label className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-1 block">
           Name *
         </label>
         <input
@@ -85,7 +85,7 @@ export function GetInvolvedForm() {
       </div>
 
       <div>
-        <label className="text-brand-cyan font-bold uppercase tracking-wider text-xs mb-1 block">
+        <label className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-1 block">
           Email *
         </label>
         <input
@@ -99,7 +99,7 @@ export function GetInvolvedForm() {
       </div>
 
       <div>
-        <label className="text-brand-cyan font-bold uppercase tracking-wider text-xs mb-1 block">
+        <label className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-1 block">
           Business / Organisation
         </label>
         <input
@@ -112,17 +112,17 @@ export function GetInvolvedForm() {
       </div>
 
       <div>
-        <label className="text-brand-cyan font-bold uppercase tracking-wider text-xs mb-1 block">
+        <label className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-1 block">
           I&apos;m interested in... *
         </label>
         <div className="space-y-2 mt-2">
           {INTEREST_OPTIONS.map(option => (
-            <label key={option} className="flex items-center gap-2 text-white/80 cursor-pointer">
+            <label key={option} className="flex items-center gap-2 text-brand-ink/80 cursor-pointer">
               <input
                 type="checkbox"
                 checked={interests.includes(option)}
                 onChange={() => toggleInterest(option)}
-                className="accent-[#FF0055]"
+                className="accent-[#F26522]"
                 disabled={status === 'submitting'}
               />
               {option}
