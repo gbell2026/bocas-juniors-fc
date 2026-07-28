@@ -1657,7 +1657,7 @@ main()
 
 - [ ] **Step 2: Run the script**
 
-Run: `npx ts-node --project tsconfig.json scripts/migrate-cloudinary-folder.ts`
+Run: `npx tsx scripts/migrate-cloudinary-folder.ts` (ts-node 10.9.2 is incompatible with Node 22's module loader — `npx tsx` runs the same script without needing any project changes)
 Expected: logs the count found in `bocas-juniors`, then the count in `tangerine-toucans` after migration, with the two matching, and no WARNING line. If Cloudinary's `rename` API isn't available on this account's plan, the script will fail on the first `rename` call — in that case, fall back to downloading + re-uploading each resource under the new public ID instead (same before/after count verification applies, same pre-migration list saved for rollback).
 
 - [ ] **Step 3: Verify the counts match — hard gate before Step 4**
