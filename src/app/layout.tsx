@@ -1,20 +1,20 @@
 import type { Metadata } from 'next'
-import { Anton, Montserrat } from 'next/font/google'
+import { Barlow_Condensed, Inter } from 'next/font/google'
 import { Nav } from '@/components/nav'
 import './globals.css'
 
-const anton = Anton({ subsets: ['latin'], weight: '400', variable: '--font-anton' })
-const montserrat = Montserrat({ subsets: ['latin'], variable: '--font-montserrat' })
+const barlowCondensed = Barlow_Condensed({ subsets: ['latin'], weight: '600', variable: '--font-barlow-condensed' })
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
 export const metadata: Metadata = {
-  title: 'Bocas Juniors FC',
+  title: 'Tangerine Toucans',
   description: 'Youth football club in Bocas del Toro, Panama',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${anton.variable} ${montserrat.variable} font-body`}>
+      <body className={`${barlowCondensed.variable} ${inter.variable} font-body`}>
         <Nav />
         {children}
       </body>
