@@ -132,7 +132,7 @@ export function GetInvolvedForm() {
       </div>
 
       <div>
-        <label className="text-brand-cyan font-bold uppercase tracking-wider text-xs mb-1 block">
+        <label className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-1 block">
           Message
         </label>
         <textarea
