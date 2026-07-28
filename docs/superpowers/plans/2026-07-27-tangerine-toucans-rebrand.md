@@ -1740,3 +1740,100 @@ Click through every page in the dev server (`/`, `/contact`, `/gallery`, `/regis
 git add -A
 git commit -m "chore: final verification pass for Tangerine Toucans rebrand"
 ```
+
+---
+
+## Chunk 9: Follow-up — content sub-components on /admin and /profile
+
+Found during the final holistic branch review (not by any per-task review): Chunk 6's Tasks 28-30 only rethemed the `/admin` and `/profile` page *shells* (the `<main>` wrapper and top-level headings) — they never mention the actual content components rendered inside those pages. Four of those components are still on plain default Tailwind gray, sitting directly on the new cream page background next to `bg-brand-tint` cards elsewhere on the same page:
+
+- `src/components/profile/player-info.tsx` — `bg-gray-50` card, plain `text-lg font-semibold` heading
+- `src/components/profile/payment-history.tsx` — `bg-gray-100` table header, plain heading, `text-gray-500` empty-state text
+- `src/components/admin/players-table.tsx` — `bg-gray-100` table header
+- `src/components/admin/media-uploader.tsx` — `border-gray-300` dropzone, `text-gray-600` instructional text
+
+`src/components/admin/pending-payments.tsx`'s `bg-yellow-50`/`border-yellow-200`/`text-yellow-800` is deliberately **left unchanged** — it's a semantic warning callout, same category as the already-unchanged `.btn-success`/`.btn-danger`, not a generic content container.
+
+### Task 35: Retheme the remaining admin/profile content components
+
+**Files:**
+- Modify: `src/components/profile/player-info.tsx`
+- Modify: `src/components/profile/payment-history.tsx`
+- Modify: `src/components/admin/players-table.tsx`
+- Modify: `src/components/admin/media-uploader.tsx`
+
+- [ ] **Step 1: `player-info.tsx`**
+
+Old:
+```tsx
+    <section className="bg-gray-50 rounded-lg p-4">
+      <h2 className="text-lg font-semibold mb-2">Player Details</h2>
+```
+New:
+```tsx
+    <section className="bg-brand-tint rounded-lg p-4">
+      <h2 className="font-heading text-lg uppercase tracking-wide text-brand-ink mb-2">Player Details</h2>
+```
+
+- [ ] **Step 2: `payment-history.tsx`**
+
+Old:
+```tsx
+  if (payments.length === 0) return <p className="text-gray-500">No payments yet.</p>
+  return (
+    <section>
+      <h2 className="text-lg font-semibold mb-3">Payment History</h2>
+      <table className="w-full text-sm border-collapse">
+        <thead>
+          <tr className="bg-gray-100">
+```
+New:
+```tsx
+  if (payments.length === 0) return <p className="text-brand-muted">No payments yet.</p>
+  return (
+    <section>
+      <h2 className="font-heading text-lg uppercase tracking-wide text-brand-ink mb-3">Payment History</h2>
+      <table className="w-full text-sm border-collapse">
+        <thead>
+          <tr className="bg-brand-creamAlt">
+```
+
+- [ ] **Step 3: `players-table.tsx`**
+
+Old:
+```tsx
+        <thead className="bg-gray-100">
+```
+New:
+```tsx
+        <thead className="bg-brand-creamAlt">
+```
+
+- [ ] **Step 4: `media-uploader.tsx`**
+
+Old:
+```tsx
+      className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center"
+```
+```tsx
+      <p className="text-gray-600 mb-3">Drag and drop photos/videos, or click to select</p>
+```
+New:
+```tsx
+      className="border-2 border-dashed border-brand-line rounded-lg p-6 text-center"
+```
+```tsx
+      <p className="text-brand-muted mb-3">Drag and drop photos/videos, or click to select</p>
+```
+
+- [ ] **Step 5: Run tests and build**
+
+Run: `npx jest && npm run build`
+Expected: all suites pass, build succeeds.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/components/profile/player-info.tsx src/components/profile/payment-history.tsx src/components/admin/players-table.tsx src/components/admin/media-uploader.tsx
+git commit -m "feat: retheme remaining admin/profile content components"
+```
