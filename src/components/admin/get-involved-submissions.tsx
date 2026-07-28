@@ -31,7 +31,7 @@ export function GetInvolvedSubmissions({ submissions: initial }: { submissions: 
 
   return (
     <section>
-      <h2 className="text-lg font-semibold mb-3">Get Involved Submissions ({unhandledCount} unhandled)</h2>
+      <h2 className="font-heading text-lg uppercase tracking-wide text-brand-ink mb-3">Get Involved Submissions ({unhandledCount} unhandled)</h2>
       {errorMessage && <p className="text-brand-primary text-sm mb-2">{errorMessage}</p>}
       <div className="space-y-3">
         {items.map(item => (

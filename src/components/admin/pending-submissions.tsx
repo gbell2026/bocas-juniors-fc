@@ -48,7 +48,7 @@ export function PendingSubmissions({ submissions: initial }: { submissions: Medi
 
   return (
     <section>
-      <h2 className="text-lg font-semibold mb-3">Pending Submissions ({items.length})</h2>
+      <h2 className="font-heading text-lg uppercase tracking-wide text-brand-ink mb-3">Pending Submissions ({items.length})</h2>
       {error && <p className="text-brand-primary text-sm mb-2">{error}</p>}
       <div className="space-y-3">
         {items.map(item => (
