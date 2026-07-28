@@ -2,8 +2,8 @@ import type { Player } from '@/lib/supabase/types'
 
 export function PlayerInfo({ player }: { player: Player }) {
   return (
-    <section className="bg-gray-50 rounded-lg p-4">
-      <h2 className="text-lg font-semibold mb-2">Player Details</h2>
+    <section className="bg-brand-tint rounded-lg p-4">
+      <h2 className="font-heading text-lg uppercase tracking-wide text-brand-ink mb-2">Player Details</h2>
       <dl className="grid grid-cols-2 gap-2 text-sm">
         <dt className="font-medium">Name</dt><dd>{player.name}</dd>
         <dt className="font-medium">Position</dt><dd>{player.position}</dd>
