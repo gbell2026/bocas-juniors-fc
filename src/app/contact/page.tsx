@@ -23,16 +23,16 @@ const contacts = [
 
 export default function ContactPage() {
   return (
-    <main className="bg-brand-dark min-h-screen">
+    <main className="bg-brand-cream min-h-screen">
       <PageHeader title="Contact Us" subtitle="Get in touch with the team" />
       <div className="max-w-2xl mx-auto py-8 px-4 space-y-4">
         {contacts.map(c => (
           <div
             key={c.name}
-            className="bg-brand-surface border border-brand-border border-l-[3px] border-l-brand-primary rounded p-5"
+            className="bg-brand-tint border border-brand-line border-l-[3px] border-l-brand-primary rounded p-5"
           >
-            <h2 className="text-white font-black text-base">{c.name}</h2>
-            <p className="text-brand-cyan font-bold uppercase tracking-widest text-xs mt-1 mb-2">{c.role}</p>
+            <h2 className="text-brand-ink font-black text-base">{c.name}</h2>
+            <p className="text-brand-primaryDeep font-bold uppercase tracking-widest text-xs mt-1 mb-2">{c.role}</p>
             {c.email && (
               <p className="text-sm">
                 <a href={`mailto:${c.email}`} className="text-brand-primary underline">
@@ -40,7 +40,7 @@ export default function ContactPage() {
                 </a>
               </p>
             )}
-            {c.phone && <p className="text-white/50 text-sm mt-1">{c.phone}</p>}
+            {c.phone && <p className="text-brand-muted text-sm mt-1">{c.phone}</p>}
           </div>
         ))}
       </div>
