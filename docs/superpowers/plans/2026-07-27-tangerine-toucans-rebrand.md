@@ -846,9 +846,9 @@ New:
         <p className="text-brand-muted text-sm mb-6">We&apos;ll be in contact soon.</p>
 ```
 
-- [ ] **Step 2: Replace all four `text-brand-cyan` label classes (lines 75, 88, 102, 115)**
+- [ ] **Step 2: Replace all five `text-brand-cyan` label classes (lines 75, 88, 102, 115, 135 — includes the "Message" field label, easy to miss since it's further down the file)**
 
-Old (repeated 4x with different label text):
+Old (repeated 5x with different label text — Name, Email, Business/Organisation, "I'm interested in...", Message):
 ```tsx
         <label className="text-brand-cyan font-bold uppercase tracking-wider text-xs mb-1 block">
 ```
