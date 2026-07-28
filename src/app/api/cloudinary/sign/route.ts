@@ -23,7 +23,7 @@ export async function POST(_req: NextRequest) {
   }
 
   const timestamp = Math.round(Date.now() / 1000)
-  const paramsToSign = { timestamp, folder: 'bocas-juniors' }
+  const paramsToSign = { timestamp, folder: 'tangerine-toucans' }
   const signature = cloudinary.utils.api_sign_request(paramsToSign, process.env.CLOUDINARY_API_SECRET!)
 
   return NextResponse.json({
@@ -31,6 +31,6 @@ export async function POST(_req: NextRequest) {
     timestamp,
     cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
     apiKey: process.env.CLOUDINARY_API_KEY,
-    folder: 'bocas-juniors',
+    folder: 'tangerine-toucans',
   })
 }
