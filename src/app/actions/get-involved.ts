@@ -33,7 +33,7 @@ export async function submitGetInvolved({
     const { Resend } = await import('resend')
     const resend = new Resend(process.env.RESEND_API_KEY)
     const { error: emailError } = await resend.emails.send({
-      from: 'Bocas Juniors FC <onboarding@resend.dev>',
+      from: 'Tangerine Toucans <onboarding@resend.dev>',
       to: ['g.bell2010@googlemail.com'],
       subject: `New Get Involved submission — ${name}`,
       text: `New Get Involved Submission\n\nName: ${name}\nEmail: ${email}\nOrganisation: ${organisation || 'N/A'}\nInterested in: ${interests.join(', ')}\nMessage: ${message || 'N/A'}`,
