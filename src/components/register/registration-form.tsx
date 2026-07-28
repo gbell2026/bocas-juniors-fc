@@ -27,12 +27,12 @@ export function RegistrationForm({ onSuccess }: Props) {
     onSuccess(result.playerId!, result.parentId!, fd.get('parentName') as string, fd.get('playerName') as string)
   }
 
-  const labelClass = 'block text-brand-cyan font-bold uppercase tracking-wider text-xs mb-1'
+  const labelClass = 'block text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-1'
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-md mx-auto">
       <fieldset className="space-y-4">
-        <legend className="text-brand-cyan font-bold uppercase tracking-wider text-xs mb-2">Player Details</legend>
+        <legend className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-2">Player Details</legend>
         <div>
           <label htmlFor="playerName" className={labelClass}>Player Name</label>
           <input id="playerName" name="playerName" required className="input w-full" />
@@ -53,7 +53,7 @@ export function RegistrationForm({ onSuccess }: Props) {
       </fieldset>
 
       <fieldset className="space-y-4">
-        <legend className="text-brand-cyan font-bold uppercase tracking-wider text-xs mb-2">Parent / Guardian Details</legend>
+        <legend className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-2">Parent / Guardian Details</legend>
         <div>
           <label htmlFor="parentName" className={labelClass}>Parent Name</label>
           <input id="parentName" name="parentName" required className="input w-full" />

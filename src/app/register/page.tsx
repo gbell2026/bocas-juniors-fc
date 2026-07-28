@@ -10,10 +10,10 @@ type Ids = { playerId: string; parentId: string; parentName: string; playerName:
 function StepIndicator({ step }: { step: Step }) {
   return (
     <div className="flex">
-      <div className={`flex-1 py-2 text-center text-xs font-bold uppercase tracking-wider ${step === 'register' ? 'bg-brand-primary text-white' : 'bg-brand-surface text-white/40'}`}>
+      <div className={`flex-1 py-2 text-center text-xs font-bold uppercase tracking-wider ${step === 'register' ? 'bg-brand-primary text-white' : 'bg-brand-tint text-brand-mutedWarm'}`}>
         1. Player Info
       </div>
-      <div className={`flex-1 py-2 text-center text-xs font-bold uppercase tracking-wider ${step === 'pay' ? 'bg-brand-primary text-white' : 'bg-brand-surface text-white/40'}`}>
+      <div className={`flex-1 py-2 text-center text-xs font-bold uppercase tracking-wider ${step === 'pay' ? 'bg-brand-primary text-white' : 'bg-brand-tint text-brand-mutedWarm'}`}>
         2. Payment
       </div>
     </div>
@@ -26,7 +26,7 @@ export default function RegisterPage() {
 
   if (step === 'pay' && ids) {
     return (
-      <main className="bg-brand-dark min-h-screen">
+      <main className="bg-brand-cream min-h-screen">
         <PageHeader title="Register" subtitle="Sign your child up today" />
         <StepIndicator step="pay" />
         <div className="py-8 px-4">
@@ -42,7 +42,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="bg-brand-dark min-h-screen">
+    <main className="bg-brand-cream min-h-screen">
       <PageHeader title="Register" subtitle="Sign your child up today" />
       <StepIndicator step="register" />
       <div className="py-8 px-4">

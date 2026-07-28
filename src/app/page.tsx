@@ -3,12 +3,12 @@ import Link from 'next/link'
 
 export default function HomePage() {
   return (
-    <main>
+    <main className="bg-brand-cream min-h-screen">
       {/* Hero */}
       <section className="relative min-h-[500px] flex items-center justify-center text-center overflow-hidden">
         <Image
           src="/beach-hero.jpg"
-          alt="Bocas Juniors FC training on the beach"
+          alt="Tangerine Toucans training on the beach"
           fill
           className="object-cover"
           style={{ objectPosition: 'center 35%' }}
@@ -26,16 +26,16 @@ export default function HomePage() {
             src="/logo.png"
             width={120}
             height={120}
-            alt="Bocas Juniors FC"
+            alt="Tangerine Toucans"
             className="mb-5 drop-shadow-2xl"
           />
           <h1
             className="font-heading text-white uppercase tracking-widest"
             style={{ fontSize: '4.5rem', lineHeight: 1 }}
           >
-            Bocas Juniors FC
+            Tangerine Toucans
           </h1>
-          <p className="text-brand-cyan font-bold uppercase tracking-[0.3em] text-xs mt-3">
+          <p className="text-brand-primary font-bold uppercase tracking-[0.3em] text-xs mt-3">
             Youth Football · Bocas del Toro, Panama
           </p>
           <div className="flex gap-4 mt-7 flex-wrap justify-center">
@@ -50,13 +50,13 @@ export default function HomePage() {
       </section>
 
       {/* Get Involved CTA */}
-      <section className="py-14 px-4 bg-brand-dark border-t border-brand-border text-center">
+      <section className="py-14 px-4 bg-brand-ink border-t border-brand-charcoal text-center">
         <h2 className="font-heading text-white text-4xl uppercase tracking-wider mb-3">Get Involved</h2>
         <p className="text-white/60 mb-7 max-w-md mx-auto">
-          Want to support Bocas Juniors FC? We&apos;re looking for sponsors, volunteers, and partners to help grow the club.
+          Want to support the Tangerine Toucans? We&apos;re looking for sponsors, volunteers, and partners to help grow the club.
         </p>
         <Link href="/get-involved" className="btn-primary">Become a Supporter</Link>
-        <div className="mt-10 pt-8 border-t border-brand-border">
+        <div className="mt-10 pt-8 border-t border-brand-charcoal">
           <p className="text-xs text-white/30 uppercase tracking-widest mb-3">Proudly supported by</p>
           <Image
             src="/bocas-dance-logo.png"

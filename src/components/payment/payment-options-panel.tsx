@@ -19,7 +19,7 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
     getPaymentSettings().then(setSettings)
   }, [])
 
-  if (!settings) return <p className="text-white/60 py-8 text-center">Loading payment options…</p>
+  if (!settings) return <p className="text-brand-muted py-8 text-center">Loading payment options…</p>
 
   const fee = `$${(settings.feeCents / 100).toFixed(2)}`
 
@@ -37,13 +37,13 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
 
   return (
     <div className="max-w-lg mx-auto py-8 px-4 space-y-6">
-      <h2 className="font-heading text-white text-2xl uppercase tracking-wider">Pay Membership Fee — {fee}</h2>
-      <p className="text-sm text-white/60">Choose a payment method below. Once you&apos;ve paid, click the confirmation button so the admin can verify your payment.</p>
+      <h2 className="font-heading text-brand-ink text-2xl uppercase tracking-wider">Pay Membership Fee — {fee}</h2>
+      <p className="text-sm text-brand-muted">Choose a payment method below. Once you&apos;ve paid, click the confirmation button so the admin can verify your payment.</p>
 
       {/* PayPal / Card */}
-      <div className="border border-brand-border rounded p-4 space-y-3 bg-brand-surface">
-        <h3 className="font-bold text-white">Pay via PayPal or Credit/Debit Card</h3>
-        <p className="text-sm text-white/60">Opens PayPal. You can pay with PayPal balance, bank account, or credit/debit card — no PayPal account required for card payments.</p>
+      <div className="border border-brand-line rounded p-4 space-y-3 bg-brand-tint">
+        <h3 className="font-bold text-brand-ink">Pay via PayPal or Credit/Debit Card</h3>
+        <p className="text-sm text-brand-muted">Opens PayPal. You can pay with PayPal balance, bank account, or credit/debit card — no PayPal account required for card payments.</p>
         {methodState.paypal === 'sent' ? (
           <p className="text-green-600 text-sm font-medium">✓ Payment request sent — admin will confirm shortly.</p>
         ) : methodState.paypal === 'error' ? (
@@ -72,9 +72,9 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
       </div>
 
       {/* Monzo */}
-      <div className="border border-brand-border rounded p-4 space-y-3 bg-brand-surface">
-        <h3 className="font-bold text-white">Pay via Monzo bank transfer</h3>
-        <div className="bg-brand-dark rounded p-3 font-mono text-sm flex items-center justify-between gap-3 text-white/80">
+      <div className="border border-brand-line rounded p-4 space-y-3 bg-brand-tint">
+        <h3 className="font-bold text-brand-ink">Pay via Monzo bank transfer</h3>
+        <div className="bg-brand-creamAlt rounded p-3 font-mono text-sm flex items-center justify-between gap-3 text-brand-ink/80">
           <span>{settings.monzoDetails}</span>
           <button
             onClick={() => copyToClipboard(settings.monzoDetails, setMonzoCopied)}
@@ -99,9 +99,9 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
       </div>
 
       {/* Revolut */}
-      <div className="border border-brand-border rounded p-4 space-y-3 bg-brand-surface">
-        <h3 className="font-bold text-white">Pay via Revolut bank transfer</h3>
-        <div className="bg-brand-dark rounded p-3 font-mono text-sm flex items-center justify-between gap-3 text-white/80">
+      <div className="border border-brand-line rounded p-4 space-y-3 bg-brand-tint">
+        <h3 className="font-bold text-brand-ink">Pay via Revolut bank transfer</h3>
+        <div className="bg-brand-creamAlt rounded p-3 font-mono text-sm flex items-center justify-between gap-3 text-brand-ink/80">
           <span>{settings.revolutDetails}</span>
           <button
             onClick={() => copyToClipboard(settings.revolutDetails, setRevolutCopied)}
@@ -126,9 +126,9 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
       </div>
 
       {/* Cash */}
-      <div className="border border-brand-border rounded p-4 space-y-3 bg-brand-surface">
-        <h3 className="font-bold text-white">Pay by Cash</h3>
-        <p className="text-sm text-white/60">Bring cash to the next training session. Click below to notify the admin.</p>
+      <div className="border border-brand-line rounded p-4 space-y-3 bg-brand-tint">
+        <h3 className="font-bold text-brand-ink">Pay by Cash</h3>
+        <p className="text-sm text-brand-muted">Bring cash to the next training session. Click below to notify the admin.</p>
         {methodState.cash === 'sent' ? (
           <p className="text-green-600 text-sm font-medium">✓ Admin notified — bring {fee} cash to training.</p>
         ) : methodState.cash === 'error' ? (

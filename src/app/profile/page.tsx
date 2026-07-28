@@ -18,8 +18,8 @@ export default async function ProfilePage() {
   const player = parent?.players?.[0]
 
   return (
-    <main className="max-w-2xl mx-auto py-8 px-4 space-y-8">
-      <h1 className="text-2xl font-bold">My Profile</h1>
+    <main className="bg-brand-cream min-h-screen max-w-2xl mx-auto py-8 px-4 space-y-8">
+      <h1 className="font-heading text-2xl uppercase tracking-wide text-brand-ink">My Profile</h1>
       {player && <PlayerInfo player={player} />}
       <PaymentOptionsPanel
         playerId={player?.id ?? ''}

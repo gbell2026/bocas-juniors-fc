@@ -21,9 +21,9 @@ export default async function AdminPage() {
   ])
 
   return (
-    <main className="max-w-5xl mx-auto py-8 px-4 space-y-8">
+    <main className="bg-brand-cream min-h-screen max-w-5xl mx-auto py-8 px-4 space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+        <h1 className="font-heading text-2xl uppercase tracking-wide text-brand-ink">Admin Dashboard</h1>
         <p className="text-lg font-semibold text-brand-primary">
           Total Revenue: ${(totalRevenueCents / 100).toFixed(2)}
         </p>
@@ -34,14 +34,14 @@ export default async function AdminPage() {
       <PendingPayments payments={pendingPayments as any} />
 
       <section>
-        <h2 className="text-lg font-semibold mb-3">Players ({players.length})</h2>
+        <h2 className="font-heading text-lg uppercase tracking-wide text-brand-ink mb-3">Players ({players.length})</h2>
         <PlayersTable players={players as any} />
       </section>
 
       <PendingSubmissions submissions={pendingSubmissions} />
 
       <section>
-        <h2 className="text-lg font-semibold mb-3">Upload Media</h2>
+        <h2 className="font-heading text-lg uppercase tracking-wide text-brand-ink mb-3">Upload Media</h2>
         <MediaUploader uploadedBy={user.id} />
       </section>
     </main>

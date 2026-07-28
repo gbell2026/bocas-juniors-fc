@@ -8,12 +8,12 @@
 }
 
 body {
-  color: #ffffff;
-  background: #0A0A0A;
+  color: #141311;
+  background: #FBF7F2;
 }
 
 h1, h2, h3 {
-  font-family: var(--font-anton), sans-serif;
+  font-family: var(--font-barlow-condensed), sans-serif;
   letter-spacing: 0.02em;
 }
 
@@ -25,14 +25,14 @@ h1, h2, h3 {
 
 @layer components {
   .input {
-    @apply border border-brand-border bg-brand-surface rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary;
+    @apply border border-brand-line bg-white rounded px-3 py-2 text-sm text-brand-ink focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary;
   }
   .btn-primary {
     @apply bg-brand-primary text-white px-4 py-2 rounded font-bold uppercase tracking-wider hover:opacity-90 disabled:opacity-50 transition;
-    box-shadow: 0 4px 16px rgba(255, 0, 85, 0.4);
+    box-shadow: 0 4px 16px rgba(242, 101, 34, 0.4);
   }
   .btn-secondary {
-    @apply border-2 border-brand-cyan text-brand-cyan px-4 py-2 rounded font-bold uppercase tracking-wider hover:bg-brand-cyan hover:text-black transition;
+    @apply border-2 border-brand-primary text-brand-primary px-4 py-2 rounded font-bold uppercase tracking-wider hover:bg-brand-primary hover:text-white transition;
   }
   .btn-success {
     @apply bg-green-600 text-white px-3 py-1 rounded font-medium hover:bg-green-700 transition;

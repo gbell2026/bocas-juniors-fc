@@ -1,13 +1,13 @@
 import type { Payment } from '@/lib/supabase/types'
 
 export function PaymentHistory({ payments }: { payments: Payment[] }) {
-  if (payments.length === 0) return <p className="text-gray-500">No payments yet.</p>
+  if (payments.length === 0) return <p className="text-brand-muted">No payments yet.</p>
   return (
     <section>
-      <h2 className="text-lg font-semibold mb-3">Payment History</h2>
+      <h2 className="font-heading text-lg uppercase tracking-wide text-brand-ink mb-3">Payment History</h2>
       <table className="w-full text-sm border-collapse">
         <thead>
-          <tr className="bg-gray-100">
+          <tr className="bg-brand-creamAlt">
             <th className="text-left p-2">Date</th>
             <th className="text-left p-2">Amount</th>
             <th className="text-left p-2">Method</th>

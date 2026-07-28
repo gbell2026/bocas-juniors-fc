@@ -24,9 +24,9 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="py-12 px-4">
+    <main className="bg-brand-cream min-h-screen py-12 px-4">
       <form onSubmit={handleSubmit} className="space-y-4 max-w-sm mx-auto">
-        <h1 className="text-2xl font-bold">Log In</h1>
+        <h1 className="font-heading text-2xl uppercase tracking-wide text-brand-ink">Log In</h1>
         <div>
           <label htmlFor="email" className="block text-sm font-medium">Email</label>
           <input id="email" name="email" type="email" required className="input w-full" />

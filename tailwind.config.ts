@@ -9,20 +9,26 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        heading: ['var(--font-anton)', 'sans-serif'],
-        body: ['var(--font-montserrat)', 'sans-serif'],
+        heading: ['var(--font-barlow-condensed)', 'sans-serif'],
+        body: ['var(--font-inter)', 'sans-serif'],
       },
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
         brand: {
-          primary: '#FF0055',   // Hot pink — primary buttons, left-border accents
-          cyan:    '#00E5FF',   // Electric cyan — active states, labels, outlines, borders
-          gold:    '#AC8D4E',   // Sand Gold — nav active underline (unchanged)
-          dark:    '#0A0A0A',   // Near-black — page and nav backgrounds
-          surface: '#111111',   // Dark card/section backgrounds
-          border:  '#1E1E1E',   // Subtle dividers
-          white:   '#FFFFFF',
+          primary:     '#F26522',   // Tangerine — CTAs, headings, accents
+          primaryDeep: '#B84F1D',   // Tangerine Deep — hover, display numbers, eyebrow labels on light
+          accent:      '#FFB627',   // Amber — accent only, small areas
+          ink:         '#141311',   // Near-black — dark sections only (nav, homepage CTA band)
+          charcoal:    '#211F1C',   // Lifted dark panels (within dark sections)
+          cream:       '#FBF7F2',   // Primary page background
+          creamAlt:    '#F7F1E9',   // Alternate section banding / neutral fills
+          tint:        '#FCEFE4',   // Pale highlight card background
+          line:        '#E7DFD5',   // Borders, dividers on light backgrounds
+          muted:       '#6E665B',   // Secondary body text on light
+          mutedWarm:   '#8A8175',   // Muted labels, sub-copy
+          mutedLight:  '#C9BFB2',   // Muted text on dark sections
+          white:       '#FFFFFF',
         },
       },
     },

@@ -45,7 +45,7 @@ export function GalleryClient({ items }: { items: Media[] }) {
             className={`rounded text-xs font-bold uppercase tracking-wider px-3 py-1.5 transition ${
               filter === tab.value
                 ? 'bg-brand-primary text-white'
-                : 'border border-brand-border text-white/50 hover:border-brand-cyan hover:text-brand-cyan'
+                : 'border border-brand-line text-brand-muted hover:border-brand-primary hover:text-brand-primary'
             }`}
           >
             {tab.label}

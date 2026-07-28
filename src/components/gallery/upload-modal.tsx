@@ -145,14 +145,14 @@ export function UploadModal({ open, onClose }: { open: boolean; onClose: () => v
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-end sm:items-center justify-center">
-      <div className="bg-brand-surface w-full sm:max-w-xl sm:rounded-lg max-h-[90vh] overflow-y-auto">
+      <div className="bg-white w-full sm:max-w-xl sm:rounded-lg max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-brand-border">
-          <h2 className="font-heading text-white uppercase tracking-wider text-lg">Submit a Photo/Video</h2>
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-brand-line">
+          <h2 className="font-heading text-brand-ink uppercase tracking-wider text-lg">Submit a Photo/Video</h2>
           <button
             aria-label="close"
             onClick={handleClose}
-            className="text-white/50 hover:text-white text-2xl leading-none"
+            className="text-brand-muted hover:text-brand-ink text-2xl leading-none"
           >
             ×
           </button>
@@ -161,15 +161,15 @@ export function UploadModal({ open, onClose }: { open: boolean; onClose: () => v
         <div className="p-5">
           {phase === 'complete' ? (
             <div className="text-center py-8">
-              <p className="text-white font-bold text-lg mb-2">Thanks for sharing!</p>
-              <p className="text-white/50 text-sm mb-6">Your photos will appear once approved.</p>
+              <p className="text-brand-ink font-bold text-lg mb-2">Thanks for sharing!</p>
+              <p className="text-brand-muted text-sm mb-6">Your photos will appear once approved.</p>
               <button onClick={handleClose} className="btn-primary">Close</button>
             </div>
           ) : (
             <>
               {/* Drop zone */}
               <div
-                className={`border-2 border-dashed rounded-lg p-8 text-center text-white/50 hover:border-brand-cyan transition cursor-pointer ${isDragging ? 'border-brand-primary' : 'border-brand-border'}`}
+                className={`border-2 border-dashed rounded-lg p-8 text-center text-brand-muted hover:border-brand-primary transition cursor-pointer ${isDragging ? 'border-brand-primary' : 'border-brand-line'}`}
                 onClick={() => inputRef.current?.click()}
                 onDragOver={e => { e.preventDefault(); setIsDragging(true) }}
                 onDragLeave={() => setIsDragging(false)}
@@ -202,10 +202,10 @@ export function UploadModal({ open, onClose }: { open: boolean; onClose: () => v
                   <div className="grid grid-cols-3 gap-2 mt-4">
                     {files.map(entry => (
                       <div key={entry.id} className="relative">
-                        <div className="aspect-square bg-brand-border rounded overflow-hidden">
+                        <div className="aspect-square bg-brand-creamAlt rounded overflow-hidden">
                           {entry.preview
                             ? <img src={entry.preview} alt="" className="w-full h-full object-cover" />
-                            : <div className="w-full h-full flex items-center justify-center text-white/30 text-2xl">▶</div>
+                            : <div className="w-full h-full flex items-center justify-center text-brand-mutedWarm text-2xl">▶</div>
                           }
                         </div>
                         <button
@@ -217,7 +217,7 @@ export function UploadModal({ open, onClose }: { open: boolean; onClose: () => v
                         </button>
                         {/* Progress bar */}
                         {entry.status === 'uploading' && (
-                          <div className="mt-1 bg-brand-border rounded-full h-1">
+                          <div className="mt-1 bg-brand-creamAlt rounded-full h-1">
                             <div
                               className="bg-brand-primary rounded-full h-1 transition-all"
                               style={{ width: `${entry.progress}%` }}
@@ -225,7 +225,7 @@ export function UploadModal({ open, onClose }: { open: boolean; onClose: () => v
                           </div>
                         )}
                         {entry.status === 'done' && (
-                          <p className="text-brand-cyan text-[10px] mt-1 text-center">✓ Uploaded</p>
+                          <p className="text-brand-primaryDeep text-[10px] mt-1 text-center">✓ Uploaded</p>
                         )}
                         {entry.status === 'error' && (
                           <p className="text-brand-primary text-[10px] mt-1">{entry.error}</p>
@@ -243,7 +243,7 @@ export function UploadModal({ open, onClose }: { open: boolean; onClose: () => v
 
                   {/* Name field */}
                   <div className="mt-4">
-                    <label className="text-brand-cyan font-bold uppercase tracking-wider text-xs block mb-1">
+                    <label className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs block mb-1">
                       Your name (optional)
                     </label>
                     <input

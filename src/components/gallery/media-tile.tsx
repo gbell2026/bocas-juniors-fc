@@ -21,7 +21,7 @@ export function MediaTile({ item, onClick }: Props) {
   return (
     <button
       onClick={onClick}
-      className="relative block w-full overflow-hidden group bg-brand-surface transition-transform hover:scale-[1.02]"
+      className="relative block w-full overflow-hidden group bg-brand-tint transition-transform hover:scale-[1.02]"
     >
       <img
         src={src}

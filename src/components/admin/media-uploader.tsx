@@ -47,11 +47,11 @@ export function MediaUploader({ uploadedBy }: { uploadedBy: string }) {
 
   return (
     <section
-      className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center"
+      className="border-2 border-dashed border-brand-line rounded-lg p-6 text-center"
       onDragOver={e => e.preventDefault()}
       onDrop={e => { e.preventDefault(); handleFiles(e.dataTransfer.files) }}
     >
-      <p className="text-gray-600 mb-3">Drag and drop photos/videos, or click to select</p>
+      <p className="text-brand-muted mb-3">Drag and drop photos/videos, or click to select</p>
       <input
         ref={inputRef}
         type="file"

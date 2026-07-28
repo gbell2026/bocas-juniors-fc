@@ -35,7 +35,7 @@ export function PlayersTable({ players }: { players: PlayerWithParent[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
-        <thead className="bg-gray-100">
+        <thead className="bg-brand-creamAlt">
           <tr>
             {['Player', 'Position', 'DOB', 'Parent', 'Status', 'Return Date', 'Last Paid', 'Actions'].map(h => (
               <th key={h} className="text-left p-3">{h}</th>

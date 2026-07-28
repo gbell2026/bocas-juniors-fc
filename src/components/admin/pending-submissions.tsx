@@ -48,16 +48,16 @@ export function PendingSubmissions({ submissions: initial }: { submissions: Medi
 
   return (
     <section>
-      <h2 className="text-lg font-semibold mb-3">Pending Submissions ({items.length})</h2>
+      <h2 className="font-heading text-lg uppercase tracking-wide text-brand-ink mb-3">Pending Submissions ({items.length})</h2>
       {error && <p className="text-brand-primary text-sm mb-2">{error}</p>}
       <div className="space-y-3">
         {items.map(item => (
           <div
             key={item.id}
-            className="flex gap-4 items-start bg-brand-surface border border-brand-border rounded p-3"
+            className="flex gap-4 items-start bg-brand-tint border border-brand-line rounded p-3"
           >
             {/* Thumbnail */}
-            <div className="w-16 h-16 rounded bg-brand-border overflow-hidden flex-shrink-0 flex items-center justify-center">
+            <div className="w-16 h-16 rounded bg-brand-creamAlt overflow-hidden flex-shrink-0 flex items-center justify-center">
               {item.type === 'photo' ? (
                 <img
                   src={`https://res.cloudinary.com/${cloud}/image/upload/w_120,h_120,c_fill,q_auto,f_auto/${item.cloudinary_public_id}`}
@@ -65,14 +65,14 @@ export function PendingSubmissions({ submissions: initial }: { submissions: Medi
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <span className="text-white/30 text-2xl">▶</span>
+                <span className="text-brand-mutedWarm text-2xl">▶</span>
               )}
             </div>
             {/* Info */}
             <div className="flex-1 min-w-0">
-              <p className="text-white font-bold text-sm">{item.submitter_name ?? 'Anonymous'}</p>
-              {item.caption && <p className="text-white/50 text-xs mt-0.5">{item.caption}</p>}
-              <p className="text-white/30 text-xs mt-0.5">{formatDate(item.uploaded_at)}</p>
+              <p className="text-brand-ink font-bold text-sm">{item.submitter_name ?? 'Anonymous'}</p>
+              {item.caption && <p className="text-brand-muted text-xs mt-0.5">{item.caption}</p>}
+              <p className="text-brand-mutedWarm text-xs mt-0.5">{formatDate(item.uploaded_at)}</p>
             </div>
             {/* Actions */}
             <div className="flex gap-2 flex-shrink-0">
