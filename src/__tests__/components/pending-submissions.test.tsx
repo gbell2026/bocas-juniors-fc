@@ -10,7 +10,7 @@ jest.mock('@/app/actions/admin', () => ({
 
 const submission: Media = {
   id: '1',
-  cloudinary_public_id: 'bocas-juniors/test-photo',
+  cloudinary_public_id: 'tangerine-toucans/test-photo',
   type: 'photo',
   caption: 'A great shot',
   published: false,
@@ -58,7 +58,7 @@ describe('PendingSubmissions', () => {
     render(<PendingSubmissions submissions={[submission]} />)
     fireEvent.click(screen.getByRole('button', { name: /reject/i }))
     await waitFor(() => {
-      expect(actions.rejectSubmission).toHaveBeenCalledWith('1', 'bocas-juniors/test-photo', 'image')
+      expect(actions.rejectSubmission).toHaveBeenCalledWith('1', 'tangerine-toucans/test-photo', 'image')
       expect(screen.queryByText('Jane Doe')).not.toBeInTheDocument()
     })
   })
