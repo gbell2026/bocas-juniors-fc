@@ -32,9 +32,16 @@ alter table players add column payment_plan payment_plan_type not null default '
 -- Nullable: historical payments predate this feature.
 alter table payments add column installment_label installment_label_type;
 
--- Backfill: every payment that already succeeded predates installment tracking and
--- represents the old flat fee — tag it 'full' so it doesn't look unaccounted-for.
-update payments set installment_label = 'full' where status = 'succeeded';
+-- Backfill: every payment row that exists at migration time predates installment
+-- tracking and represents the old flat fee — tag it 'full' regardless of status
+-- (not just 'succeeded'). This matters for any payment that's still 'pending' right
+-- now and gets confirmed via confirmPayment() *after* this migration ships: confirmPayment
+-- only ever updates status/paid_at, never installment_label, so if we only backfilled
+-- 'succeeded' rows, that payment would flip to 'succeeded' with a null label post-deploy
+-- and getAmountDue would then wrongly ignore it — making that player look like they still
+-- owe their first installment despite having just paid it. Backfilling every existing row
+-- up front (succeeded, pending, and failed alike) closes that gap entirely.
+update payments set installment_label = 'full' where installment_label is null;
 
 -- The seeded membership fee ($25, from 002_seed_settings.sql) is stale — the real
 -- current fee is $30. That seed file already ran in production, so this corrects
@@ -52,7 +59,7 @@ This project applies migrations manually (see the comment in `002_seed_settings.
 After applying, confirm in Supabase Studio (or via CLI) that:
 - `players.payment_plan` exists, defaults to `'full'`
 - `payments.installment_label` exists, nullable
-- Every row in `payments` with `status = 'succeeded'` now has `installment_label = 'full'`
+- Every pre-existing row in `payments` (any status — succeeded, pending, or failed) now has `installment_label = 'full'`
 - `settings` row with `key = 'membership_fee_cents'` now has `value = '3000'`
 
 - [ ] **Step 4: Commit**
@@ -84,15 +91,17 @@ Old (in `public.Enums`):
 New:
 ```typescript
     Enums: {
+      installment_label_type: "full" | "august" | "september" | "october" | "november"
       media_type: "photo" | "video"
       payment_method_type: "paypal" | "monzo" | "revolut" | "cash"
       payment_plan_type: "full" | "monthly"
       payment_status_type: "succeeded" | "pending" | "failed"
-      installment_label_type: "full" | "august" | "september" | "october" | "november"
       player_status: "active" | "inactive" | "injured" | "away"
       user_role_type: "parent" | "coach" | "admin" | "player"
     }
 ```
+
+(Note the alphabetical ordering — `installment_label_type` sorts before `media_type`. This matches what a real `supabase gen types` regeneration would produce; TypeScript doesn't care about key order, but keeping it matches the file's existing convention.)
 
 - [ ] **Step 2: Add `installment_label` to the `payments` table's Row/Insert/Update**
 
@@ -254,7 +263,48 @@ New:
         }
 ```
 
-- [ ] **Step 4: Add convenience type aliases**
+- [ ] **Step 4: Update the `Constants` block to match**
+
+A real `supabase gen types` regeneration keeps the `export const Constants = { ... }` block (near the bottom of the file) in sync with the `Enums` type above — nothing in `src/` currently reads `Constants` today, so this has no functional effect, but leaving it out of sync would make a future real regeneration produce a surprising diff.
+
+Old:
+```typescript
+export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
+  public: {
+    Enums: {
+      media_type: ["photo", "video"],
+      payment_method_type: ["paypal", "monzo", "revolut", "cash"],
+      payment_status_type: ["succeeded", "pending", "failed"],
+      player_status: ["active", "inactive", "injured", "away"],
+      user_role_type: ["parent", "coach", "admin", "player"],
+    },
+  },
+} as const
+```
+New:
+```typescript
+export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
+  public: {
+    Enums: {
+      installment_label_type: ["full", "august", "september", "october", "november"],
+      media_type: ["photo", "video"],
+      payment_method_type: ["paypal", "monzo", "revolut", "cash"],
+      payment_plan_type: ["full", "monthly"],
+      payment_status_type: ["succeeded", "pending", "failed"],
+      player_status: ["active", "inactive", "injured", "away"],
+      user_role_type: ["parent", "coach", "admin", "player"],
+    },
+  },
+} as const
+```
+
+- [ ] **Step 5: Add convenience type aliases**
 
 Old (near the bottom of the file):
 ```typescript
@@ -271,12 +321,12 @@ export type PaymentPlan = Database['public']['Enums']['payment_plan_type']
 export type InstallmentLabel = Database['public']['Enums']['installment_label_type']
 ```
 
-- [ ] **Step 5: Verify the file is valid TypeScript**
+- [ ] **Step 6: Verify the file is valid TypeScript**
 
 Run: `npx tsc --noEmit`
 Expected: no new errors (existing `any`-casts elsewhere in the codebase are unaffected by this change).
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add src/lib/supabase/types.ts
@@ -444,7 +494,7 @@ Replace the full content of `src/app/actions/__tests__/payment.test.ts`:
 ```typescript
 jest.mock('@/lib/supabase/server', () => ({ createSupabaseServiceClient: jest.fn() }))
 
-import { requestPayment, confirmPayment, denyPayment, getAmountDue } from '../payment'
+import { requestPayment, confirmPayment, denyPayment, adminMarkCashPaid, getAmountDue } from '../payment'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 
 const mockSupabase = {
@@ -459,17 +509,32 @@ const mockSupabase = {
 beforeEach(() => {
   (createSupabaseServiceClient as jest.Mock).mockReturnValue(mockSupabase)
   jest.clearAllMocks()
+  // Note: jest.clearAllMocks() resets call history but not persistent implementations
+  // like the .mockReturnThis() set above at declaration time — no need to re-apply those here.
 })
+
+/**
+ * getAmountDue makes exactly 3 sequential `.eq()` calls per invocation:
+ *   1. players  .eq('id', playerId)          -> chainable, resolved via .single()
+ *   2. payments .eq('player_id', playerId)    -> chainable
+ *   3. payments .eq('status', 'succeeded')    -> IS the awaited value (no .single() on this query)
+ * Queue exactly 3 mockImplementationOnce calls, in that order, for every test
+ * that (directly or indirectly, e.g. via requestPayment/adminMarkCashPaid) calls
+ * getAmountDue once. A test calling it twice needs 6 queued, in two groups of 3.
+ */
+function mockGetAmountDueOnce(plan: string, succeededLabels: (string | null)[]) {
+  mockSupabase.single.mockResolvedValueOnce({ data: { payment_plan: plan }, error: null })
+  ;(mockSupabase.eq as jest.Mock)
+    .mockImplementationOnce(() => mockSupabase) // players .eq('id', ...)
+    .mockImplementationOnce(() => mockSupabase) // payments .eq('player_id', ...)
+    .mockImplementationOnce(() => Promise.resolve({ // payments .eq('status', 'succeeded')
+      data: succeededLabels.map(installment_label => ({ installment_label })), error: null,
+    }))
+}
 
 describe('getAmountDue', () => {
   it('returns the full-plan amount for a full-plan player with no succeeded payments', async () => {
-    mockSupabase.single.mockResolvedValue({ data: { payment_plan: 'full' }, error: null })
-    mockSupabase.eq.mockReturnValue({ ...mockSupabase, then: undefined }) // chain continues to a final await
-    // players.select().eq().single() -> { payment_plan: 'full' }
-    // payments.select().eq().eq() resolves to an array (no succeeded payments yet)
-    ;(mockSupabase.eq as jest.Mock)
-      .mockImplementationOnce(() => mockSupabase) // players .eq('id', ...)
-      .mockImplementationOnce(() => Promise.resolve({ data: [], error: null })) // payments .eq('status', 'succeeded')
+    mockGetAmountDueOnce('full', [])
     const result = await getAmountDue('player-1')
     expect(result).toEqual({ label: 'full', amountCents: 3000, isFirstInstallment: true })
   })
@@ -477,10 +542,7 @@ describe('getAmountDue', () => {
 
 describe('requestPayment', () => {
   it('inserts a pending payment tagged with the currently-due installment', async () => {
-    mockSupabase.single.mockResolvedValue({ data: { payment_plan: 'full' }, error: null })
-    ;(mockSupabase.eq as jest.Mock)
-      .mockImplementationOnce(() => mockSupabase)
-      .mockImplementationOnce(() => Promise.resolve({ data: [], error: null }))
+    mockGetAmountDueOnce('full', [])
     mockSupabase.insert.mockResolvedValue({ error: null })
 
     const result = await requestPayment({
@@ -490,6 +552,19 @@ describe('requestPayment', () => {
     expect(result.error).toBeUndefined()
     expect(mockSupabase.insert).toHaveBeenCalledWith(
       expect.objectContaining({ amount: 3000, installment_label: 'full' })
+    )
+  })
+})
+
+describe('adminMarkCashPaid', () => {
+  it('inserts a succeeded cash payment tagged with the currently-due installment', async () => {
+    mockGetAmountDueOnce('monthly', ['august']) // August already paid -> September ($60) is due
+    mockSupabase.insert.mockResolvedValue({ error: null })
+
+    const result = await adminMarkCashPaid({ playerId: 'p1', parentId: 'pa1' })
+    expect(result.error).toBeUndefined()
+    expect(mockSupabase.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: 6000, installment_label: 'september', status: 'succeeded' })
     )
   })
 })
@@ -506,8 +581,6 @@ it('denyPayment sets status to failed on the correct payment row', async () => {
   expect(mockSupabase.eq).toHaveBeenCalledWith('id', 'pay-1')
 })
 ```
-
-Note: the mock chain here is intentionally a bit manual (`mockImplementationOnce` twice) because `getAmountDue` makes two separate Supabase calls (one for the player's plan, one for their succeeded payments) rather than one. If this proves awkward once you're actually running it, it's fine to simplify the mock setup — the important behavioral assertions are the two `expect` calls, not the exact mock plumbing.
 
 - [ ] **Step 2: Run the tests to confirm they fail**
 
@@ -945,6 +1018,9 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
   useEffect(() => {
     getPaymentSettings().then(setSettings)
     refreshDue()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- playerId is stable for this
+    // component's lifetime (a fresh instance mounts per profile view); intentionally
+    // fetch-on-mount only, matching this file's existing pattern before this change.
   }, [])
 
   async function refreshDue() {
@@ -1103,14 +1179,54 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
 
 Note: `regFeePaid` is derived entirely from `getAmountDue`'s result (`due === null` → everything's paid, so obviously the reg fee is too; otherwise `!due.isFirstInstallment` → some earlier installment, i.e. the reg fee, must already be paid) — no second server round-trip needed. Also note `handleConfirm` now calls `refreshDue()` after a successful request, since the amount due may change (though for a `pending` request it won't actually change until the admin confirms — this just keeps the panel consistent if you re-open it).
 
-- [ ] **Step 2: Verify manually**
+- [ ] **Step 2: Fix the existing test's mock — it will otherwise throw**
+
+`src/components/payment/__tests__/payment-options-panel.test.tsx` mocks the whole `@/app/actions/payment` module but only provides `getPaymentSettings`/`requestPayment`. The component above now also calls `getAmountDue` inside `useEffect` — under the current mock that's `undefined`, so calling it throws `TypeError: getAmountDue is not a function` (an unhandled rejection inside the effect). Without this fix, `npx jest` will not actually be all-green despite this task's own changes being correct in isolation.
+
+Old:
+```tsx
+import { render, screen } from '@testing-library/react'
+
+jest.mock('@/app/actions/payment', () => ({
+  getPaymentSettings: jest.fn().mockResolvedValue({
+    feeCents: 2500,
+    paypalMeUrl: 'https://paypal.me/bocasjuniorsfc',
+    monzoDetails: 'Sort: 04-00-04 / Acc: 12345678',
+    revolutDetails: '@bocasjuniorsfc',
+  }),
+  requestPayment: jest.fn().mockResolvedValue({}),
+}))
+```
+New:
+```tsx
+import { render, screen } from '@testing-library/react'
+
+jest.mock('@/app/actions/payment', () => ({
+  getPaymentSettings: jest.fn().mockResolvedValue({
+    paypalMeUrl: 'https://paypal.me/bocasjuniorsfc',
+    monzoDetails: 'Sort: 04-00-04 / Acc: 12345678',
+    revolutDetails: '@bocasjuniorsfc',
+  }),
+  requestPayment: jest.fn().mockResolvedValue({}),
+  getAmountDue: jest.fn().mockResolvedValue({ label: 'full', amountCents: 3000, isFirstInstallment: true }),
+}))
+```
+
+(`feeCents` is removed from the `getPaymentSettings` mock since that field no longer exists on the real return value as of Task 4 — keeping it would just be a harmless unused property, but removing it keeps the mock honest.)
+
+- [ ] **Step 3: Run the test**
+
+Run: `npx jest payment-options-panel`
+Expected: `PASS`.
+
+- [ ] **Step 4: Verify manually**
 
 Run: `npm run dev`, log in as a parent, view `/profile`. Confirm the fee shown matches the player's plan and no succeeded payments, and the registration-fee status line shows "Outstanding".
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add src/components/payment/payment-options-panel.tsx
+git add src/components/payment/payment-options-panel.tsx src/components/payment/__tests__/payment-options-panel.test.tsx
 git commit -m "feat: make Payment Options panel plan-aware with paid-status display"
 ```
 
@@ -1171,9 +1287,15 @@ export async function updatePlayerPaymentPlan(playerId: string, paymentPlan: Pay
 }
 ```
 
-Add these imports near the top of the file (alongside whatever's already imported there):
+Also update the file's existing type-only import line to include the two new types, and add one new value import:
+
+Old:
 ```typescript
-import type { PaymentPlan, InstallmentLabel } from '@/lib/supabase/types'
+import type { PlayerStatus, Media, GetInvolvedSubmission } from '@/lib/supabase/types'
+```
+New:
+```typescript
+import type { PlayerStatus, Media, GetInvolvedSubmission, PaymentPlan, InstallmentLabel } from '@/lib/supabase/types'
 import { isRegistrationFeePaid } from '@/lib/payment-schedule'
 ```
 
