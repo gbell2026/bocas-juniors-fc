@@ -70,7 +70,7 @@ export default function HomePage() {
               <Image
                 src="/tesoro-escondido-logo.png"
                 alt="Tesoro Escondido Hotel & Bar"
-                width={170}
+                width={247}
                 height={80}
                 className="h-20 w-auto object-contain"
               />
