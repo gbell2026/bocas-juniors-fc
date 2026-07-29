@@ -26,6 +26,7 @@ it('returns error if auth.admin.createUser fails', async () => {
   const result = await registerParentAndPlayer({
     parentName: 'Jane', email: 'jane@test.com', phone: '555-1234', password: 'pass123',
     playerName: 'Junior', dateOfBirth: '2015-06-01', position: 'Forward',
+    paymentPlan: 'full', agreedToTerms: true,
   })
   expect(result.error).toBe('Email taken')
 })
@@ -49,7 +50,18 @@ it('returns playerId on success', async () => {
   const result = await registerParentAndPlayer({
     parentName: 'Jane', email: 'jane@test.com', phone: '555-1234', password: 'pass123',
     playerName: 'Junior', dateOfBirth: '2015-06-01', position: 'Forward',
+    paymentPlan: 'full', agreedToTerms: true,
   })
   expect(result.playerId).toBe('player-1')
   expect(result.parentId).toBe('parent-1')
+})
+
+it('returns an error if agreedToTerms is false, without creating anything', async () => {
+  const result = await registerParentAndPlayer({
+    parentName: 'Jane', email: 'jane@test.com', phone: '555-1234', password: 'pass123',
+    playerName: 'Junior', dateOfBirth: '2015-06-01', position: 'Forward',
+    paymentPlan: 'full', agreedToTerms: false,
+  })
+  expect(result.error).toBe('You must agree to the registration terms.')
+  expect(mockSupabase.auth.admin.createUser).not.toHaveBeenCalled()
 })

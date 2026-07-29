@@ -1,9 +1,11 @@
 'use server'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
+import type { PaymentPlan } from '@/lib/supabase/types'
 
 export type RegisterInput = {
   parentName: string; email: string; phone: string; password: string
   playerName: string; dateOfBirth: string; position: string
+  paymentPlan: PaymentPlan; agreedToTerms: boolean
 }
 
 export type RegisterResult =
@@ -11,6 +13,10 @@ export type RegisterResult =
   | { error: string; playerId?: never; parentId?: never; userId?: never }
 
 export async function registerParentAndPlayer(input: RegisterInput): Promise<RegisterResult> {
+  if (!input.agreedToTerms) {
+    return { error: 'You must agree to the registration terms.' }
+  }
+
   const supabase = createSupabaseServiceClient()
 
   // 1. Create auth user
@@ -41,6 +47,7 @@ export async function registerParentAndPlayer(input: RegisterInput): Promise<Reg
       name: input.playerName,
       date_of_birth: input.dateOfBirth,
       position: input.position,
+      payment_plan: input.paymentPlan,
     })
     .select()
     .single()
