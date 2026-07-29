@@ -20,7 +20,7 @@ The registration-payment-plans feature (shipped in `docs/superpowers/specs/2026-
 Update the three assertions that hardcode the old `full` amount (3000) to the new one (21000):
 - `getNextDue('full', [])` → expects `amountCents: 21000`
 - `getNextDue('monthly', ['full'])` → expects `amountCents: 3000` for `august` (unaffected — this test is about the monthly plan ignoring an irrelevant `'full'` label; no change needed here, listed for completeness)
-- `getPlanTotalCents('full')` → expects `21000` instead of `3000`
+- `getPlanTotalCents('full')` → expects `21000` instead of `3000`, and its test description string ("full plan totals $30") should be updated to "full plan totals $210" to match
 
 ### 3. `src/app/actions/__tests__/payment.test.ts`
 Update the two assertions referencing the old full-plan amount (3000 → 21000):
