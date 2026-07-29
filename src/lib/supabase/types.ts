@@ -39,6 +39,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      get_involved_submissions: {
+        Row: {
+          email: string
+          handled: boolean
+          id: string
+          interests: string[]
+          message: string | null
+          name: string
+          organisation: string | null
+          submitted_at: string
+        }
+        Insert: {
+          email: string
+          handled?: boolean
+          id?: string
+          interests: string[]
+          message?: string | null
+          name: string
+          organisation?: string | null
+          submitted_at?: string
+        }
+        Update: {
+          email?: string
+          handled?: boolean
+          id?: string
+          interests?: string[]
+          message?: string | null
+          name?: string
+          organisation?: string | null
+          submitted_at?: string
+        }
+        Relationships: []
+      }
       media: {
         Row: {
           caption: string | null
@@ -75,39 +108,6 @@ export type Database = {
         }
         Relationships: []
       }
-      get_involved_submissions: {
-        Row: {
-          id: string
-          name: string
-          email: string
-          organisation: string | null
-          interests: string[]
-          message: string | null
-          submitted_at: string
-          handled: boolean
-        }
-        Insert: {
-          id?: string
-          name: string
-          email: string
-          organisation?: string | null
-          interests: string[]
-          message?: string | null
-          submitted_at?: string
-          handled?: boolean
-        }
-        Update: {
-          id?: string
-          name?: string
-          email?: string
-          organisation?: string | null
-          interests?: string[]
-          message?: string | null
-          submitted_at?: string
-          handled?: boolean
-        }
-        Relationships: []
-      }
       parents: {
         Row: {
           created_at: string
@@ -140,6 +140,9 @@ export type Database = {
           amount: number
           currency: string
           id: string
+          installment_label:
+            | Database["public"]["Enums"]["installment_label_type"]
+            | null
           notes: string | null
           paid_at: string | null
           parent_id: string
@@ -151,6 +154,9 @@ export type Database = {
           amount: number
           currency?: string
           id?: string
+          installment_label?:
+            | Database["public"]["Enums"]["installment_label_type"]
+            | null
           notes?: string | null
           paid_at?: string | null
           parent_id: string
@@ -162,6 +168,9 @@ export type Database = {
           amount?: number
           currency?: string
           id?: string
+          installment_label?:
+            | Database["public"]["Enums"]["installment_label_type"]
+            | null
           notes?: string | null
           paid_at?: string | null
           parent_id?: string
@@ -193,6 +202,7 @@ export type Database = {
           id: string
           name: string
           parent_id: string
+          payment_plan: Database["public"]["Enums"]["payment_plan_type"]
           position: string
           return_date: string | null
           status: Database["public"]["Enums"]["player_status"]
@@ -204,6 +214,7 @@ export type Database = {
           id?: string
           name: string
           parent_id: string
+          payment_plan?: Database["public"]["Enums"]["payment_plan_type"]
           position: string
           return_date?: string | null
           status?: Database["public"]["Enums"]["player_status"]
@@ -215,6 +226,7 @@ export type Database = {
           id?: string
           name?: string
           parent_id?: string
+          payment_plan?: Database["public"]["Enums"]["payment_plan_type"]
           position?: string
           return_date?: string | null
           status?: Database["public"]["Enums"]["player_status"]
@@ -271,8 +283,15 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      installment_label_type:
+        | "full"
+        | "august"
+        | "september"
+        | "october"
+        | "november"
       media_type: "photo" | "video"
       payment_method_type: "paypal" | "monzo" | "revolut" | "cash"
+      payment_plan_type: "full" | "monthly"
       payment_status_type: "succeeded" | "pending" | "failed"
       player_status: "active" | "inactive" | "injured" | "away"
       user_role_type: "parent" | "coach" | "admin" | "player"
@@ -406,8 +425,16 @@ export const Constants = {
   },
   public: {
     Enums: {
+      installment_label_type: [
+        "full",
+        "august",
+        "september",
+        "october",
+        "november",
+      ],
       media_type: ["photo", "video"],
       payment_method_type: ["paypal", "monzo", "revolut", "cash"],
+      payment_plan_type: ["full", "monthly"],
       payment_status_type: ["succeeded", "pending", "failed"],
       player_status: ["active", "inactive", "injured", "away"],
       user_role_type: ["parent", "coach", "admin", "player"],
@@ -429,3 +456,5 @@ export type PaymentStatus = Database['public']['Enums']['payment_status_type']
 export type MediaType = Database['public']['Enums']['media_type']
 export type UserRole = Database['public']['Enums']['user_role_type']
 export type GetInvolvedSubmission = Database['public']['Tables']['get_involved_submissions']['Row']
+export type PaymentPlan = Database['public']['Enums']['payment_plan_type']
+export type InstallmentLabel = Database['public']['Enums']['installment_label_type']
