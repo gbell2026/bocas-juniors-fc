@@ -2,12 +2,12 @@ import { render, screen } from '@testing-library/react'
 
 jest.mock('@/app/actions/payment', () => ({
   getPaymentSettings: jest.fn().mockResolvedValue({
-    feeCents: 2500,
     paypalMeUrl: 'https://paypal.me/bocasjuniorsfc',
     monzoDetails: 'Sort: 04-00-04 / Acc: 12345678',
     revolutDetails: '@bocasjuniorsfc',
   }),
   requestPayment: jest.fn().mockResolvedValue({}),
+  getAmountDue: jest.fn().mockResolvedValue({ label: 'full', amountCents: 3000, isFirstInstallment: true }),
 }))
 
 import { PaymentOptionsPanel } from '../payment-options-panel'
