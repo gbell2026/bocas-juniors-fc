@@ -30,7 +30,7 @@ export function Nav() {
   return (
     <nav className="bg-brand-ink border-b-[3px] border-brand-primary px-4 py-3 flex items-center justify-between">
       <Link href="/">
-        <Image src="/logo.png" width={48} height={48} alt="Tangerine Toucans" />
+        <Image src="/logo-white-bg.png" width={48} height={48} alt="Tangerine Toucans" />
       </Link>
       <div className="flex items-center gap-5 text-xs font-bold uppercase tracking-wider">
         {links.map(({ href, label }) => (

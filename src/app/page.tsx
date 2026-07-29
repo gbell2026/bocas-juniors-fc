@@ -23,7 +23,7 @@ export default function HomePage() {
         />
         <div className="relative flex flex-col items-center px-6 py-16">
           <Image
-            src="/logo.png"
+            src="/logo-white-bg.png"
             width={120}
             height={120}
             alt="Tangerine Toucans"
