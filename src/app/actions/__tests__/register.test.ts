@@ -54,6 +54,10 @@ it('returns playerId on success', async () => {
   })
   expect(result.playerId).toBe('player-1')
   expect(result.parentId).toBe('parent-1')
+  expect(mockSupabase.insert).toHaveBeenNthCalledWith(
+    2,
+    expect.objectContaining({ payment_plan: 'full' })
+  )
 })
 
 it('returns an error if agreedToTerms is false, without creating anything', async () => {
