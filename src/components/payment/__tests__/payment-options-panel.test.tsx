@@ -7,7 +7,7 @@ jest.mock('@/app/actions/payment', () => ({
     revolutDetails: '@bocasjuniorsfc',
   }),
   requestPayment: jest.fn().mockResolvedValue({}),
-  getAmountDue: jest.fn().mockResolvedValue({ label: 'full', amountCents: 3000, isFirstInstallment: true }),
+  getAmountDue: jest.fn().mockResolvedValue({ label: 'full', amountCents: 21000, isFirstInstallment: true }),
 }))
 
 import { PaymentOptionsPanel } from '../payment-options-panel'
@@ -26,7 +26,7 @@ it('renders all four payment method buttons', async () => {
 
 it('shows the registration fee as Outstanding when nothing has been paid yet', async () => {
   ;(getAmountDue as jest.Mock).mockResolvedValueOnce({
-    label: 'full', amountCents: 3000, isFirstInstallment: true,
+    label: 'full', amountCents: 21000, isFirstInstallment: true,
   })
   render(
     <PaymentOptionsPanel
@@ -35,7 +35,7 @@ it('shows the registration fee as Outstanding when nothing has been paid yet', a
     />
   )
   expect(await screen.findByText(/Registration fee: Outstanding/i)).toBeInTheDocument()
-  expect(screen.getAllByText(/\$30\.00/).length).toBeGreaterThan(0)
+  expect(screen.getAllByText(/\$210\.00/).length).toBeGreaterThan(0)
 })
 
 it('shows the registration fee as Paid but still shows the next installment due', async () => {
