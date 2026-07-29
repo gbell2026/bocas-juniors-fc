@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { registerParentAndPlayer } from '@/app/actions/register'
+import type { PaymentPlan } from '@/lib/supabase/types'
 
 type Props = { onSuccess: (playerId: string, parentId: string, parentName: string, playerName: string) => void }
 
@@ -21,6 +22,8 @@ export function RegistrationForm({ onSuccess }: Props) {
       playerName: fd.get('playerName') as string,
       dateOfBirth: fd.get('dateOfBirth') as string,
       position: fd.get('position') as string,
+      paymentPlan: fd.get('paymentPlan') as PaymentPlan,
+      agreedToTerms: fd.get('agreedToTerms') === 'on',
     })
     setLoading(false)
     if (result.error) { setError(result.error); return }
@@ -71,6 +74,32 @@ export function RegistrationForm({ onSuccess }: Props) {
           <input id="password" name="password" type="password" minLength={8} required className="input w-full" />
         </div>
       </fieldset>
+
+      <fieldset className="space-y-3">
+        <legend className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-2">Payment Plan</legend>
+        <label className="flex items-start gap-2 cursor-pointer">
+          <input type="radio" name="paymentPlan" value="full" required className="mt-1" />
+          <span>
+            <span className="block font-bold">Pay in Full — $30</span>
+            <span className="block text-sm text-brand-muted">One payment, due now.</span>
+          </span>
+        </label>
+        <label className="flex items-start gap-2 cursor-pointer">
+          <input type="radio" name="paymentPlan" value="monthly" required className="mt-1" />
+          <span>
+            <span className="block font-bold">Monthly — $210 total</span>
+            <span className="block text-sm text-brand-muted">$30 in August, then $60/month September–November.</span>
+          </span>
+        </label>
+      </fieldset>
+
+      <label className="flex items-start gap-2 text-sm cursor-pointer">
+        <input type="checkbox" name="agreedToTerms" required className="mt-1" />
+        <span>
+          I agree to keep my child registered with the Tangerine Toucans through at least the
+          first half of the season, regardless of the payment plan I choose.
+        </span>
+      </label>
 
       {error && <p className="text-red-500 text-sm">{error}</p>}
       <button type="submit" disabled={loading} className="btn-primary w-full">

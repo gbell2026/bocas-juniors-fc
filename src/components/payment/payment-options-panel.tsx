@@ -1,14 +1,17 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getPaymentSettings, requestPayment } from '@/app/actions/payment'
+import { getPaymentSettings, requestPayment, getAmountDue } from '@/app/actions/payment'
 import type { PaymentMethod } from '@/lib/supabase/types'
 
 type Settings = Awaited<ReturnType<typeof getPaymentSettings>>
+type AmountDue = Awaited<ReturnType<typeof getAmountDue>>
 type Props = { playerId: string; parentId: string; parentName: string; playerName: string }
 type MethodState = 'idle' | 'awaiting_confirm' | 'loading' | 'sent' | 'error'
 
 export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName }: Props) {
   const [settings, setSettings] = useState<Settings | null>(null)
+  const [due, setDue] = useState<AmountDue | undefined>(undefined) // undefined = loading, null = fully paid
+  const [regFeePaid, setRegFeePaid] = useState(false)
   const [monzoCopied, setMonzoCopied] = useState(false)
   const [revolutCopied, setRevolutCopied] = useState(false)
   const [methodState, setMethodState] = useState<Record<PaymentMethod, MethodState>>({
@@ -17,16 +20,44 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
 
   useEffect(() => {
     getPaymentSettings().then(setSettings)
+    refreshDue()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- playerId is stable for this
+    // component's lifetime (a fresh instance mounts per profile view); intentionally
+    // fetch-on-mount only, matching this file's existing pattern before this change.
   }, [])
 
-  if (!settings) return <p className="text-brand-muted py-8 text-center">Loading payment options…</p>
+  async function refreshDue() {
+    const result = await getAmountDue(playerId)
+    setDue(result)
+    setRegFeePaid(result === null || !result.isFirstInstallment)
+  }
 
-  const fee = `$${(settings.feeCents / 100).toFixed(2)}`
+  if (!settings || due === undefined) return <p className="text-brand-muted py-8 text-center">Loading payment options…</p>
+
+  const regFeeStatus = (
+    <p className={`text-sm font-bold ${regFeePaid ? 'text-green-600' : 'text-brand-primary'}`}>
+      Registration fee: {regFeePaid ? 'Paid' : 'Outstanding'}
+    </p>
+  )
+
+  if (due === null) {
+    return (
+      <div className="max-w-lg mx-auto py-8 px-4 space-y-3 text-center">
+        {regFeeStatus}
+        <p className="font-heading text-brand-ink text-xl uppercase tracking-wider">
+          You&apos;re all paid up for the season!
+        </p>
+      </div>
+    )
+  }
+
+  const fee = `$${(due.amountCents / 100).toFixed(2)}`
 
   async function handleConfirm(method: PaymentMethod) {
     setMethodState(s => ({ ...s, [method]: 'loading' }))
     const result = await requestPayment({ playerId, parentId, method, parentName, playerName })
     setMethodState(s => ({ ...s, [method]: result.error ? 'error' : 'sent' }))
+    if (!result.error) refreshDue()
   }
 
   function copyToClipboard(text: string, setter: (v: boolean) => void) {
@@ -37,6 +68,7 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
 
   return (
     <div className="max-w-lg mx-auto py-8 px-4 space-y-6">
+      {regFeeStatus}
       <h2 className="font-heading text-brand-ink text-2xl uppercase tracking-wider">Pay Membership Fee — {fee}</h2>
       <p className="text-sm text-brand-muted">Choose a payment method below. Once you&apos;ve paid, click the confirmation button so the admin can verify your payment.</p>
 
@@ -139,7 +171,7 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
             disabled={methodState.cash === 'loading'}
             className="btn-secondary text-sm"
           >
-            {methodState.cash === 'loading' ? 'Sending\u2026' : "I\u2019ll pay cash at training"}
+            {methodState.cash === 'loading' ? 'Sending…' : "I’ll pay cash at training"}
           </button>
         )}
       </div>
