@@ -3,7 +3,7 @@ import type { PaymentPlan, InstallmentLabel } from './supabase/types'
 export type Installment = { label: InstallmentLabel; amountCents: number }
 
 const FULL_PLAN: Installment[] = [
-  { label: 'full', amountCents: 3000 },
+  { label: 'full', amountCents: 21000 },
 ]
 
 const MONTHLY_PLAN: Installment[] = [

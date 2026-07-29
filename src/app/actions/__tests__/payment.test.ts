@@ -42,7 +42,7 @@ describe('getAmountDue', () => {
   it('returns the full-plan amount for a full-plan player with no succeeded payments', async () => {
     mockGetAmountDueOnce('full', [])
     const result = await getAmountDue('player-1')
-    expect(result).toEqual({ label: 'full', amountCents: 3000, isFirstInstallment: true })
+    expect(result).toEqual({ label: 'full', amountCents: 21000, isFirstInstallment: true })
   })
 })
 
@@ -57,7 +57,7 @@ describe('requestPayment', () => {
     })
     expect(result.error).toBeUndefined()
     expect(mockSupabase.insert).toHaveBeenCalledWith(
-      expect.objectContaining({ amount: 3000, installment_label: 'full' })
+      expect.objectContaining({ amount: 21000, installment_label: 'full' })
     )
   })
 

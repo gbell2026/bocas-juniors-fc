@@ -80,8 +80,8 @@ export function RegistrationForm({ onSuccess }: Props) {
         <label className="flex items-start gap-2 cursor-pointer">
           <input type="radio" name="paymentPlan" value="full" required className="mt-1" />
           <span>
-            <span className="block font-bold">Pay in Full — $30</span>
-            <span className="block text-sm text-brand-muted">One payment, due now.</span>
+            <span className="block font-bold">Pay in Full — $210</span>
+            <span className="block text-sm text-brand-muted">One payment covering the whole season (August–November).</span>
           </span>
         </label>
         <label className="flex items-start gap-2 cursor-pointer">
@@ -96,8 +96,9 @@ export function RegistrationForm({ onSuccess }: Props) {
       <label className="flex items-start gap-2 text-sm cursor-pointer">
         <input type="checkbox" name="agreedToTerms" required className="mt-1" />
         <span>
-          I agree to keep my child registered with the Tangerine Toucans through at least the
-          first half of the season, regardless of the payment plan I choose.
+          I understand that regardless of the payment plan I choose, I am financially liable for
+          all registration fees for the first half of the season (August–November, $210 total),
+          even if my child stops playing before the season ends.
         </span>
       </label>
 

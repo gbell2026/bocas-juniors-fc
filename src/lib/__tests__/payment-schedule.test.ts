@@ -2,7 +2,7 @@ import { getNextDue, isRegistrationFeePaid, getPlanTotalCents } from '../payment
 
 describe('getNextDue', () => {
   it('returns the full-plan installment when nothing is paid', () => {
-    expect(getNextDue('full', [])).toEqual({ label: 'full', amountCents: 3000, isFirstInstallment: true })
+    expect(getNextDue('full', [])).toEqual({ label: 'full', amountCents: 21000, isFirstInstallment: true })
   })
 
   it('returns null for the full plan once it is paid', () => {
@@ -54,8 +54,8 @@ describe('isRegistrationFeePaid', () => {
 })
 
 describe('getPlanTotalCents', () => {
-  it('full plan totals $30', () => {
-    expect(getPlanTotalCents('full')).toBe(3000)
+  it('full plan totals $210', () => {
+    expect(getPlanTotalCents('full')).toBe(21000)
   })
 
   it('monthly plan totals $210', () => {
