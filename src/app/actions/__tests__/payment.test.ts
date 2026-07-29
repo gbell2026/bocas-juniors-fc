@@ -60,6 +60,17 @@ describe('requestPayment', () => {
       expect.objectContaining({ amount: 3000, installment_label: 'full' })
     )
   })
+
+  it('returns an error and does not insert when nothing is currently due', async () => {
+    mockGetAmountDueOnce('full', ['full']) // fully paid — nothing due
+
+    const result = await requestPayment({
+      playerId: 'p1', parentId: 'pa1', method: 'paypal',
+      parentName: 'Jane', playerName: 'Junior',
+    })
+    expect(result.error).toBe('No payment is currently due for this player')
+    expect(mockSupabase.insert).not.toHaveBeenCalled()
+  })
 })
 
 describe('adminMarkCashPaid', () => {
@@ -72,6 +83,14 @@ describe('adminMarkCashPaid', () => {
     expect(mockSupabase.insert).toHaveBeenCalledWith(
       expect.objectContaining({ amount: 6000, installment_label: 'september', status: 'succeeded' })
     )
+  })
+
+  it('returns an error and does not insert when nothing is currently due', async () => {
+    mockGetAmountDueOnce('monthly', ['august', 'september', 'october', 'november']) // fully paid
+
+    const result = await adminMarkCashPaid({ playerId: 'p1', parentId: 'pa1' })
+    expect(result.error).toBe('No payment is currently due for this player')
+    expect(mockSupabase.insert).not.toHaveBeenCalled()
   })
 })
 
