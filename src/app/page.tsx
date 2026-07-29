@@ -58,13 +58,24 @@ export default function HomePage() {
         <Link href="/get-involved" className="btn-primary">Become a Supporter</Link>
         <div className="mt-10 pt-8 border-t border-brand-charcoal">
           <p className="text-xs text-white/30 uppercase tracking-widest mb-3">Proudly supported by</p>
-          <Image
-            src="/bocas-dance-logo.png"
-            alt="Bocas Dance Collective"
-            width={160}
-            height={86}
-            className="h-20 w-auto object-contain mx-auto"
-          />
+          <div className="flex items-center justify-center gap-8 flex-wrap">
+            <Image
+              src="/bocas-dance-logo.png"
+              alt="Bocas Dance Collective"
+              width={160}
+              height={86}
+              className="h-20 w-auto object-contain"
+            />
+            <a href="https://www.tesoro-escondido.com/" target="_blank" rel="noopener noreferrer">
+              <Image
+                src="/tesoro-escondido-logo.png"
+                alt="Tesoro Escondido Hotel & Bar"
+                width={170}
+                height={80}
+                className="h-20 w-auto object-contain"
+              />
+            </a>
+          </div>
         </div>
       </section>
 
