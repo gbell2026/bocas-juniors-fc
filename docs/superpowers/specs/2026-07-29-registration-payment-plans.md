@@ -53,7 +53,7 @@ This due-amount computation happens **server-side**, derived from the player's s
 2. Compute the current-due installment via the shared schedule logic above (ignore any amount the client might send).
 3. Insert the payment with `amount` set to that installment's `amountCents` and `installment_label` set to that installment's label.
 
-`getPaymentSettings` keeps returning `monzoDetails`/`revolutDetails`/`paypalMeUrl` as today (unrelated to plan) but no longer returns a single flat `feeCents` — callers get the per-player due amount from a new function instead (see below).
+`getPaymentSettings` keeps returning `monzoDetails`/`revolutDetails`/`paypalMeUrl` as today (unrelated to plan) but no longer returns a single flat `feeCents` — callers instead get the per-player due amount from a new `getAmountDue(playerId)` action in `src/app/actions/payment.ts`, returning either `{ label, amountCents }` (current installment due) or `null` (fully paid). This is the same function `PaymentOptionsPanel`, `requestPayment`, `adminMarkCashPaid`, and the admin Players-table status column all call — one implementation, four call sites.
 
 ## Registration form changes
 
