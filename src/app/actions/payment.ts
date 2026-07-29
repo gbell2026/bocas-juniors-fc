@@ -1,8 +1,33 @@
 'use server'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
-import type { PaymentMethod } from '@/lib/supabase/types'
+import type { PaymentMethod, PaymentPlan, InstallmentLabel } from '@/lib/supabase/types'
+import { getNextDue } from '@/lib/payment-schedule'
 
 export type RequestPaymentResult = { error?: string }
+
+/**
+ * Computes what a player currently owes, based on their stored payment plan
+ * and which installments already have a succeeded payment. Returns null if
+ * every installment in their plan is paid. This is the single source of
+ * truth for "amount due" — callers must not accept a client-supplied amount.
+ */
+export async function getAmountDue(playerId: string) {
+  const supabase = createSupabaseServiceClient()
+
+  const { data: player } = await supabase
+    .from('players').select('payment_plan').eq('id', playerId).single()
+  const plan = (player?.payment_plan ?? 'full') as PaymentPlan
+
+  const { data: succeededPayments } = await supabase
+    .from('payments').select('installment_label')
+    .eq('player_id', playerId).eq('status', 'succeeded')
+
+  const paidLabels = (succeededPayments ?? [])
+    .map(p => p.installment_label)
+    .filter((label): label is InstallmentLabel => label !== null)
+
+  return getNextDue(plan, paidLabels)
+}
 
 // Parent-initiated: create a pending payment record for any method
 export async function requestPayment({
@@ -13,15 +38,15 @@ export async function requestPayment({
 }): Promise<RequestPaymentResult> {
   const supabase = createSupabaseServiceClient()
 
-  const { data: setting } = await supabase
-    .from('settings').select('value').eq('key', 'membership_fee_cents').single()
-  const amount = parseInt(setting?.value ?? '2500', 10)
+  const due = await getAmountDue(playerId)
+  if (!due) return { error: 'No payment is currently due for this player' }
 
   const { error } = await supabase.from('payments').insert({
     parent_id: parentId,
     player_id: playerId,
     payment_method: method,
-    amount,
+    amount: due.amountCents,
+    installment_label: due.label,
     currency: 'usd',
     status: 'pending',
     notes: `${method} payment requested by ${parentName} for ${playerName}`,
@@ -62,15 +87,16 @@ export async function adminMarkCashPaid({
   playerId, parentId, adminNotes,
 }: { playerId: string; parentId: string; adminNotes?: string }) {
   const supabase = createSupabaseServiceClient()
-  const { data: setting } = await supabase
-    .from('settings').select('value').eq('key', 'membership_fee_cents').single()
-  const amount = parseInt(setting?.value ?? '2500', 10)
+
+  const due = await getAmountDue(playerId)
+  if (!due) return { error: 'No payment is currently due for this player' }
 
   await supabase.from('payments').insert({
     parent_id: parentId,
     player_id: playerId,
     payment_method: 'cash',
-    amount,
+    amount: due.amountCents,
+    installment_label: due.label,
     currency: 'usd',
     status: 'succeeded',
     paid_at: new Date().toISOString(),
@@ -81,12 +107,12 @@ export async function adminMarkCashPaid({
 }
 
 // Server action called by PaymentOptionsPanel to fetch settings for display
+// (payment provider details only — the fee amount is per-player, see getAmountDue)
 export async function getPaymentSettings() {
   const supabase = createSupabaseServiceClient()
   const { data: settings } = await supabase.from('settings').select('*')
   const map = Object.fromEntries((settings ?? []).map(s => [s.key, s.value]))
   return {
-    feeCents: parseInt(map.membership_fee_cents ?? '2500', 10),
     paypalMeUrl: map.paypal_me_url ?? '',
     monzoDetails: map.monzo_details ?? '',
     revolutDetails: map.revolut_details ?? '',
