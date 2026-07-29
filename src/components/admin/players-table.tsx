@@ -1,26 +1,28 @@
 'use client'
 import { useState } from 'react'
-import { updatePlayerStatus } from '@/app/actions/admin'
+import { updatePlayerStatus, updatePlayerPaymentPlan } from '@/app/actions/admin'
 import { adminMarkCashPaid } from '@/app/actions/payment'
-import type { Player } from '@/lib/supabase/types'
+import type { Player, PaymentPlan } from '@/lib/supabase/types'
 
 type PlayerWithParent = Player & {
   parents: { name: string; email: string }
   lastPaidAt: string | null
+  regFeePaid: boolean
 }
 
 export function PlayersTable({ players }: { players: PlayerWithParent[] }) {
   const [updating, setUpdating] = useState<string | null>(null)
-  const [edits, setEdits] = useState<Record<string, { status: string; returnDate: string }>>({})
+  const [edits, setEdits] = useState<Record<string, { status: string; returnDate: string; paymentPlan: PaymentPlan }>>({})
 
-  function getEdit(p: Player) {
-    return edits[p.id] ?? { status: p.status, returnDate: p.return_date ?? '' }
+  function getEdit(p: PlayerWithParent) {
+    return edits[p.id] ?? { status: p.status, returnDate: p.return_date ?? '', paymentPlan: p.payment_plan }
   }
 
   async function handleStatusSave(p: PlayerWithParent) {
-    const { status, returnDate } = getEdit(p)
+    const { status, returnDate, paymentPlan } = getEdit(p)
     setUpdating(p.id)
     await updatePlayerStatus(p.id, status as import('@/lib/supabase/types').PlayerStatus, returnDate || undefined)
+    await updatePlayerPaymentPlan(p.id, paymentPlan)
     setUpdating(null)
     window.location.reload()
   }
@@ -37,7 +39,7 @@ export function PlayersTable({ players }: { players: PlayerWithParent[] }) {
       <table className="w-full text-sm">
         <thead className="bg-brand-creamAlt">
           <tr>
-            {['Player', 'Position', 'DOB', 'Parent', 'Status', 'Return Date', 'Last Paid', 'Actions'].map(h => (
+            {['Player', 'Position', 'DOB', 'Parent', 'Plan', 'Reg. Fee', 'Status', 'Return Date', 'Last Paid', 'Actions'].map(h => (
               <th key={h} className="text-left p-3">{h}</th>
             ))}
           </tr>
@@ -52,6 +54,23 @@ export function PlayersTable({ players }: { players: PlayerWithParent[] }) {
                 <td className="p-3">{p.position}</td>
                 <td className="p-3">{p.date_of_birth}</td>
                 <td className="p-3">{p.parents?.name}</td>
+                <td className="p-3">
+                  <select
+                    value={edit.paymentPlan}
+                    disabled={updating === p.id}
+                    onChange={e => setEdits(prev => ({ ...prev, [p.id]: { ...edit, paymentPlan: e.target.value as PaymentPlan } }))}
+                    className="border rounded p-1 text-sm"
+                  >
+                    {['full', 'monthly'].map(plan => (
+                      <option key={plan} value={plan}>{plan}</option>
+                    ))}
+                  </select>
+                </td>
+                <td className="p-3">
+                  <span className={p.regFeePaid ? 'text-green-600 font-medium' : 'text-brand-primary font-medium'}>
+                    {p.regFeePaid ? 'Paid' : 'Outstanding'}
+                  </span>
+                </td>
                 <td className="p-3">
                   <select
                     value={edit.status}

@@ -1,6 +1,7 @@
 'use server'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
-import type { PlayerStatus, Media, GetInvolvedSubmission } from '@/lib/supabase/types'
+import type { PlayerStatus, Media, GetInvolvedSubmission, PaymentPlan, InstallmentLabel } from '@/lib/supabase/types'
+import { isRegistrationFeePaid } from '@/lib/payment-schedule'
 import { v2 as cloudinary } from 'cloudinary'
 
 cloudinary.config({
@@ -47,17 +48,25 @@ export async function getAllPlayers() {
   const supabase = createSupabaseServiceClient()
   const { data } = await supabase
     .from('players')
-    .select('*, parents(name, email), payments(paid_at, status)')
+    .select('*, parents(name, email), payments(paid_at, status, installment_label)')
     .order('name')
-  // Attach last succeeded payment date to each player
-  return (data ?? []).map(p => ({
-    ...p,
-    lastPaidAt: (p.payments as any[])
-      ?.filter((pay: any) => pay.status === 'succeeded')
-      .map((pay: any) => pay.paid_at)
-      .sort()
-      .at(-1) ?? null,
-  }))
+  // Attach last succeeded payment date and registration-fee-paid status to each player
+  return (data ?? []).map(p => {
+    const succeeded = (p.payments as any[])?.filter((pay: any) => pay.status === 'succeeded') ?? []
+    const paidLabels = succeeded
+      .map((pay: any) => pay.installment_label)
+      .filter((label: any): label is InstallmentLabel => label !== null)
+    return {
+      ...p,
+      lastPaidAt: succeeded.map((pay: any) => pay.paid_at).sort().at(-1) ?? null,
+      regFeePaid: isRegistrationFeePaid(p.payment_plan, paidLabels),
+    }
+  })
+}
+
+export async function updatePlayerPaymentPlan(playerId: string, paymentPlan: PaymentPlan) {
+  const supabase = createSupabaseServiceClient()
+  await supabase.from('players').update({ payment_plan: paymentPlan }).eq('id', playerId)
 }
 
 export async function getTotalRevenue() {
