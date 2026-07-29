@@ -55,6 +55,10 @@ export function PlayersTable({ players }: { players: PlayerWithParent[] }) {
                 <td className="p-3">{p.date_of_birth}</td>
                 <td className="p-3">{p.parents?.name}</td>
                 <td className="p-3">
+                  {/* Known limitation: switching a player's plan after they've made payments under
+                      the old plan can make their reg-fee/amount-due status look wrong, since
+                      paid-installment labels don't get relabeled. Acceptable for MVP; revisit if
+                      this bites a real family. */}
                   <select
                     value={edit.paymentPlan}
                     disabled={updating === p.id}
@@ -99,7 +103,7 @@ export function PlayersTable({ players }: { players: PlayerWithParent[] }) {
                     onClick={() => handleStatusSave(p)}
                     disabled={updating === p.id}
                     className="btn-primary text-xs block w-full"
-                  >Save Status</button>
+                  >Save Changes</button>
                   <button
                     onClick={() => handleMarkCashPaid(p)}
                     disabled={updating === p.id}
