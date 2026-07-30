@@ -107,6 +107,10 @@ export async function getLeagueDivisionsAdmin() {
 }
 
 export async function createDivision(input: CreateDivisionInput): Promise<{ error?: string }> {
+  if (new Date(input.seasonEndDate) <= new Date(input.seasonStartDate)) {
+    return { error: 'Season end date must be after the start date' }
+  }
+
   const supabase = createSupabaseServiceClient()
   const { error } = await supabase.from('league_divisions').insert({
     name: input.name,
@@ -120,6 +124,17 @@ export async function createDivision(input: CreateDivisionInput): Promise<{ erro
 export type UpdateDivisionInput = { name?: string; seasonStartDate?: string; seasonEndDate?: string }
 
 export async function updateDivision(id: string, input: UpdateDivisionInput): Promise<{ error?: string }> {
+  // Both dates are only comparable when both are present in this partial
+  // update — if just one is being changed, the caller (the admin edit form)
+  // always submits both fields together in practice, so this still catches
+  // the realistic case (an admin transposing the two dates while editing).
+  if (
+    input.seasonStartDate && input.seasonEndDate &&
+    new Date(input.seasonEndDate) <= new Date(input.seasonStartDate)
+  ) {
+    return { error: 'Season end date must be after the start date' }
+  }
+
   const supabase = createSupabaseServiceClient()
   const patch: Record<string, string> = {}
   if (input.name) patch.name = input.name

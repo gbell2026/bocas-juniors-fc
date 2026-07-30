@@ -1,6 +1,6 @@
 jest.mock('@/lib/supabase/server', () => ({ createSupabaseServiceClient: jest.fn() }))
 
-import { generateSchedule, approveLeaguePlayer } from '../league-admin'
+import { generateSchedule, approveLeaguePlayer, createDivision, updateDivision } from '../league-admin'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 
 const mockSupabase = {
@@ -64,6 +64,38 @@ describe('generateSchedule', () => {
       expect.objectContaining({ division_id: 'div-1', home_team_id: 'team-1', away_team_id: 'team-2' }),
       expect.objectContaining({ division_id: 'div-1', home_team_id: 'team-2', away_team_id: 'team-1' }),
     ])
+  })
+})
+
+describe('createDivision', () => {
+  it('rejects a season end date on or before the start date, without touching the database', async () => {
+    const result = await createDivision({ name: 'U12', seasonStartDate: '2026-11-01', seasonEndDate: '2026-08-01' })
+    expect(result.error).toBe('Season end date must be after the start date')
+    expect(mockSupabase.insert).not.toHaveBeenCalled()
+  })
+
+  it('creates the division when the date range is valid', async () => {
+    mockSupabase.insert.mockResolvedValueOnce({ error: null })
+    const result = await createDivision({ name: 'U12', seasonStartDate: '2026-08-01', seasonEndDate: '2026-11-01' })
+    expect(result.error).toBeUndefined()
+    expect(mockSupabase.insert).toHaveBeenCalledWith(expect.objectContaining({
+      season_start_date: '2026-08-01', season_end_date: '2026-11-01',
+    }))
+  })
+})
+
+describe('updateDivision', () => {
+  it('rejects a season end date on or before the start date, without touching the database', async () => {
+    const result = await updateDivision('div-1', { seasonStartDate: '2026-11-01', seasonEndDate: '2026-08-01' })
+    expect(result.error).toBe('Season end date must be after the start date')
+    expect(mockSupabase.update).not.toHaveBeenCalled()
+  })
+
+  it('updates the division when only one date field is provided (no comparison possible)', async () => {
+    mockSupabase.update.mockReturnValueOnce(mockSupabase)
+    mockSupabase.eq.mockResolvedValueOnce({ error: null })
+    const result = await updateDivision('div-1', { seasonStartDate: '2026-08-01' })
+    expect(result.error).toBeUndefined()
   })
 })
 
