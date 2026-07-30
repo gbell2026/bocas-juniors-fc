@@ -25,35 +25,54 @@ export function LeagueDivisions({ divisions: initial }: { divisions: Division[] 
     e.preventDefault()
     setErrorMessage(null)
     setCreating(true)
-    const result = await createDivision({ name, seasonStartDate, seasonEndDate })
-    setCreating(false)
-    if (result.error) { setErrorMessage(result.error); return }
-    setName(''); setSeasonStartDate(''); setSeasonEndDate('')
-    window.location.reload()
+    try {
+      const result = await createDivision({ name, seasonStartDate, seasonEndDate })
+      if (result.error) { setErrorMessage(result.error); return }
+      setName(''); setSeasonStartDate(''); setSeasonEndDate('')
+      window.location.reload()
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
+    } finally {
+      setCreating(false)
+    }
   }
 
   async function handleSaveEdit(id: string) {
     const edit = edits[id]
     if (!edit) return
+    if (!edit.name || !edit.seasonStartDate || !edit.seasonEndDate) {
+      setErrorMessage('Name, start date, and end date are all required.')
+      return
+    }
     setErrorMessage(null)
     setSaving(id)
-    const result = await updateDivision(id, edit)
-    setSaving(null)
-    if (result.error) { setErrorMessage(result.error); return }
-    setDivisions(prev => prev.map(d => d.id === id
-      ? { ...d, name: edit.name, season_start_date: edit.seasonStartDate, season_end_date: edit.seasonEndDate }
-      : d
-    ))
-    setEditingId(null)
+    try {
+      const result = await updateDivision(id, edit)
+      if (result.error) { setErrorMessage(result.error); return }
+      setDivisions(prev => prev.map(d => d.id === id
+        ? { ...d, name: edit.name, season_start_date: edit.seasonStartDate, season_end_date: edit.seasonEndDate }
+        : d
+      ))
+      setEditingId(null)
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
+    } finally {
+      setSaving(null)
+    }
   }
 
   async function handleGenerateSchedule(divisionId: string) {
     setErrorMessage(null)
     setGenerating(divisionId)
-    const result = await generateSchedule(divisionId)
-    setGenerating(null)
-    if (result.error) { setErrorMessage(result.error); return }
-    window.location.reload()
+    try {
+      const result = await generateSchedule(divisionId)
+      if (result.error) { setErrorMessage(result.error); return }
+      window.location.reload()
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
+    } finally {
+      setGenerating(null)
+    }
   }
 
   return (
