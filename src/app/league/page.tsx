@@ -22,10 +22,12 @@ export default function LeaguePage() {
   const [divisionId, setDivisionId] = useState('')
 
   useEffect(() => {
-    getDivisions().then(list => {
-      setDivisions(list)
-      if (list.length > 0) setDivisionId(list[0].id)
-    })
+    getDivisions()
+      .then(list => {
+        setDivisions(list)
+        if (list.length > 0) setDivisionId(list[0].id)
+      })
+      .catch(err => console.error('Failed to load League divisions:', err))
   }, [])
 
   return (
