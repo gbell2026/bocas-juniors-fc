@@ -46,7 +46,11 @@ export function LeaguePendingQueue({ clubs: initialClubs, teams: initialTeams, p
   const handleApproveTeam = (id: string) => withProcessing(id, async () => {
     const result = await approveLeagueTeam(id)
     if (result.error) { setErrorMessage(result.error); return }
-    setTeams(prev => prev.filter(t => t.id !== id))
+    // A newly-approved team needs to show up in LeagueFixturesAdmin's team
+    // dropdowns (fed by a separate server-side getApprovedTeams() fetch on
+    // this same page) — reload so that data is fresh, matching the pattern
+    // LeagueDivisions already uses after create/generate-schedule.
+    window.location.reload()
   })
   const handleRejectTeam = (id: string) => withProcessing(id, async () => {
     const result = await rejectLeagueTeam(id)

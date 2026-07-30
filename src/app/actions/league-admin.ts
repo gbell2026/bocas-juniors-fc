@@ -241,7 +241,10 @@ export async function addFixture(input: {
     away_team_id: input.awayTeamId,
     match_date: input.matchDate,
   })
-  if (error) return { error: 'Failed to add fixture' }
+  if (error) {
+    if (error.code === '23514') return { error: 'A team cannot play itself — pick two different teams.' }
+    return { error: 'Failed to add fixture' }
+  }
   return {}
 }
 
