@@ -5,19 +5,32 @@ import { PendingPayments } from '@/components/admin/pending-payments'
 import { MediaUploader } from '@/components/admin/media-uploader'
 import { PendingSubmissions } from '@/components/admin/pending-submissions'
 import { GetInvolvedSubmissions } from '@/components/admin/get-involved-submissions'
+import { LeaguePendingQueue } from '@/components/admin/league-pending-queue'
+import { LeagueDivisions } from '@/components/admin/league-divisions'
+import { LeagueFixturesAdmin } from '@/components/admin/league-fixtures-admin'
 import { getPendingPayments, getAllPlayers, getTotalRevenue, getPendingSubmissions, getGetInvolvedSubmissions } from '@/app/actions/admin'
+import { getPendingLeagueClubs, getPendingLeagueTeams, getPendingLeaguePlayers, getLeagueDivisionsAdmin } from '@/app/actions/league-admin'
+import { getApprovedTeams } from '@/app/actions/league'
 
 export default async function AdminPage() {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [players, pendingPayments, totalRevenueCents, pendingSubmissions, getInvolvedSubmissions] = await Promise.all([
+  const [
+    players, pendingPayments, totalRevenueCents, pendingSubmissions, getInvolvedSubmissions,
+    pendingLeagueClubs, pendingLeagueTeams, pendingLeaguePlayers, leagueDivisions, approvedLeagueTeams,
+  ] = await Promise.all([
     getAllPlayers(),
     getPendingPayments(),
     getTotalRevenue(),
     getPendingSubmissions(),
     getGetInvolvedSubmissions(),
+    getPendingLeagueClubs(),
+    getPendingLeagueTeams(),
+    getPendingLeaguePlayers(),
+    getLeagueDivisionsAdmin(),
+    getApprovedTeams(),
   ])
 
   return (
@@ -39,6 +52,12 @@ export default async function AdminPage() {
       </section>
 
       <PendingSubmissions submissions={pendingSubmissions} />
+
+      <LeaguePendingQueue clubs={pendingLeagueClubs} teams={pendingLeagueTeams} players={pendingLeaguePlayers} />
+
+      <LeagueDivisions divisions={leagueDivisions} />
+
+      <LeagueFixturesAdmin divisions={leagueDivisions} teams={approvedLeagueTeams} />
 
       <section>
         <h2 className="font-heading text-lg uppercase tracking-wide text-brand-ink mb-3">Upload Media</h2>
