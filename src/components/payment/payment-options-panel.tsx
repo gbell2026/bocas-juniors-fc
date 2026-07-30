@@ -125,7 +125,7 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
             disabled={methodState.monzo === 'loading'}
             className="btn-secondary text-sm"
           >
-            {methodState.monzo === 'loading' ? 'Sending…' : "I&apos;ve sent the transfer"}
+            {methodState.monzo === 'loading' ? 'Sending…' : "I've sent the transfer"}
           </button>
         )}
       </div>
@@ -152,7 +152,7 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
             disabled={methodState.revolut === 'loading'}
             className="btn-secondary text-sm"
           >
-            {methodState.revolut === 'loading' ? 'Sending…' : "I&apos;ve sent the transfer"}
+            {methodState.revolut === 'loading' ? 'Sending…' : "I've sent the transfer"}
           </button>
         )}
       </div>
