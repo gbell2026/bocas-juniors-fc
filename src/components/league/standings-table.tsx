@@ -9,8 +9,12 @@ export function StandingsTable({ divisionId }: { divisionId: string }) {
   const [rows, setRows] = useState<StandingsRow[] | null>(null)
 
   useEffect(() => {
+    let cancelled = false
     setRows(null)
-    getStandings(divisionId).then(setRows)
+    getStandings(divisionId)
+      .then(data => { if (!cancelled) setRows(data) })
+      .catch(() => { if (!cancelled) setRows([]) })
+    return () => { cancelled = true }
   }, [divisionId])
 
   if (rows === null) return <p className="text-brand-muted py-8 text-center">Loading table…</p>

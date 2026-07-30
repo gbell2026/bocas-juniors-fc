@@ -5,15 +5,23 @@ import { getFixtures } from '@/app/actions/league'
 type Fixture = Awaited<ReturnType<typeof getFixtures>>[number]
 
 function formatMatchDate(iso: string) {
-  return new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(iso))
+  // match_date is a bare calendar date (no time component) — format it in
+  // UTC so it doesn't shift a day depending on the viewer's timezone.
+  return new Intl.DateTimeFormat('en-GB', {
+    weekday: 'long', day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC',
+  }).format(new Date(iso))
 }
 
 export function FixturesList({ divisionId }: { divisionId: string }) {
   const [fixtures, setFixtures] = useState<Fixture[] | null>(null)
 
   useEffect(() => {
+    let cancelled = false
     setFixtures(null)
-    getFixtures(divisionId).then(setFixtures)
+    getFixtures(divisionId)
+      .then(data => { if (!cancelled) setFixtures(data) })
+      .catch(() => { if (!cancelled) setFixtures([]) })
+    return () => { cancelled = true }
   }, [divisionId])
 
   if (fixtures === null) return <p className="text-brand-muted py-8 text-center">Loading fixtures…</p>
