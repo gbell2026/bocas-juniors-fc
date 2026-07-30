@@ -9,6 +9,7 @@ import { getRegFeeAlertForUser } from '@/app/actions/payment'
 const links = [
   { href: '/', label: 'Home' },
   { href: '/gallery', label: 'Gallery' },
+  { href: '/league', label: 'League' },
   { href: '/register', label: 'Register' },
   { href: '/contact', label: 'Contact' },
 ]
