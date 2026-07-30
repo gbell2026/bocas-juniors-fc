@@ -1,6 +1,6 @@
 jest.mock('@/lib/supabase/server', () => ({ createSupabaseServiceClient: jest.fn() }))
 
-import { requestPayment, confirmPayment, denyPayment, adminMarkCashPaid, getAmountDue } from '../payment'
+import { requestPayment, confirmPayment, denyPayment, adminMarkCashPaid, getAmountDue, getRegFeeAlertForUser } from '../payment'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 
 const mockSupabase = {
@@ -9,6 +9,7 @@ const mockSupabase = {
   update: jest.fn().mockReturnThis(),
   eq: jest.fn().mockReturnThis(),
   select: jest.fn().mockReturnThis(),
+  limit: jest.fn().mockReturnThis(),
   single: jest.fn(),
 }
 
@@ -104,4 +105,58 @@ it('denyPayment sets status to failed on the correct payment row', async () => {
   await denyPayment('pay-1')
   expect(mockSupabase.update).toHaveBeenCalledWith({ status: 'failed' })
   expect(mockSupabase.eq).toHaveBeenCalledWith('id', 'pay-1')
+})
+
+describe('getRegFeeAlertForUser', () => {
+  it('returns null when the user has no parent record', async () => {
+    mockSupabase.single.mockResolvedValueOnce({ data: null, error: null }) // parent lookup
+    const result = await getRegFeeAlertForUser('user-1')
+    expect(result).toBeNull()
+  })
+
+  it('returns null when the parent has no players', async () => {
+    mockSupabase.single.mockResolvedValueOnce({ data: { id: 'parent-1' }, error: null }) // parent lookup
+    mockSupabase.limit.mockResolvedValueOnce({ data: [], error: null }) // players lookup
+    const result = await getRegFeeAlertForUser('user-1')
+    expect(result).toBeNull()
+  })
+
+  it('reports regFeePaid: false when the registration fee is outstanding', async () => {
+    mockSupabase.single.mockResolvedValueOnce({ data: { id: 'parent-1' }, error: null }) // parent lookup
+    mockSupabase.limit.mockResolvedValueOnce({ data: [{ id: 'player-1' }], error: null }) // players lookup
+    // This function's own 2 .eq() calls (parent's user_id, players' parent_id) must be
+    // explicitly queued as chainable before mockGetAmountDueOnce's 3 .eq() values, since
+    // the mock's once-queue is consumed strictly in call order, not by which helper queued it.
+    ;(mockSupabase.eq as jest.Mock)
+      .mockImplementationOnce(() => mockSupabase) // parents .eq('user_id', ...)
+      .mockImplementationOnce(() => mockSupabase) // players .eq('parent_id', ...)
+    mockGetAmountDueOnce('full', []) // nothing paid yet
+
+    const result = await getRegFeeAlertForUser('user-1')
+    expect(result).toEqual({ playerId: 'player-1', regFeePaid: false })
+  })
+
+  it('reports regFeePaid: true when the registration fee installment has been paid', async () => {
+    mockSupabase.single.mockResolvedValueOnce({ data: { id: 'parent-1' }, error: null })
+    mockSupabase.limit.mockResolvedValueOnce({ data: [{ id: 'player-1' }], error: null })
+    ;(mockSupabase.eq as jest.Mock)
+      .mockImplementationOnce(() => mockSupabase) // parents .eq('user_id', ...)
+      .mockImplementationOnce(() => mockSupabase) // players .eq('parent_id', ...)
+    mockGetAmountDueOnce('monthly', ['august']) // reg fee (august) already paid, September now due
+
+    const result = await getRegFeeAlertForUser('user-1')
+    expect(result).toEqual({ playerId: 'player-1', regFeePaid: true })
+  })
+
+  it('reports regFeePaid: true when the whole plan is fully paid up', async () => {
+    mockSupabase.single.mockResolvedValueOnce({ data: { id: 'parent-1' }, error: null })
+    mockSupabase.limit.mockResolvedValueOnce({ data: [{ id: 'player-1' }], error: null })
+    ;(mockSupabase.eq as jest.Mock)
+      .mockImplementationOnce(() => mockSupabase) // parents .eq('user_id', ...)
+      .mockImplementationOnce(() => mockSupabase) // players .eq('parent_id', ...)
+    mockGetAmountDueOnce('full', ['full']) // getAmountDue resolves null (nothing left to pay)
+
+    const result = await getRegFeeAlertForUser('user-1')
+    expect(result).toEqual({ playerId: 'player-1', regFeePaid: true })
+  })
 })

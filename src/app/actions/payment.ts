@@ -106,6 +106,26 @@ export async function adminMarkCashPaid({
   return {}
 }
 
+// Called by the nav bar to decide whether to show a "registration fee
+// outstanding" banner for the currently logged-in parent. Follows the
+// existing single-player-per-parent assumption used elsewhere (e.g.
+// profile/page.tsx's `parent?.players?.[0]`). Returns null if the user
+// has no parent record yet, or no player registered yet — the banner
+// simply doesn't show in either case.
+export async function getRegFeeAlertForUser(userId: string): Promise<{ playerId: string; regFeePaid: boolean } | null> {
+  const supabase = createSupabaseServiceClient()
+
+  const { data: parent } = await supabase.from('parents').select('id').eq('user_id', userId).single()
+  if (!parent) return null
+
+  const { data: players } = await supabase.from('players').select('id').eq('parent_id', parent.id).limit(1)
+  const player = players?.[0]
+  if (!player) return null
+
+  const due = await getAmountDue(player.id)
+  return { playerId: player.id, regFeePaid: due === null || !due.isFirstInstallment }
+}
+
 // Server action called by PaymentOptionsPanel to fetch settings for display
 // (payment provider details only — the fee amount is per-player, see getAmountDue)
 export async function getPaymentSettings() {
