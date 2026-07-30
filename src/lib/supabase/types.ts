@@ -72,6 +72,207 @@ export type Database = {
         }
         Relationships: []
       }
+      league_clubs: {
+        Row: {
+          badge_cloudinary_public_id: string | null
+          contact_email: string
+          contact_name: string
+          contact_phone: string
+          created_at: string
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["league_status_type"]
+          updated_at: string
+        }
+        Insert: {
+          badge_cloudinary_public_id?: string | null
+          contact_email: string
+          contact_name: string
+          contact_phone: string
+          created_at?: string
+          id?: string
+          name: string
+          status?: Database["public"]["Enums"]["league_status_type"]
+          updated_at?: string
+        }
+        Update: {
+          badge_cloudinary_public_id?: string | null
+          contact_email?: string
+          contact_name?: string
+          contact_phone?: string
+          created_at?: string
+          id?: string
+          name?: string
+          status?: Database["public"]["Enums"]["league_status_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      league_divisions: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          season_end_date: string
+          season_start_date: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          season_end_date: string
+          season_start_date: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          season_end_date?: string
+          season_start_date?: string
+        }
+        Relationships: []
+      }
+      league_fixtures: {
+        Row: {
+          away_score: number | null
+          away_team_id: string
+          created_at: string
+          division_id: string
+          home_score: number | null
+          home_team_id: string
+          id: string
+          match_date: string
+        }
+        Insert: {
+          away_score?: number | null
+          away_team_id: string
+          created_at?: string
+          division_id: string
+          home_score?: number | null
+          home_team_id: string
+          id?: string
+          match_date: string
+        }
+        Update: {
+          away_score?: number | null
+          away_team_id?: string
+          created_at?: string
+          division_id?: string
+          home_score?: number | null
+          home_team_id?: string
+          id?: string
+          match_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "league_fixtures_away_team_id_fkey"
+            columns: ["away_team_id"]
+            isOneToOne: false
+            referencedRelation: "league_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_fixtures_division_id_fkey"
+            columns: ["division_id"]
+            isOneToOne: false
+            referencedRelation: "league_divisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_fixtures_home_team_id_fkey"
+            columns: ["home_team_id"]
+            isOneToOne: false
+            referencedRelation: "league_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      league_players: {
+        Row: {
+          created_at: string
+          date_of_birth: string
+          id: string
+          name: string
+          squad_number: number
+          status: Database["public"]["Enums"]["league_status_type"]
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date_of_birth: string
+          id?: string
+          name: string
+          squad_number: number
+          status?: Database["public"]["Enums"]["league_status_type"]
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date_of_birth?: string
+          id?: string
+          name?: string
+          squad_number?: number
+          status?: Database["public"]["Enums"]["league_status_type"]
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "league_players_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "league_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      league_teams: {
+        Row: {
+          club_id: string
+          created_at: string
+          division_id: string
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["league_status_type"]
+          updated_at: string
+        }
+        Insert: {
+          club_id: string
+          created_at?: string
+          division_id: string
+          id?: string
+          name: string
+          status?: Database["public"]["Enums"]["league_status_type"]
+          updated_at?: string
+        }
+        Update: {
+          club_id?: string
+          created_at?: string
+          division_id?: string
+          id?: string
+          name?: string
+          status?: Database["public"]["Enums"]["league_status_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "league_teams_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "league_clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_teams_division_id_fkey"
+            columns: ["division_id"]
+            isOneToOne: false
+            referencedRelation: "league_divisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media: {
         Row: {
           caption: string | null
@@ -289,6 +490,7 @@ export type Database = {
         | "september"
         | "october"
         | "november"
+      league_status_type: "pending" | "approved" | "rejected"
       media_type: "photo" | "video"
       payment_method_type: "paypal" | "monzo" | "revolut" | "cash"
       payment_plan_type: "full" | "monthly"
@@ -432,6 +634,7 @@ export const Constants = {
         "october",
         "november",
       ],
+      league_status_type: ["pending", "approved", "rejected"],
       media_type: ["photo", "video"],
       payment_method_type: ["paypal", "monzo", "revolut", "cash"],
       payment_plan_type: ["full", "monthly"],
@@ -458,3 +661,9 @@ export type UserRole = Database['public']['Enums']['user_role_type']
 export type GetInvolvedSubmission = Database['public']['Tables']['get_involved_submissions']['Row']
 export type PaymentPlan = Database['public']['Enums']['payment_plan_type']
 export type InstallmentLabel = Database['public']['Enums']['installment_label_type']
+export type LeagueStatus = Database['public']['Enums']['league_status_type']
+export type LeagueClub = Database['public']['Tables']['league_clubs']['Row']
+export type LeagueDivision = Database['public']['Tables']['league_divisions']['Row']
+export type LeagueTeam = Database['public']['Tables']['league_teams']['Row']
+export type LeaguePlayer = Database['public']['Tables']['league_players']['Row']
+export type LeagueFixture = Database['public']['Tables']['league_fixtures']['Row']
