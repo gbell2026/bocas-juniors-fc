@@ -25,7 +25,9 @@ export function Nav() {
 
   useEffect(() => {
     if (!user) { setRegFeeUnpaid(false); return }
-    getRegFeeAlertForUser(user.id).then(alert => setRegFeeUnpaid(alert !== null && !alert.regFeePaid))
+    getRegFeeAlertForUser(user.id)
+      .then(alert => setRegFeeUnpaid(alert !== null && !alert.regFeePaid))
+      .catch(err => console.error('Failed to check registration fee status:', err))
   }, [user])
 
   async function handleLogout() {
