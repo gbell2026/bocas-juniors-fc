@@ -33,8 +33,8 @@ export function RegisterTeamForm() {
   const [playerSquadNumber, setPlayerSquadNumber] = useState('')
 
   useEffect(() => {
-    getOpenDivisions().then(setDivisions)
-    getApprovedTeams().then(setTeams)
+    getOpenDivisions().then(setDivisions).catch(() => setDivisions([]))
+    getApprovedTeams().then(setTeams).catch(() => setTeams([]))
   }, [])
 
   function updatePlayerRow(index: number, patch: Partial<PlayerRow>) {
@@ -57,39 +57,64 @@ export function RegisterTeamForm() {
     fd.append('file', badgeFile)
     fd.append('upload_preset', uploadPreset)
     const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: 'POST', body: fd })
+    if (!res.ok) throw new Error('Badge upload failed')
     const data = await res.json()
     return data.public_id as string | undefined
+  }
+
+  function isValidSquadNumber(value: string) {
+    const n = Number(value)
+    return Number.isInteger(n) && n > 0
   }
 
   async function handleNewTeamSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
+
+    if (players.some(p => !isValidSquadNumber(p.squadNumber))) {
+      setError('Squad numbers must be whole numbers greater than 0.')
+      return
+    }
+
     setLoading(true)
-
-    const badgeCloudinaryPublicId = await uploadBadge()
-
-    const result = await registerLeagueTeam({
-      clubName, contactName, contactEmail, contactPhone,
-      badgeCloudinaryPublicId,
-      teamName, divisionId,
-      players: players.map(p => ({ name: p.name, dateOfBirth: p.dateOfBirth, squadNumber: Number(p.squadNumber) })),
-    })
-    setLoading(false)
-    if (result.error) { setError(result.error); return }
-    setSuccess(true)
+    try {
+      const badgeCloudinaryPublicId = await uploadBadge()
+      const result = await registerLeagueTeam({
+        clubName, contactName, contactEmail, contactPhone,
+        badgeCloudinaryPublicId,
+        teamName, divisionId,
+        players: players.map(p => ({ name: p.name, dateOfBirth: p.dateOfBirth, squadNumber: Number(p.squadNumber) })),
+      })
+      if (result.error) { setError(result.error); return }
+      setSuccess(true)
+    } catch {
+      setError('Something went wrong submitting your registration. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function handleAddPlayerSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
-    setLoading(true)
 
-    const result = await addLeaguePlayer({
-      teamId: selectedTeamId, name: playerName, dateOfBirth: playerDob, squadNumber: Number(playerSquadNumber),
-    })
-    setLoading(false)
-    if (result.error) { setError(result.error); return }
-    setSuccess(true)
+    if (!isValidSquadNumber(playerSquadNumber)) {
+      setError('Squad number must be a whole number greater than 0.')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const result = await addLeaguePlayer({
+        teamId: selectedTeamId, name: playerName, dateOfBirth: playerDob, squadNumber: Number(playerSquadNumber),
+      })
+      if (result.error) { setError(result.error); return }
+      setSuccess(true)
+    } catch {
+      setError('Something went wrong submitting the player. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (success) {
@@ -107,6 +132,7 @@ export function RegisterTeamForm() {
         <button
           type="button"
           onClick={() => setMode('newTeam')}
+          aria-pressed={mode === 'newTeam'}
           className={mode === 'newTeam' ? 'btn-primary text-sm flex-1' : 'btn-secondary text-sm flex-1'}
         >
           Register New Team
@@ -114,6 +140,7 @@ export function RegisterTeamForm() {
         <button
           type="button"
           onClick={() => setMode('addPlayer')}
+          aria-pressed={mode === 'addPlayer'}
           className={mode === 'addPlayer' ? 'btn-primary text-sm flex-1' : 'btn-secondary text-sm flex-1'}
         >
           Add a Player
@@ -166,28 +193,35 @@ export function RegisterTeamForm() {
             {players.map((p, i) => (
               <div key={i} className="border border-brand-line rounded p-3 space-y-2">
                 <input
-                  placeholder="Player name" required className="input w-full"
+                  placeholder="Player name" aria-label={`Player ${i + 1} name`} required className="input w-full"
                   value={p.name} onChange={e => updatePlayerRow(i, { name: e.target.value })}
                 />
                 <div className="flex gap-2">
                   <input
-                    type="date" required className="input flex-1"
+                    type="date" aria-label={`Player ${i + 1} date of birth`} required className="input flex-1"
                     value={p.dateOfBirth} onChange={e => updatePlayerRow(i, { dateOfBirth: e.target.value })}
                   />
                   <input
-                    type="number" placeholder="Squad #" required className="input w-24"
+                    type="number" placeholder="Squad #" aria-label={`Player ${i + 1} squad number`}
+                    min={1} step={1} required className="input w-24"
                     value={p.squadNumber} onChange={e => updatePlayerRow(i, { squadNumber: e.target.value })}
                   />
                 </div>
                 {players.length > 1 && (
-                  <button type="button" onClick={() => removePlayerRow(i)} className="text-brand-primary text-xs">Remove player</button>
+                  <button
+                    type="button" onClick={() => removePlayerRow(i)}
+                    aria-label={`Remove player ${i + 1}`}
+                    className="text-brand-primary text-xs"
+                  >
+                    Remove player
+                  </button>
                 )}
               </div>
             ))}
             <button type="button" onClick={addPlayerRow} className="btn-secondary text-sm w-full">Add Another Player</button>
           </fieldset>
 
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+          {error && <p role="alert" className="text-red-500 text-sm">{error}</p>}
           <button type="submit" disabled={loading} className="btn-primary w-full">
             {loading ? 'Submitting…' : 'Submit Registration'}
           </button>
@@ -213,9 +247,9 @@ export function RegisterTeamForm() {
           </div>
           <div>
             <label htmlFor="playerSquadNumber" className={labelClass}>Squad Number</label>
-            <input id="playerSquadNumber" type="number" required className="input w-full" value={playerSquadNumber} onChange={e => setPlayerSquadNumber(e.target.value)} />
+            <input id="playerSquadNumber" type="number" min={1} step={1} required className="input w-full" value={playerSquadNumber} onChange={e => setPlayerSquadNumber(e.target.value)} />
           </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+          {error && <p role="alert" className="text-red-500 text-sm">{error}</p>}
           <button type="submit" disabled={loading} className="btn-primary w-full">
             {loading ? 'Submitting…' : 'Submit Player'}
           </button>

@@ -33,6 +33,15 @@ describe('registerLeagueTeam', () => {
     expect(mockSupabase.insert).not.toHaveBeenCalled()
   })
 
+  it('rejects a submission with an invalid squad number before touching the database', async () => {
+    const result = await registerLeagueTeam({
+      ...validInput,
+      players: [{ name: 'Player One', dateOfBirth: '2014-01-01', squadNumber: 0 }],
+    })
+    expect(result.error).toBe('Squad numbers must be whole numbers greater than 0.')
+    expect(mockSupabase.insert).not.toHaveBeenCalled()
+  })
+
   it('rejects a submission targeting a division whose schedule has already been generated', async () => {
     // .from('league_fixtures').select('id').eq('division_id', ...).limit(1) finds an existing fixture
     mockSupabase.limit.mockResolvedValueOnce({ data: [{ id: 'fx-1' }], error: null })
@@ -93,6 +102,12 @@ describe('registerLeagueTeam', () => {
 
 describe('addLeaguePlayer', () => {
   const validInput = { teamId: 'team-1', name: 'New Player', dateOfBirth: '2014-05-05', squadNumber: 9 }
+
+  it('rejects an invalid squad number before touching the database', async () => {
+    const result = await addLeaguePlayer({ ...validInput, squadNumber: -1 })
+    expect(result.error).toBe('Squad number must be a whole number greater than 0.')
+    expect(mockSupabase.insert).not.toHaveBeenCalled()
+  })
 
   it('rejects when the team does not exist', async () => {
     mockSupabase.single.mockResolvedValueOnce({ data: null, error: null })

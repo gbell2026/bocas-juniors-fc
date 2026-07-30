@@ -15,6 +15,10 @@ export type RegisterLeagueTeamInput = {
 
 export type RegisterLeagueTeamResult = { clubId?: string; teamId?: string; error?: string }
 
+function isValidSquadNumber(n: number) {
+  return Number.isInteger(n) && n > 0
+}
+
 // Public, unauthenticated: a club registering a brand-new team. Creates a
 // club + team + initial roster in one submission, all landing as 'pending'.
 // Rolls back everything already inserted if a later step fails, since a
@@ -22,6 +26,9 @@ export type RegisterLeagueTeamResult = { clubId?: string; teamId?: string; error
 // admin approval queue to sort through.
 export async function registerLeagueTeam(input: RegisterLeagueTeamInput): Promise<RegisterLeagueTeamResult> {
   if (input.players.length === 0) return { error: 'At least one player is required' }
+  if (input.players.some(p => !isValidSquadNumber(p.squadNumber))) {
+    return { error: 'Squad numbers must be whole numbers greater than 0.' }
+  }
 
   const supabase = createSupabaseServiceClient()
 
@@ -87,6 +94,10 @@ export type AddLeaguePlayerInput = {
 // the public dropdown should only ever list approved teams, but this closes
 // the gap against a stale/direct call.
 export async function addLeaguePlayer(input: AddLeaguePlayerInput): Promise<{ error?: string }> {
+  if (!isValidSquadNumber(input.squadNumber)) {
+    return { error: 'Squad number must be a whole number greater than 0.' }
+  }
+
   const supabase = createSupabaseServiceClient()
 
   const { data: team } = await supabase
