@@ -26,25 +26,31 @@ export function LeaguePendingQueue({ clubs: initialClubs, teams: initialTeams, p
     setProcessing(prev => new Set(prev).add(id))
     try {
       await fn()
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
     } finally {
       setProcessing(prev => { const s = new Set(prev); s.delete(id); return s })
     }
   }
 
   const handleApproveClub = (id: string) => withProcessing(id, async () => {
-    await approveLeagueClub(id)
+    const result = await approveLeagueClub(id)
+    if (result.error) { setErrorMessage(result.error); return }
     setClubs(prev => prev.filter(c => c.id !== id))
   })
   const handleRejectClub = (id: string) => withProcessing(id, async () => {
-    await rejectLeagueClub(id)
+    const result = await rejectLeagueClub(id)
+    if (result.error) { setErrorMessage(result.error); return }
     setClubs(prev => prev.filter(c => c.id !== id))
   })
   const handleApproveTeam = (id: string) => withProcessing(id, async () => {
-    await approveLeagueTeam(id)
+    const result = await approveLeagueTeam(id)
+    if (result.error) { setErrorMessage(result.error); return }
     setTeams(prev => prev.filter(t => t.id !== id))
   })
   const handleRejectTeam = (id: string) => withProcessing(id, async () => {
-    await rejectLeagueTeam(id)
+    const result = await rejectLeagueTeam(id)
+    if (result.error) { setErrorMessage(result.error); return }
     setTeams(prev => prev.filter(t => t.id !== id))
   })
   const handleApprovePlayer = (id: string) => withProcessing(id, async () => {
@@ -53,7 +59,8 @@ export function LeaguePendingQueue({ clubs: initialClubs, teams: initialTeams, p
     setPlayers(prev => prev.filter(p => p.id !== id))
   })
   const handleRejectPlayer = (id: string) => withProcessing(id, async () => {
-    await rejectLeaguePlayer(id)
+    const result = await rejectLeaguePlayer(id)
+    if (result.error) { setErrorMessage(result.error); return }
     setPlayers(prev => prev.filter(p => p.id !== id))
   })
 
@@ -76,7 +83,7 @@ export function LeaguePendingQueue({ clubs: initialClubs, teams: initialTeams, p
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
                   <button onClick={() => handleApproveClub(c.id)} disabled={processing.has(c.id)} className="btn-primary text-xs px-3 py-1.5">Approve</button>
-                  <button onClick={() => handleRejectClub(c.id)} disabled={processing.has(c.id)} className="btn-secondary text-xs px-3 py-1.5">Reject</button>
+                  <button onClick={() => handleRejectClub(c.id)} disabled={processing.has(c.id)} className="btn-secondary text-xs px-3 py-1.5 disabled:opacity-50">Reject</button>
                 </div>
               </div>
             ))}
@@ -96,7 +103,7 @@ export function LeaguePendingQueue({ clubs: initialClubs, teams: initialTeams, p
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
                   <button onClick={() => handleApproveTeam(t.id)} disabled={processing.has(t.id)} className="btn-primary text-xs px-3 py-1.5">Approve</button>
-                  <button onClick={() => handleRejectTeam(t.id)} disabled={processing.has(t.id)} className="btn-secondary text-xs px-3 py-1.5">Reject</button>
+                  <button onClick={() => handleRejectTeam(t.id)} disabled={processing.has(t.id)} className="btn-secondary text-xs px-3 py-1.5 disabled:opacity-50">Reject</button>
                 </div>
               </div>
             ))}
@@ -116,7 +123,7 @@ export function LeaguePendingQueue({ clubs: initialClubs, teams: initialTeams, p
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
                   <button onClick={() => handleApprovePlayer(p.id)} disabled={processing.has(p.id)} className="btn-primary text-xs px-3 py-1.5">Approve</button>
-                  <button onClick={() => handleRejectPlayer(p.id)} disabled={processing.has(p.id)} className="btn-secondary text-xs px-3 py-1.5">Reject</button>
+                  <button onClick={() => handleRejectPlayer(p.id)} disabled={processing.has(p.id)} className="btn-secondary text-xs px-3 py-1.5 disabled:opacity-50">Reject</button>
                 </div>
               </div>
             ))}

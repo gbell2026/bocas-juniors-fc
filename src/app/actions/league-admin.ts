@@ -10,14 +10,18 @@ export async function getPendingLeagueClubs() {
   return data ?? []
 }
 
-export async function approveLeagueClub(id: string) {
+export async function approveLeagueClub(id: string): Promise<{ error?: string }> {
   const supabase = createSupabaseServiceClient()
-  await supabase.from('league_clubs').update({ status: 'approved', updated_at: new Date().toISOString() }).eq('id', id)
+  const { error } = await supabase.from('league_clubs').update({ status: 'approved', updated_at: new Date().toISOString() }).eq('id', id)
+  if (error) return { error: 'Failed to approve club' }
+  return {}
 }
 
-export async function rejectLeagueClub(id: string) {
+export async function rejectLeagueClub(id: string): Promise<{ error?: string }> {
   const supabase = createSupabaseServiceClient()
-  await supabase.from('league_clubs').update({ status: 'rejected', updated_at: new Date().toISOString() }).eq('id', id)
+  const { error } = await supabase.from('league_clubs').update({ status: 'rejected', updated_at: new Date().toISOString() }).eq('id', id)
+  if (error) return { error: 'Failed to reject club' }
+  return {}
 }
 
 // --- Teams ---
@@ -38,14 +42,18 @@ export async function getPendingLeagueTeams() {
   }))
 }
 
-export async function approveLeagueTeam(id: string) {
+export async function approveLeagueTeam(id: string): Promise<{ error?: string }> {
   const supabase = createSupabaseServiceClient()
-  await supabase.from('league_teams').update({ status: 'approved', updated_at: new Date().toISOString() }).eq('id', id)
+  const { error } = await supabase.from('league_teams').update({ status: 'approved', updated_at: new Date().toISOString() }).eq('id', id)
+  if (error) return { error: 'Failed to approve team' }
+  return {}
 }
 
-export async function rejectLeagueTeam(id: string) {
+export async function rejectLeagueTeam(id: string): Promise<{ error?: string }> {
   const supabase = createSupabaseServiceClient()
-  await supabase.from('league_teams').update({ status: 'rejected', updated_at: new Date().toISOString() }).eq('id', id)
+  const { error } = await supabase.from('league_teams').update({ status: 'rejected', updated_at: new Date().toISOString() }).eq('id', id)
+  if (error) return { error: 'Failed to reject team' }
+  return {}
 }
 
 // --- Players ---
@@ -91,9 +99,11 @@ export async function approveLeaguePlayer(id: string): Promise<{ error?: string 
   return {}
 }
 
-export async function rejectLeaguePlayer(id: string) {
+export async function rejectLeaguePlayer(id: string): Promise<{ error?: string }> {
   const supabase = createSupabaseServiceClient()
-  await supabase.from('league_players').update({ status: 'rejected', updated_at: new Date().toISOString() }).eq('id', id)
+  const { error } = await supabase.from('league_players').update({ status: 'rejected', updated_at: new Date().toISOString() }).eq('id', id)
+  if (error) return { error: 'Failed to reject player' }
+  return {}
 }
 
 // --- Divisions & schedule generation ---

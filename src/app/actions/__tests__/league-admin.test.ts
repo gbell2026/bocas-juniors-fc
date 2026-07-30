@@ -1,6 +1,9 @@
 jest.mock('@/lib/supabase/server', () => ({ createSupabaseServiceClient: jest.fn() }))
 
-import { generateSchedule, approveLeaguePlayer, createDivision, updateDivision } from '../league-admin'
+import {
+  generateSchedule, approveLeaguePlayer, createDivision, updateDivision,
+  approveLeagueClub, rejectLeagueClub, approveLeagueTeam, rejectLeagueTeam, rejectLeaguePlayer,
+} from '../league-admin'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 
 const mockSupabase = {
@@ -114,5 +117,31 @@ describe('approveLeaguePlayer', () => {
 
     const result = await approveLeaguePlayer('player-1')
     expect(result.error).toBe('That squad number is already taken on this team — ask the club for a different number.')
+  })
+})
+
+describe('club/team/player approve-reject error surfacing', () => {
+  const cases: [string, () => Promise<{ error?: string }>, string][] = [
+    ['approveLeagueClub', () => approveLeagueClub('id-1'), 'Failed to approve club'],
+    ['rejectLeagueClub', () => rejectLeagueClub('id-1'), 'Failed to reject club'],
+    ['approveLeagueTeam', () => approveLeagueTeam('id-1'), 'Failed to approve team'],
+    ['rejectLeagueTeam', () => rejectLeagueTeam('id-1'), 'Failed to reject team'],
+    ['rejectLeaguePlayer', () => rejectLeaguePlayer('id-1'), 'Failed to reject player'],
+  ]
+
+  it.each(cases)('%s surfaces a friendly error instead of silently succeeding on a DB failure', async (_name, fn, expectedError) => {
+    mockSupabase.update.mockReturnValueOnce(mockSupabase)
+    mockSupabase.eq.mockResolvedValueOnce({ error: { message: 'db error' } })
+
+    const result = await fn()
+    expect(result.error).toBe(expectedError)
+  })
+
+  it.each(cases)('%s returns no error on success', async (_name, fn) => {
+    mockSupabase.update.mockReturnValueOnce(mockSupabase)
+    mockSupabase.eq.mockResolvedValueOnce({ error: null })
+
+    const result = await fn()
+    expect(result.error).toBeUndefined()
   })
 })
