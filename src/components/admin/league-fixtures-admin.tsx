@@ -23,7 +23,14 @@ export function LeagueFixturesAdmin({ divisions, teams }: { divisions: Division[
     setLoading(false)
   }
 
-  useEffect(() => { refresh() }, [divisionId])
+  useEffect(() => {
+    refresh()
+    // Switching divisions invalidates any in-progress "Add Fixture" selections —
+    // the previously-picked teams belong to the old division and won't appear
+    // as options in the new one, so stale state would otherwise sit there
+    // satisfying `required` with a team that isn't actually selectable anymore.
+    setNewFixture({ homeTeamId: '', awayTeamId: '', matchDate: '' })
+  }, [divisionId])
 
   const divisionTeams = teams.filter(t => t.divisionId === divisionId)
 
@@ -36,34 +43,69 @@ export function LeagueFixturesAdmin({ divisions, teams }: { divisions: Division[
     if (!draft || draft.home === '' || draft.away === '') return
     setErrorMessage(null)
     setSaving(fixtureId)
-    await recordFixtureScore(fixtureId, Number(draft.home), Number(draft.away))
-    setSaving(null)
-    await refresh()
+    try {
+      const result = await recordFixtureScore(fixtureId, Number(draft.home), Number(draft.away))
+      if (result.error) { setErrorMessage(result.error); return }
+      await refresh()
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
+    } finally {
+      setSaving(null)
+    }
   }
 
   async function handleDateChange(fixtureId: string, matchDate: string) {
     setErrorMessage(null)
     setSaving(fixtureId)
-    await updateFixture(fixtureId, { matchDate })
-    setSaving(null)
-    await refresh()
+    try {
+      const result = await updateFixture(fixtureId, { matchDate })
+      if (result.error) { setErrorMessage(result.error); return }
+      await refresh()
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
+    } finally {
+      setSaving(null)
+    }
   }
 
   async function handleTeamChange(fixtureId: string, side: 'homeTeamId' | 'awayTeamId', teamId: string) {
+    const fixture = fixtures.find(f => f.id === fixtureId)
+    const otherTeamId = side === 'homeTeamId' ? fixture?.awayTeamId : fixture?.homeTeamId
+    if (teamId === otherTeamId) {
+      setErrorMessage('A team cannot play itself — pick two different teams.')
+      return
+    }
+
     setErrorMessage(null)
     setSaving(fixtureId)
-    await updateFixture(fixtureId, { [side]: teamId })
-    setSaving(null)
-    await refresh()
+    try {
+      const result = await updateFixture(fixtureId, { [side]: teamId })
+      if (result.error) { setErrorMessage(result.error); return }
+      await refresh()
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
+    } finally {
+      setSaving(null)
+    }
   }
 
   async function handleAddFixture(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setErrorMessage(null)
-    const result = await addFixture({ divisionId, ...newFixture })
-    if (result.error) { setErrorMessage(result.error); return }
-    setNewFixture({ homeTeamId: '', awayTeamId: '', matchDate: '' })
-    await refresh()
+
+    if (newFixture.homeTeamId === newFixture.awayTeamId) {
+      setErrorMessage('Home and away team must be different.')
+      return
+    }
+
+    try {
+      const result = await addFixture({ divisionId, ...newFixture })
+      if (result.error) { setErrorMessage(result.error); return }
+      setNewFixture({ homeTeamId: '', awayTeamId: '', matchDate: '' })
+      await refresh()
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
+    }
   }
 
   return (
@@ -92,6 +134,7 @@ export function LeagueFixturesAdmin({ divisions, teams }: { divisions: Division[
             return (
               <div key={f.id} className="bg-brand-tint border border-brand-line rounded p-3 flex items-center gap-3 flex-wrap">
                 <input
+                  key={`${f.id}-${f.matchDate}`}
                   type="date"
                   className="input text-xs"
                   defaultValue={f.matchDate}
@@ -113,12 +156,12 @@ export function LeagueFixturesAdmin({ divisions, teams }: { divisions: Division[
                   {divisionTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
                 <input
-                  type="number" placeholder="H" className="input w-14 text-xs"
+                  type="number" min={0} placeholder="H" className="input w-14 text-xs"
                   value={draft.home}
                   onChange={e => setScoreDrafts(prev => ({ ...prev, [f.id]: { home: e.target.value, away: draft.away } }))}
                 />
                 <input
-                  type="number" placeholder="A" className="input w-14 text-xs"
+                  type="number" min={0} placeholder="A" className="input w-14 text-xs"
                   value={draft.away}
                   onChange={e => setScoreDrafts(prev => ({ ...prev, [f.id]: { home: draft.home, away: e.target.value } }))}
                 />

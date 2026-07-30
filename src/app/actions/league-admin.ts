@@ -217,13 +217,18 @@ export async function getFixturesForAdmin(divisionId: string) {
 
 export type UpdateFixtureInput = { matchDate?: string; homeTeamId?: string; awayTeamId?: string }
 
-export async function updateFixture(id: string, input: UpdateFixtureInput) {
+export async function updateFixture(id: string, input: UpdateFixtureInput): Promise<{ error?: string }> {
   const supabase = createSupabaseServiceClient()
   const patch: Record<string, string> = {}
   if (input.matchDate) patch.match_date = input.matchDate
   if (input.homeTeamId) patch.home_team_id = input.homeTeamId
   if (input.awayTeamId) patch.away_team_id = input.awayTeamId
-  await supabase.from('league_fixtures').update(patch).eq('id', id)
+  const { error } = await supabase.from('league_fixtures').update(patch).eq('id', id)
+  if (error) {
+    if (error.code === '23514') return { error: 'A team cannot play itself — pick two different teams.' }
+    return { error: 'Failed to update fixture' }
+  }
+  return {}
 }
 
 export async function addFixture(input: {
@@ -240,7 +245,12 @@ export async function addFixture(input: {
   return {}
 }
 
-export async function recordFixtureScore(id: string, homeScore: number, awayScore: number) {
+export async function recordFixtureScore(id: string, homeScore: number, awayScore: number): Promise<{ error?: string }> {
   const supabase = createSupabaseServiceClient()
-  await supabase.from('league_fixtures').update({ home_score: homeScore, away_score: awayScore }).eq('id', id)
+  const { error } = await supabase.from('league_fixtures').update({ home_score: homeScore, away_score: awayScore }).eq('id', id)
+  if (error) {
+    if (error.code === '23514') return { error: 'Scores cannot be negative.' }
+    return { error: 'Failed to save score' }
+  }
+  return {}
 }

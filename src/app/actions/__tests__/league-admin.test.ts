@@ -3,6 +3,7 @@ jest.mock('@/lib/supabase/server', () => ({ createSupabaseServiceClient: jest.fn
 import {
   generateSchedule, approveLeaguePlayer, createDivision, updateDivision,
   approveLeagueClub, rejectLeagueClub, approveLeagueTeam, rejectLeagueTeam, rejectLeaguePlayer,
+  updateFixture, recordFixtureScore,
 } from '../league-admin'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 
@@ -142,6 +143,42 @@ describe('club/team/player approve-reject error surfacing', () => {
     mockSupabase.eq.mockResolvedValueOnce({ error: null })
 
     const result = await fn()
+    expect(result.error).toBeUndefined()
+  })
+})
+
+describe('updateFixture', () => {
+  it('returns a friendly error when the two teams would be the same (check constraint violation)', async () => {
+    mockSupabase.update.mockReturnValueOnce(mockSupabase)
+    mockSupabase.eq.mockResolvedValueOnce({ error: { code: '23514', message: 'check constraint violation' } })
+
+    const result = await updateFixture('fx-1', { homeTeamId: 'team-1' })
+    expect(result.error).toBe('A team cannot play itself — pick two different teams.')
+  })
+
+  it('returns no error on success', async () => {
+    mockSupabase.update.mockReturnValueOnce(mockSupabase)
+    mockSupabase.eq.mockResolvedValueOnce({ error: null })
+
+    const result = await updateFixture('fx-1', { matchDate: '2026-08-15' })
+    expect(result.error).toBeUndefined()
+  })
+})
+
+describe('recordFixtureScore', () => {
+  it('returns a friendly error when a negative score violates the check constraint', async () => {
+    mockSupabase.update.mockReturnValueOnce(mockSupabase)
+    mockSupabase.eq.mockResolvedValueOnce({ error: { code: '23514', message: 'check constraint violation' } })
+
+    const result = await recordFixtureScore('fx-1', -1, 2)
+    expect(result.error).toBe('Scores cannot be negative.')
+  })
+
+  it('returns no error on success', async () => {
+    mockSupabase.update.mockReturnValueOnce(mockSupabase)
+    mockSupabase.eq.mockResolvedValueOnce({ error: null })
+
+    const result = await recordFixtureScore('fx-1', 2, 1)
     expect(result.error).toBeUndefined()
   })
 })
