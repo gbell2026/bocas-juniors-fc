@@ -10,7 +10,7 @@ export type StandingsRow = {
   points: number
 }
 
-type FixtureResult = {
+export type FixtureResult = {
   homeTeamId: string
   awayTeamId: string
   homeScore: number | null
