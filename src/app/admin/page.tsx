@@ -9,10 +9,12 @@ import { LeaguePendingQueue } from '@/components/admin/league-pending-queue'
 import { LeagueDivisions } from '@/components/admin/league-divisions'
 import { LeagueFixturesAdmin } from '@/components/admin/league-fixtures-admin'
 import { AnnouncementsAdmin } from '@/components/admin/announcements-admin'
+import { StaffAdmin } from '@/components/admin/staff-admin'
 import { getPendingPayments, getAllPlayers, getTotalRevenue, getPendingSubmissions, getGetInvolvedSubmissions } from '@/app/actions/admin'
 import { getPendingLeagueClubs, getPendingLeagueTeams, getPendingLeaguePlayers, getLeagueDivisionsAdmin } from '@/app/actions/league-admin'
 import { getApprovedTeams } from '@/app/actions/league'
 import { getAnnouncements } from '@/app/actions/announcements'
+import { getStaffMembers } from '@/app/actions/staff'
 
 export default async function AdminPage() {
   const supabase = await createSupabaseServerClient()
@@ -22,7 +24,7 @@ export default async function AdminPage() {
   const [
     players, pendingPayments, totalRevenueCents, pendingSubmissions, getInvolvedSubmissions,
     pendingLeagueClubs, pendingLeagueTeams, pendingLeaguePlayers, leagueDivisions, approvedLeagueTeams,
-    announcements,
+    announcements, staffMembers,
   ] = await Promise.all([
     getAllPlayers(),
     getPendingPayments(),
@@ -35,6 +37,7 @@ export default async function AdminPage() {
     getLeagueDivisionsAdmin(),
     getApprovedTeams(),
     getAnnouncements(),
+    getStaffMembers(),
   ])
 
   return (
@@ -64,6 +67,8 @@ export default async function AdminPage() {
       <LeagueFixturesAdmin divisions={leagueDivisions} teams={approvedLeagueTeams} />
 
       <AnnouncementsAdmin announcements={announcements} />
+
+      <StaffAdmin staff={staffMembers} />
 
       <section>
         <h2 className="font-heading text-lg uppercase tracking-wide text-brand-ink mb-3">Upload Media</h2>

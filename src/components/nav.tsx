@@ -11,6 +11,7 @@ const links = [
   { href: '/gallery', label: 'Gallery' },
   { href: '/league', label: 'League' },
   { href: '/announcements', label: 'Announcements' },
+  { href: '/team', label: 'Our Team' },
   { href: '/register', label: 'Register' },
   { href: '/contact', label: 'Contact' },
 ]
