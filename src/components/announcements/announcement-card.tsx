@@ -58,6 +58,7 @@ export function AnnouncementCard({ announcement, isLoggedIn }: { announcement: A
           <input
             className="input flex-1 text-sm"
             placeholder="Add a comment…"
+            aria-label="Add a comment"
             value={body}
             onChange={e => setBody(e.target.value)}
             required
