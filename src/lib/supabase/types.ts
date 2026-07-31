@@ -39,6 +39,65 @@ export type Database = {
   }
   public: {
     Tables: {
+      announcement_comments: {
+        Row: {
+          announcement_id: string
+          author_name: string
+          body: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          announcement_id: string
+          author_name: string
+          body: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          announcement_id?: string
+          author_name?: string
+          body?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcement_comments_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      announcements: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       get_involved_submissions: {
         Row: {
           email: string
@@ -461,6 +520,33 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_members: {
+        Row: {
+          bio: string
+          created_at: string
+          id: string
+          name: string
+          photo_cloudinary_public_id: string | null
+          role_title: string
+        }
+        Insert: {
+          bio: string
+          created_at?: string
+          id?: string
+          name: string
+          photo_cloudinary_public_id?: string | null
+          role_title: string
+        }
+        Update: {
+          bio?: string
+          created_at?: string
+          id?: string
+          name?: string
+          photo_cloudinary_public_id?: string | null
+          role_title?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           role: Database["public"]["Enums"]["user_role_type"]
@@ -667,3 +753,6 @@ export type LeagueDivision = Database['public']['Tables']['league_divisions']['R
 export type LeagueTeam = Database['public']['Tables']['league_teams']['Row']
 export type LeaguePlayer = Database['public']['Tables']['league_players']['Row']
 export type LeagueFixture = Database['public']['Tables']['league_fixtures']['Row']
+export type AnnouncementRow = Database['public']['Tables']['announcements']['Row']
+export type AnnouncementCommentRow = Database['public']['Tables']['announcement_comments']['Row']
+export type StaffMemberRow = Database['public']['Tables']['staff_members']['Row']
