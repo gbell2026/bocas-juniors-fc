@@ -23,10 +23,12 @@ Two new tables, following this codebase's existing conventions (UUID primary key
 - **`announcements`** — `title` (text), `body` (text), `created_at`
 - **`announcement_comments`** — `announcement_id` (FK → `announcements`, cascade delete), `user_id` (FK → `auth.users`), `author_name` (text, denormalized from the commenter's parent record at post time so the comment list doesn't need a join back to `parents` on every read), `body` (text), `created_at`
 
+**`author_name` fallback:** every authenticated non-admin account has a `parents` row created at registration (see `register.ts`), so this lookup should always succeed for the intended audience. If it ever doesn't (e.g. an admin account with no parent record posts a comment), fall back to `"A club member"` rather than failing the comment — this is a display nicety, not a security boundary, so it should degrade gracefully.
+
 ## Access control
 
 - Public read of announcements and comments: via `'use server'` actions using the service-role client (no RLS-based anon access, consistent with the League feature's reasoning — deny-all + service-role covers it without needing extra RLS policies).
-- Posting a comment: requires an authenticated session. The action derives `user_id` from the session server-side (never trust a client-supplied user id) and looks up the commenter's display name from their `parents` record.
+- Posting a comment: requires an authenticated session. This is a new pattern for this codebase's server actions — every existing `'use server'` action so far uses only the service-role client (which has no concept of "who's calling"). The comment-posting action needs to use **two Supabase clients**: first `createSupabaseServerClient()` (session/cookie-aware, already used in server *components* like `profile/page.tsx` but not yet inside a `'use server'` action) to call `.auth.getUser()` and get the caller's real `user_id` — never trust a client-supplied one — then `createSupabaseServiceClient()` for the actual `parents` lookup and the insert, matching how every other write in this codebase is performed. If `.auth.getUser()` returns no user, reject with an error before touching the database.
 - Creating/editing/deleting announcements, and deleting any comment: lives under `/admin`, which is already role-gated to `admin` at the middleware level — no additional access-control work needed here.
 
 ## Pages & components
