@@ -122,6 +122,7 @@ export function StaffAdmin({ staff: initial }: { staff: Staff[] }) {
                 />
                 <input
                   type="file" accept="image/*" className="input w-full"
+                  aria-label="Photo"
                   onChange={e => setEdits(prev => ({ ...prev, [s.id]: { ...prev[s.id], photoFile: e.target.files?.[0] ?? null } }))}
                 />
                 <div className="flex gap-2">
