@@ -42,6 +42,12 @@ describe('createAnnouncement', () => {
     const result = await createAnnouncement({ title: 'x', body: 'y' })
     expect(result.error).toBe('Failed to create announcement')
   })
+
+  it('rejects a blank title or body without touching the database', async () => {
+    const result = await createAnnouncement({ title: '   ', body: 'y' })
+    expect(result.error).toBe('Title and body are both required.')
+    expect(mockService.insert).not.toHaveBeenCalled()
+  })
 })
 
 describe('updateAnnouncement', () => {
@@ -57,6 +63,12 @@ describe('updateAnnouncement', () => {
     mockService.eq.mockResolvedValueOnce({ error: { message: 'db error' } })
     const result = await updateAnnouncement('a1', { title: 'x', body: 'y' })
     expect(result.error).toBe('Failed to update announcement')
+  })
+
+  it('rejects a blank title or body without touching the database', async () => {
+    const result = await updateAnnouncement('a1', { title: 'x', body: '   ' })
+    expect(result.error).toBe('Title and body are both required.')
+    expect(mockService.update).not.toHaveBeenCalled()
   })
 })
 
@@ -113,6 +125,13 @@ describe('postComment', () => {
 
     const result = await postComment('a1', 'hello')
     expect(result.error).toBe('Failed to post comment')
+  })
+
+  it('rejects a blank comment body without touching the database', async () => {
+    mockSession.auth.getUser.mockResolvedValueOnce({ data: { user: { id: 'user-1' } } })
+    const result = await postComment('a1', '   ')
+    expect(result.error).toBe('Comment cannot be empty.')
+    expect(mockService.insert).not.toHaveBeenCalled()
   })
 })
 

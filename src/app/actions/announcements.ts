@@ -29,6 +29,7 @@ export type CreateAnnouncementInput = { title: string; body: string }
 
 // Admin: create a new announcement.
 export async function createAnnouncement(input: CreateAnnouncementInput): Promise<{ error?: string }> {
+  if (!input.title.trim() || !input.body.trim()) return { error: 'Title and body are both required.' }
   const supabase = createSupabaseServiceClient()
   const { error } = await supabase.from('announcements').insert({ title: input.title, body: input.body })
   if (error) return { error: 'Failed to create announcement' }
@@ -37,6 +38,7 @@ export async function createAnnouncement(input: CreateAnnouncementInput): Promis
 
 // Admin: edit an existing announcement.
 export async function updateAnnouncement(id: string, input: CreateAnnouncementInput): Promise<{ error?: string }> {
+  if (!input.title.trim() || !input.body.trim()) return { error: 'Title and body are both required.' }
   const supabase = createSupabaseServiceClient()
   const { error } = await supabase
     .from('announcements')
@@ -62,6 +64,7 @@ export async function postComment(announcementId: string, body: string): Promise
   const supabaseSession = await createSupabaseServerClient()
   const { data: { user } } = await supabaseSession.auth.getUser()
   if (!user) return { error: 'You must be logged in to comment.' }
+  if (!body.trim()) return { error: 'Comment cannot be empty.' }
 
   const supabase = createSupabaseServiceClient()
   const { data: parent } = await supabase.from('parents').select('name').eq('user_id', user.id).single()
