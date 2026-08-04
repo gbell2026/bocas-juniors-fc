@@ -77,18 +77,21 @@ export function RegistrationForm({ onSuccess }: Props) {
 
       <fieldset className="space-y-3">
         <legend className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-2">Payment Plan</legend>
+        <p className="text-sm text-brand-muted">
+          A one-time <span className="font-bold">$30 registration fee</span> applies to every plan, paid separately and first.
+        </p>
         <label className="flex items-start gap-2 cursor-pointer">
           <input type="radio" name="paymentPlan" value="full" required className="mt-1" />
           <span>
-            <span className="block font-bold">Pay in Full — $210</span>
-            <span className="block text-sm text-brand-muted">One payment covering the whole season (August–November).</span>
+            <span className="block font-bold">Pay in Full — $210 season fee</span>
+            <span className="block text-sm text-brand-muted">One payment covering the whole season (August–November), plus the $30 registration fee.</span>
           </span>
         </label>
         <label className="flex items-start gap-2 cursor-pointer">
           <input type="radio" name="paymentPlan" value="monthly" required className="mt-1" />
           <span>
-            <span className="block font-bold">Monthly — $210 total</span>
-            <span className="block text-sm text-brand-muted">$30 in August, then $60/month September–November.</span>
+            <span className="block font-bold">Monthly — $210 season total</span>
+            <span className="block text-sm text-brand-muted">$30 in August, then $60/month September–November, plus the $30 registration fee.</span>
           </span>
         </label>
       </fieldset>
@@ -97,7 +100,7 @@ export function RegistrationForm({ onSuccess }: Props) {
         <input type="checkbox" name="agreedToTerms" required className="mt-1" />
         <span>
           I understand that regardless of the payment plan I choose, I am financially liable for
-          all registration fees for the first half of the season (August–November, $210 total),
+          the $30 one-time registration fee plus the full $210 season fee (August–November),
           even if my child stops playing before the season ends.
         </span>
       </label>

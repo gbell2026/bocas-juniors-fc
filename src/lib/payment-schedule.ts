@@ -2,11 +2,17 @@ import type { PaymentPlan, InstallmentLabel } from './supabase/types'
 
 export type Installment = { label: InstallmentLabel; amountCents: number }
 
+// One-time $30 registration fee, due first for every plan — separate from
+// and in addition to the season fee below.
+const REGISTRATION_FEE: Installment = { label: 'registration', amountCents: 3000 }
+
 const FULL_PLAN: Installment[] = [
+  REGISTRATION_FEE,
   { label: 'full', amountCents: 21000 },
 ]
 
 const MONTHLY_PLAN: Installment[] = [
+  REGISTRATION_FEE,
   { label: 'august', amountCents: 3000 },
   { label: 'september', amountCents: 6000 },
   { label: 'october', amountCents: 6000 },
@@ -33,9 +39,9 @@ export function getNextDue(
 }
 
 /**
- * "Registration fee paid" means the *first* installment in the plan's sequence
- * has a succeeded payment — regardless of whether later monthly installments
- * are still outstanding.
+ * "Registration fee paid" means the one-time $30 registration installment
+ * (always first in the sequence, for both plans) has a succeeded payment —
+ * regardless of whether the season fee itself is still outstanding.
  */
 export function isRegistrationFeePaid(plan: PaymentPlan, paidLabels: InstallmentLabel[]): boolean {
   const firstLabel = getSchedule(plan)[0].label

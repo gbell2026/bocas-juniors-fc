@@ -576,6 +576,7 @@ export type Database = {
         | "september"
         | "october"
         | "november"
+        | "registration"
       league_status_type: "pending" | "approved" | "rejected"
       media_type: "photo" | "video"
       payment_method_type: "paypal" | "monzo" | "revolut" | "cash"
@@ -719,6 +720,7 @@ export const Constants = {
         "september",
         "october",
         "november",
+        "registration",
       ],
       league_status_type: ["pending", "approved", "rejected"],
       media_type: ["photo", "video"],

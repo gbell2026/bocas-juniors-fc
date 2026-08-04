@@ -38,6 +38,32 @@ it('shows the registration fee as Outstanding when nothing has been paid yet', a
   expect(screen.getAllByText(/\$210\.00/).length).toBeGreaterThan(0)
 })
 
+it('shows a "Pay Registration Fee" heading when the registration installment is what is currently due', async () => {
+  ;(getAmountDue as jest.Mock).mockResolvedValueOnce({
+    label: 'registration', amountCents: 3000, isFirstInstallment: true,
+  })
+  render(
+    <PaymentOptionsPanel
+      playerId="p1" parentId="pa1"
+      parentName="Jane" playerName="Junior"
+    />
+  )
+  expect(await screen.findByText(/Pay Registration Fee — \$30\.00/i)).toBeInTheDocument()
+})
+
+it('shows a "Pay Membership Fee" heading once the registration fee is paid and a season installment is due', async () => {
+  ;(getAmountDue as jest.Mock).mockResolvedValueOnce({
+    label: 'full', amountCents: 21000, isFirstInstallment: false,
+  })
+  render(
+    <PaymentOptionsPanel
+      playerId="p1" parentId="pa1"
+      parentName="Jane" playerName="Junior"
+    />
+  )
+  expect(await screen.findByText(/Pay Membership Fee — \$210\.00/i)).toBeInTheDocument()
+})
+
 it('shows the registration fee as Paid but still shows the next installment due', async () => {
   ;(getAmountDue as jest.Mock).mockResolvedValueOnce({
     label: 'september', amountCents: 6000, isFirstInstallment: false,

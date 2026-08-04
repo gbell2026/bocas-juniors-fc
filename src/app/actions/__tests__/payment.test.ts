@@ -46,10 +46,16 @@ function mockGetAmountDueOnce(plan: string, succeededLabels: (string | null)[]) 
 }
 
 describe('getAmountDue', () => {
-  it('returns the full-plan amount for a full-plan player with no succeeded payments', async () => {
+  it('returns the one-time registration fee first for a full-plan player with no succeeded payments', async () => {
     mockGetAmountDueOnce('full', [])
     const result = await getAmountDue('player-1')
-    expect(result).toEqual({ label: 'full', amountCents: 21000, isFirstInstallment: true })
+    expect(result).toEqual({ label: 'registration', amountCents: 3000, isFirstInstallment: true })
+  })
+
+  it('returns the full-plan season fee once the registration fee is paid', async () => {
+    mockGetAmountDueOnce('full', ['registration'])
+    const result = await getAmountDue('player-1')
+    expect(result).toEqual({ label: 'full', amountCents: 21000, isFirstInstallment: false })
   })
 })
 
@@ -64,7 +70,7 @@ describe('requestPayment', () => {
     })
     expect(result.error).toBeUndefined()
     expect(mockSupabase.insert).toHaveBeenCalledWith(
-      expect.objectContaining({ amount: 21000, installment_label: 'full' })
+      expect.objectContaining({ amount: 3000, installment_label: 'registration' })
     )
     expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({
       to: ['g.bell2010@googlemail.com'],
@@ -73,7 +79,7 @@ describe('requestPayment', () => {
   })
 
   it('returns an error and does not insert when nothing is currently due', async () => {
-    mockGetAmountDueOnce('full', ['full']) // fully paid — nothing due
+    mockGetAmountDueOnce('full', ['registration', 'full']) // fully paid — nothing due
 
     const result = await requestPayment({
       playerId: 'p1', parentId: 'pa1', method: 'paypal',
@@ -87,7 +93,7 @@ describe('requestPayment', () => {
 
 describe('adminMarkCashPaid', () => {
   it('inserts a succeeded cash payment tagged with the currently-due installment', async () => {
-    mockGetAmountDueOnce('monthly', ['august']) // August already paid -> September ($60) is due
+    mockGetAmountDueOnce('monthly', ['registration', 'august']) // registration + August already paid -> September ($60) is due
     mockSupabase.insert.mockResolvedValue({ error: null })
 
     const result = await adminMarkCashPaid({ playerId: 'p1', parentId: 'pa1' })
@@ -98,7 +104,7 @@ describe('adminMarkCashPaid', () => {
   })
 
   it('returns an error and does not insert when nothing is currently due', async () => {
-    mockGetAmountDueOnce('monthly', ['august', 'september', 'october', 'november']) // fully paid
+    mockGetAmountDueOnce('monthly', ['registration', 'august', 'september', 'october', 'november']) // fully paid
 
     const result = await adminMarkCashPaid({ playerId: 'p1', parentId: 'pa1' })
     expect(result.error).toBe('No payment is currently due for this player')
@@ -153,7 +159,7 @@ describe('getRegFeeAlertForUser', () => {
     ;(mockSupabase.eq as jest.Mock)
       .mockImplementationOnce(() => mockSupabase) // parents .eq('user_id', ...)
       .mockImplementationOnce(() => mockSupabase) // players .eq('parent_id', ...)
-    mockGetAmountDueOnce('monthly', ['august']) // reg fee (august) already paid, September now due
+    mockGetAmountDueOnce('monthly', ['registration']) // registration fee paid, August now due
 
     const result = await getRegFeeAlertForUser('user-1')
     expect(result).toEqual({ playerId: 'player-1', regFeePaid: true })
@@ -165,7 +171,7 @@ describe('getRegFeeAlertForUser', () => {
     ;(mockSupabase.eq as jest.Mock)
       .mockImplementationOnce(() => mockSupabase) // parents .eq('user_id', ...)
       .mockImplementationOnce(() => mockSupabase) // players .eq('parent_id', ...)
-    mockGetAmountDueOnce('full', ['full']) // getAmountDue resolves null (nothing left to pay)
+    mockGetAmountDueOnce('full', ['registration', 'full']) // getAmountDue resolves null (nothing left to pay)
 
     const result = await getRegFeeAlertForUser('user-1')
     expect(result).toEqual({ playerId: 'player-1', regFeePaid: true })

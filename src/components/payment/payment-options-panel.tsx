@@ -52,6 +52,7 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
   }
 
   const fee = `$${(due.amountCents / 100).toFixed(2)}`
+  const feeTitle = due.label === 'registration' ? 'Pay Registration Fee' : 'Pay Membership Fee'
 
   async function handleConfirm(method: PaymentMethod) {
     setMethodState(s => ({ ...s, [method]: 'loading' }))
@@ -69,7 +70,7 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
   return (
     <div className="max-w-lg mx-auto py-8 px-4 space-y-6">
       {regFeeStatus}
-      <h2 className="font-heading text-brand-ink text-2xl uppercase tracking-wider">Pay Membership Fee — {fee}</h2>
+      <h2 className="font-heading text-brand-ink text-2xl uppercase tracking-wider">{feeTitle} — {fee}</h2>
       <p className="text-sm text-brand-muted">Choose a payment method below. Once you&apos;ve paid, click the confirmation button so the admin can verify your payment.</p>
 
       {/* PayPal / Card */}
