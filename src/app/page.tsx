@@ -68,10 +68,10 @@ export default function HomePage() {
             />
             <a href="https://www.tesoro-escondido.com/" target="_blank" rel="noopener noreferrer">
               <Image
-                src="/tesoro-escondido-logo.png"
+                src="/tesoro-escondido-logo.jpg"
                 alt="Tesoro Escondido Hotel & Bar"
-                width={247}
-                height={80}
+                width={240}
+                height={160}
                 className="h-20 w-auto object-contain"
               />
             </a>
