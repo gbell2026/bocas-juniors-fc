@@ -1,5 +1,11 @@
 jest.mock('@/lib/supabase/server', () => ({ createSupabaseServiceClient: jest.fn() }))
 
+// Mock Resend so the admin-notification email never makes a real network call in tests
+const mockSend = jest.fn().mockResolvedValue({ error: null })
+jest.mock('resend', () => ({
+  Resend: jest.fn().mockImplementation(() => ({ emails: { send: mockSend } })),
+}))
+
 import { requestPayment, confirmPayment, denyPayment, adminMarkCashPaid, getAmountDue, getRegFeeAlertForUser } from '../payment'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 
@@ -60,6 +66,10 @@ describe('requestPayment', () => {
     expect(mockSupabase.insert).toHaveBeenCalledWith(
       expect.objectContaining({ amount: 21000, installment_label: 'full' })
     )
+    expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({
+      to: ['g.bell2010@googlemail.com'],
+      subject: expect.stringContaining('Junior'),
+    }))
   })
 
   it('returns an error and does not insert when nothing is currently due', async () => {
@@ -71,6 +81,7 @@ describe('requestPayment', () => {
     })
     expect(result.error).toBe('No payment is currently due for this player')
     expect(mockSupabase.insert).not.toHaveBeenCalled()
+    expect(mockSend).not.toHaveBeenCalled()
   })
 })
 

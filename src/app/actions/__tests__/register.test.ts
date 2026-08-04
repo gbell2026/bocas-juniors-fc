@@ -3,6 +3,12 @@ jest.mock('@/lib/supabase/server', () => ({
   createSupabaseServiceClient: jest.fn(),
 }))
 
+// Mock Resend so the admin-notification email never makes a real network call in tests
+const mockSend = jest.fn().mockResolvedValue({ error: null })
+jest.mock('resend', () => ({
+  Resend: jest.fn().mockImplementation(() => ({ emails: { send: mockSend } })),
+}))
+
 import { registerParentAndPlayer } from '../register'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 
@@ -58,6 +64,10 @@ it('returns playerId on success', async () => {
     2,
     expect.objectContaining({ payment_plan: 'full' })
   )
+  expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({
+    to: ['g.bell2010@googlemail.com'],
+    subject: expect.stringContaining('Junior'),
+  }))
 })
 
 it('returns an error if agreedToTerms is false, without creating anything', async () => {

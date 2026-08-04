@@ -50,49 +50,56 @@ export function PendingSubmissions({ submissions: initial }: { submissions: Medi
     <section>
       <h2 className="font-heading text-lg uppercase tracking-wide text-brand-ink mb-3">Pending Submissions ({items.length})</h2>
       {error && <p className="text-brand-primary text-sm mb-2">{error}</p>}
-      <div className="space-y-3">
-        {items.map(item => (
-          <div
-            key={item.id}
-            className="flex gap-4 items-start bg-brand-tint border border-brand-line rounded p-3"
-          >
-            {/* Thumbnail */}
-            <div className="w-16 h-16 rounded bg-brand-creamAlt overflow-hidden flex-shrink-0 flex items-center justify-center">
-              {item.type === 'photo' ? (
-                <img
-                  src={`https://res.cloudinary.com/${cloud}/image/upload/w_120,h_120,c_fill,q_auto,f_auto/${item.cloudinary_public_id}`}
-                  alt={item.caption ?? ''}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span className="text-brand-mutedWarm text-2xl">▶</span>
-              )}
-            </div>
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-              <p className="text-brand-ink font-bold text-sm">{item.submitter_name ?? 'Anonymous'}</p>
-              {item.caption && <p className="text-brand-muted text-xs mt-0.5">{item.caption}</p>}
-              <p className="text-brand-mutedWarm text-xs mt-0.5">{formatDate(item.uploaded_at)}</p>
-            </div>
-            {/* Actions */}
-            <div className="flex gap-2 flex-shrink-0">
-              <button
-                onClick={() => handleApprove(item.id)}
-                disabled={processing.has(item.id)}
-                className="btn-primary text-xs px-3 py-1.5 disabled:opacity-50"
-              >
-                Approve
-              </button>
-              <button
-                onClick={() => handleReject(item)}
-                disabled={processing.has(item.id)}
-                className="text-xs px-3 py-1.5 border border-brand-primary text-brand-primary rounded font-bold uppercase tracking-wider hover:bg-brand-primary hover:text-white transition disabled:opacity-50"
-              >
-                Reject
-              </button>
-            </div>
-          </div>
-        ))}
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-brand-creamAlt">
+            <tr>
+              {['Thumbnail', 'Submitter', 'Caption', 'Date', 'Actions'].map(h => (
+                <th key={h} className="text-left p-3">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {items.map(item => (
+              <tr key={item.id} className="border-t align-top">
+                <td className="p-3">
+                  <div className="w-16 h-16 rounded bg-brand-creamAlt overflow-hidden flex items-center justify-center">
+                    {item.type === 'photo' ? (
+                      <img
+                        src={`https://res.cloudinary.com/${cloud}/image/upload/w_120,h_120,c_fill,q_auto,f_auto/${item.cloudinary_public_id}`}
+                        alt={item.caption ?? ''}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-brand-mutedWarm text-2xl">▶</span>
+                    )}
+                  </div>
+                </td>
+                <td className="p-3 font-medium">{item.submitter_name ?? 'Anonymous'}</td>
+                <td className="p-3">{item.caption || '—'}</td>
+                <td className="p-3 text-brand-mutedWarm text-xs whitespace-nowrap">{formatDate(item.uploaded_at)}</td>
+                <td className="p-3">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleApprove(item.id)}
+                      disabled={processing.has(item.id)}
+                      className="btn-primary text-xs px-3 py-1.5 disabled:opacity-50"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => handleReject(item)}
+                      disabled={processing.has(item.id)}
+                      className="text-xs px-3 py-1.5 border border-brand-primary text-brand-primary rounded font-bold uppercase tracking-wider hover:bg-brand-primary hover:text-white transition disabled:opacity-50"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </section>
   )

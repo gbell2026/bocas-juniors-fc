@@ -64,5 +64,20 @@ export async function registerParentAndPlayer(input: RegisterInput): Promise<Reg
     return { error: 'Failed to assign role' }
   }
 
+  // Notify admin (non-blocking — don't let email failures break registration)
+  try {
+    const { Resend } = await import('resend')
+    const resend = new Resend(process.env.RESEND_API_KEY)
+    const { error: emailError } = await resend.emails.send({
+      from: 'Tangerine Toucans <onboarding@resend.dev>',
+      to: ['g.bell2010@googlemail.com'],
+      subject: `New registration — ${input.playerName}`,
+      text: `New Registration\n\nPlayer: ${input.playerName}\nDate of Birth: ${input.dateOfBirth}\nPosition: ${input.position}\nPayment Plan: ${input.paymentPlan}\n\nParent: ${input.parentName}\nEmail: ${input.email}\nPhone: ${input.phone}`,
+    })
+    if (emailError) console.error('Resend error:', emailError)
+  } catch (e) {
+    console.error('Resend threw:', e)
+  }
+
   return { playerId: player.id, parentId: parent.id, userId }
 }

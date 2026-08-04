@@ -54,8 +54,21 @@ export async function requestPayment({
 
   if (error) return { error: 'Failed to create payment request' }
 
-  // MVP: log to console. Phase 2: send email via Resend.
-  console.log(`[ADMIN NOTIFY] ${method} payment requested: ${parentName} for ${playerName}`)
+  // Notify admin (non-blocking — don't let email failures break the payment request)
+  try {
+    const { Resend } = await import('resend')
+    const resend = new Resend(process.env.RESEND_API_KEY)
+    const { error: emailError } = await resend.emails.send({
+      from: 'Tangerine Toucans <onboarding@resend.dev>',
+      to: ['g.bell2010@googlemail.com'],
+      subject: `Payment reported — ${playerName} (${method})`,
+      text: `A payment has been self-reported and needs review.\n\nPlayer: ${playerName}\nParent: ${parentName}\nMethod: ${method}\nAmount: $${(due.amountCents / 100).toFixed(2)}\nInstallment: ${due.label}\n\nConfirm or deny it from /admin.`,
+    })
+    if (emailError) console.error('Resend error:', emailError)
+  } catch (e) {
+    console.error('Resend threw:', e)
+  }
+
   return {}
 }
 
