@@ -8,10 +8,14 @@ jest.mock('@/app/actions/payment', () => ({
   }),
   requestPayment: jest.fn().mockResolvedValue({}),
   getAmountDue: jest.fn().mockResolvedValue({ label: 'full', amountCents: 21000, isFirstInstallment: true }),
+  getPaymentSchedule: jest.fn().mockResolvedValue([
+    { label: 'registration', amountCents: 3000, status: 'outstanding' },
+    { label: 'full', amountCents: 21000, status: 'outstanding' },
+  ]),
 }))
 
 import { PaymentOptionsPanel } from '../payment-options-panel'
-import { getAmountDue } from '@/app/actions/payment'
+import { getAmountDue, getPaymentSchedule } from '@/app/actions/payment'
 
 it('renders all four payment method buttons', async () => {
   render(
@@ -76,6 +80,44 @@ it('shows the registration fee as Paid but still shows the next installment due'
   )
   expect(await screen.findByText(/Registration fee: Paid/i)).toBeInTheDocument()
   expect(screen.getAllByText(/\$60\.00/).length).toBeGreaterThan(0)
+})
+
+it('shows the full payment schedule as a table, so paying the registration fee does not look like everything is done', async () => {
+  ;(getAmountDue as jest.Mock).mockResolvedValueOnce({
+    label: 'august', amountCents: 3000, isFirstInstallment: false,
+  })
+  ;(getPaymentSchedule as jest.Mock).mockResolvedValueOnce([
+    { label: 'registration', amountCents: 3000, status: 'paid' },
+    { label: 'august', amountCents: 3000, status: 'outstanding' },
+    { label: 'september', amountCents: 6000, status: 'outstanding' },
+    { label: 'october', amountCents: 6000, status: 'outstanding' },
+    { label: 'november', amountCents: 6000, status: 'outstanding' },
+  ])
+  render(
+    <PaymentOptionsPanel
+      playerId="p1" parentId="pa1"
+      parentName="Jane" playerName="Junior"
+    />
+  )
+  expect(await screen.findByText('Registration Fee')).toBeInTheDocument()
+  expect(screen.getByText('September')).toBeInTheDocument()
+  expect(screen.getByText('November')).toBeInTheDocument()
+  expect(screen.getAllByText('Paid').length).toBeGreaterThan(0)
+  expect(screen.getAllByText('Outstanding').length).toBeGreaterThan(0)
+})
+
+it('marks a self-reported payment as "Pending Review" in the schedule table', async () => {
+  ;(getPaymentSchedule as jest.Mock).mockResolvedValueOnce([
+    { label: 'registration', amountCents: 3000, status: 'pending' },
+    { label: 'full', amountCents: 21000, status: 'outstanding' },
+  ])
+  render(
+    <PaymentOptionsPanel
+      playerId="p1" parentId="pa1"
+      parentName="Jane" playerName="Junior"
+    />
+  )
+  expect(await screen.findByText('Pending Review')).toBeInTheDocument()
 })
 
 it('shows the fully-paid-up message when nothing more is due', async () => {

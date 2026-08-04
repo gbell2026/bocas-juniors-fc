@@ -1,7 +1,7 @@
 'use server'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 import type { PaymentMethod, PaymentPlan, InstallmentLabel } from '@/lib/supabase/types'
-import { getNextDue } from '@/lib/payment-schedule'
+import { getNextDue, getSchedule } from '@/lib/payment-schedule'
 
 export type RequestPaymentResult = { error?: string }
 
@@ -27,6 +27,40 @@ export async function getAmountDue(playerId: string) {
     .filter((label): label is InstallmentLabel => label !== null)
 
   return getNextDue(plan, paidLabels)
+}
+
+export type ScheduleItemStatus = 'paid' | 'pending' | 'outstanding'
+export type ScheduleItem = { label: InstallmentLabel; amountCents: number; status: ScheduleItemStatus }
+
+/**
+ * Full breakdown of every installment in a player's plan (registration fee
+ * plus every season installment), each tagged with its current status.
+ * Shown as a table so a parent can see the whole picture in one place —
+ * paying the registration fee doesn't make it look like everything is done.
+ */
+export async function getPaymentSchedule(playerId: string): Promise<ScheduleItem[]> {
+  const supabase = createSupabaseServiceClient()
+
+  const { data: player } = await supabase
+    .from('players').select('payment_plan').eq('id', playerId).single()
+  const plan = (player?.payment_plan ?? 'full') as PaymentPlan
+
+  const { data: payments } = await supabase
+    .from('payments').select('installment_label, status')
+    .eq('player_id', playerId).in('status', ['succeeded', 'pending'])
+
+  const paidLabels = new Set<InstallmentLabel>()
+  const pendingLabels = new Set<InstallmentLabel>()
+  for (const p of payments ?? []) {
+    if (!p.installment_label) continue
+    if (p.status === 'succeeded') paidLabels.add(p.installment_label)
+    else if (p.status === 'pending') pendingLabels.add(p.installment_label)
+  }
+
+  return getSchedule(plan).map(inst => ({
+    ...inst,
+    status: paidLabels.has(inst.label) ? 'paid' : pendingLabels.has(inst.label) ? 'pending' : 'outstanding',
+  }))
 }
 
 // Parent-initiated: create a pending payment record for any method

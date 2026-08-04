@@ -1,16 +1,33 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getPaymentSettings, requestPayment, getAmountDue } from '@/app/actions/payment'
+import { getPaymentSettings, requestPayment, getAmountDue, getPaymentSchedule } from '@/app/actions/payment'
 import type { PaymentMethod } from '@/lib/supabase/types'
 
 type Settings = Awaited<ReturnType<typeof getPaymentSettings>>
 type AmountDue = Awaited<ReturnType<typeof getAmountDue>>
+type Schedule = Awaited<ReturnType<typeof getPaymentSchedule>>
 type Props = { playerId: string; parentId: string; parentName: string; playerName: string }
 type MethodState = 'idle' | 'awaiting_confirm' | 'loading' | 'sent' | 'error'
+
+const LABEL_DISPLAY: Record<string, string> = {
+  registration: 'Registration Fee',
+  full: 'Season Fee (Full)',
+  august: 'August',
+  september: 'September',
+  october: 'October',
+  november: 'November',
+}
+
+const STATUS_DISPLAY: Record<Schedule[number]['status'], { text: string; className: string }> = {
+  paid: { text: 'Paid', className: 'text-green-600' },
+  pending: { text: 'Pending Review', className: 'text-yellow-600' },
+  outstanding: { text: 'Outstanding', className: 'text-brand-primary' },
+}
 
 export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName }: Props) {
   const [settings, setSettings] = useState<Settings | null>(null)
   const [due, setDue] = useState<AmountDue | undefined>(undefined) // undefined = loading, null = fully paid
+  const [schedule, setSchedule] = useState<Schedule | null>(null)
   const [regFeePaid, setRegFeePaid] = useState(false)
   const [monzoCopied, setMonzoCopied] = useState(false)
   const [revolutCopied, setRevolutCopied] = useState(false)
@@ -27,8 +44,9 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
   }, [])
 
   async function refreshDue() {
-    const result = await getAmountDue(playerId)
+    const [result, sched] = await Promise.all([getAmountDue(playerId), getPaymentSchedule(playerId)])
     setDue(result)
+    setSchedule(sched)
     setRegFeePaid(result === null || !result.isFirstInstallment)
   }
 
@@ -40,10 +58,36 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
     </p>
   )
 
+  const scheduleTable = schedule && schedule.length > 0 && (
+    <div className="border border-brand-line rounded overflow-hidden">
+      <table className="w-full text-sm">
+        <thead className="bg-brand-creamAlt">
+          <tr>
+            <th className="text-left p-2">Item</th>
+            <th className="text-left p-2">Amount</th>
+            <th className="text-left p-2">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {schedule.map(item => (
+            <tr key={item.label} className="border-t">
+              <td className="p-2">{LABEL_DISPLAY[item.label] ?? item.label}</td>
+              <td className="p-2">${(item.amountCents / 100).toFixed(2)}</td>
+              <td className={`p-2 font-medium ${STATUS_DISPLAY[item.status].className}`}>
+                {STATUS_DISPLAY[item.status].text}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+
   if (due === null) {
     return (
       <div className="max-w-lg mx-auto py-8 px-4 space-y-3 text-center">
         {regFeeStatus}
+        {scheduleTable}
         <p className="font-heading text-brand-ink text-xl uppercase tracking-wider">
           You&apos;re all paid up for the season!
         </p>
@@ -70,6 +114,7 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
   return (
     <div className="max-w-lg mx-auto py-8 px-4 space-y-6">
       {regFeeStatus}
+      {scheduleTable}
       <h2 className="font-heading text-brand-ink text-2xl uppercase tracking-wider">{feeTitle} — {fee}</h2>
       <p className="text-sm text-brand-muted">Choose a payment method below. Once you&apos;ve paid, click the confirmation button so the admin can verify your payment.</p>
 

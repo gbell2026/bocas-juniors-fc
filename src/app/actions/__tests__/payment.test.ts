@@ -6,7 +6,7 @@ jest.mock('resend', () => ({
   Resend: jest.fn().mockImplementation(() => ({ emails: { send: mockSend } })),
 }))
 
-import { requestPayment, confirmPayment, denyPayment, adminMarkCashPaid, getAmountDue, getRegFeeAlertForUser } from '../payment'
+import { requestPayment, confirmPayment, denyPayment, adminMarkCashPaid, getAmountDue, getRegFeeAlertForUser, getPaymentSchedule } from '../payment'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 
 const mockSupabase = {
@@ -16,6 +16,7 @@ const mockSupabase = {
   eq: jest.fn().mockReturnThis(),
   select: jest.fn().mockReturnThis(),
   limit: jest.fn().mockReturnThis(),
+  in: jest.fn(),
   single: jest.fn(),
 }
 
@@ -44,6 +45,42 @@ function mockGetAmountDueOnce(plan: string, succeededLabels: (string | null)[]) 
       data: succeededLabels.map(installment_label => ({ installment_label })), error: null,
     }))
 }
+
+/**
+ * getPaymentSchedule makes 1 `.single()` call (player's plan) followed by
+ * 1 `.in('status', ...)` call (payments) — `.eq()` stays on its default
+ * chainable mock, no per-call queueing needed.
+ */
+function mockGetPaymentScheduleOnce(plan: string, payments: { installment_label: string; status: string }[]) {
+  mockSupabase.single.mockResolvedValueOnce({ data: { payment_plan: plan }, error: null })
+  mockSupabase.in.mockResolvedValueOnce({ data: payments, error: null })
+}
+
+describe('getPaymentSchedule', () => {
+  it('marks every installment outstanding when nothing has been paid or requested', async () => {
+    mockGetPaymentScheduleOnce('full', [])
+    const result = await getPaymentSchedule('player-1')
+    expect(result).toEqual([
+      { label: 'registration', amountCents: 3000, status: 'outstanding' },
+      { label: 'full', amountCents: 21000, status: 'outstanding' },
+    ])
+  })
+
+  it('marks a succeeded installment as paid and a pending one as pending', async () => {
+    mockGetPaymentScheduleOnce('monthly', [
+      { installment_label: 'registration', status: 'succeeded' },
+      { installment_label: 'august', status: 'pending' },
+    ])
+    const result = await getPaymentSchedule('player-1')
+    expect(result).toEqual([
+      { label: 'registration', amountCents: 3000, status: 'paid' },
+      { label: 'august', amountCents: 3000, status: 'pending' },
+      { label: 'september', amountCents: 6000, status: 'outstanding' },
+      { label: 'october', amountCents: 6000, status: 'outstanding' },
+      { label: 'november', amountCents: 6000, status: 'outstanding' },
+    ])
+  })
+})
 
 describe('getAmountDue', () => {
   it('returns the one-time registration fee first for a full-plan player with no succeeded payments', async () => {

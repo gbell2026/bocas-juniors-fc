@@ -19,7 +19,7 @@ const MONTHLY_PLAN: Installment[] = [
   { label: 'november', amountCents: 6000 },
 ]
 
-function getSchedule(plan: PaymentPlan): Installment[] {
+export function getSchedule(plan: PaymentPlan): Installment[] {
   return plan === 'full' ? FULL_PLAN : MONTHLY_PLAN
 }
 
