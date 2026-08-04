@@ -63,24 +63,35 @@ export async function getPaymentSchedule(playerId: string): Promise<ScheduleItem
   }))
 }
 
-// Parent-initiated: create a pending payment record for any method
+// Parent-initiated: create a pending payment record for a specific
+// installment. The client specifies WHICH installment it's paying (by
+// label), never the amount — the amount is always derived server-side from
+// that item's entry in the player's schedule, so a client still can't submit
+// an arbitrary amount. Validating against the live schedule (rather than
+// just "the next sequential due item") also lets a parent report more than
+// one installment in the same visit — e.g. the registration fee via cash and
+// the season fee via PayPal — without waiting for the admin to confirm the
+// first one, which could otherwise take a day or more.
 export async function requestPayment({
-  playerId, parentId, method, parentName, playerName,
+  playerId, parentId, method, parentName, playerName, label,
 }: {
   playerId: string; parentId: string; method: PaymentMethod
-  parentName: string; playerName: string
+  parentName: string; playerName: string; label: InstallmentLabel
 }): Promise<RequestPaymentResult> {
   const supabase = createSupabaseServiceClient()
 
-  const due = await getAmountDue(playerId)
-  if (!due) return { error: 'No payment is currently due for this player' }
+  const schedule = await getPaymentSchedule(playerId)
+  const item = schedule.find(i => i.label === label)
+  if (!item || item.status !== 'outstanding') {
+    return { error: 'This item is not currently payable' }
+  }
 
   const { error } = await supabase.from('payments').insert({
     parent_id: parentId,
     player_id: playerId,
     payment_method: method,
-    amount: due.amountCents,
-    installment_label: due.label,
+    amount: item.amountCents,
+    installment_label: item.label,
     currency: 'usd',
     status: 'pending',
     notes: `${method} payment requested by ${parentName} for ${playerName}`,
@@ -96,7 +107,7 @@ export async function requestPayment({
       from: 'Tangerine Toucans <onboarding@resend.dev>',
       to: ['g.bell2010@googlemail.com'],
       subject: `Payment reported — ${playerName} (${method})`,
-      text: `A payment has been self-reported and needs review.\n\nPlayer: ${playerName}\nParent: ${parentName}\nMethod: ${method}\nAmount: $${(due.amountCents / 100).toFixed(2)}\nInstallment: ${due.label}\n\nConfirm or deny it from /admin.`,
+      text: `A payment has been self-reported and needs review.\n\nPlayer: ${playerName}\nParent: ${parentName}\nMethod: ${method}\nAmount: $${(item.amountCents / 100).toFixed(2)}\nInstallment: ${item.label}\n\nConfirm or deny it from /admin.`,
     })
     if (emailError) console.error('Resend error:', emailError)
   } catch (e) {

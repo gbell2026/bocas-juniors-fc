@@ -97,13 +97,13 @@ describe('getAmountDue', () => {
 })
 
 describe('requestPayment', () => {
-  it('inserts a pending payment tagged with the currently-due installment', async () => {
-    mockGetAmountDueOnce('full', [])
+  it('inserts a pending payment for the requested installment when it is outstanding', async () => {
+    mockGetPaymentScheduleOnce('full', [])
     mockSupabase.insert.mockResolvedValue({ error: null })
 
     const result = await requestPayment({
       playerId: 'p1', parentId: 'pa1', method: 'paypal',
-      parentName: 'Jane', playerName: 'Junior',
+      parentName: 'Jane', playerName: 'Junior', label: 'registration',
     })
     expect(result.error).toBeUndefined()
     expect(mockSupabase.insert).toHaveBeenCalledWith(
@@ -115,16 +115,52 @@ describe('requestPayment', () => {
     }))
   })
 
-  it('returns an error and does not insert when nothing is currently due', async () => {
-    mockGetAmountDueOnce('full', ['registration', 'full']) // fully paid — nothing due
+  it('allows reporting the season fee while the registration fee is still pending review', async () => {
+    mockGetPaymentScheduleOnce('full', [{ installment_label: 'registration', status: 'pending' }])
+    mockSupabase.insert.mockResolvedValue({ error: null })
+
+    const result = await requestPayment({
+      playerId: 'p1', parentId: 'pa1', method: 'monzo',
+      parentName: 'Jane', playerName: 'Junior', label: 'full',
+    })
+    expect(result.error).toBeUndefined()
+    expect(mockSupabase.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: 21000, installment_label: 'full' })
+    )
+  })
+
+  it('returns an error and does not insert when the requested installment is already paid', async () => {
+    mockGetPaymentScheduleOnce('full', [{ installment_label: 'registration', status: 'succeeded' }])
 
     const result = await requestPayment({
       playerId: 'p1', parentId: 'pa1', method: 'paypal',
-      parentName: 'Jane', playerName: 'Junior',
+      parentName: 'Jane', playerName: 'Junior', label: 'registration',
     })
-    expect(result.error).toBe('No payment is currently due for this player')
+    expect(result.error).toBe('This item is not currently payable')
     expect(mockSupabase.insert).not.toHaveBeenCalled()
     expect(mockSend).not.toHaveBeenCalled()
+  })
+
+  it('returns an error and does not insert when the requested installment is already pending review', async () => {
+    mockGetPaymentScheduleOnce('full', [{ installment_label: 'registration', status: 'pending' }])
+
+    const result = await requestPayment({
+      playerId: 'p1', parentId: 'pa1', method: 'paypal',
+      parentName: 'Jane', playerName: 'Junior', label: 'registration',
+    })
+    expect(result.error).toBe('This item is not currently payable')
+    expect(mockSupabase.insert).not.toHaveBeenCalled()
+  })
+
+  it('returns an error and does not insert for a label not in the player\'s plan', async () => {
+    mockGetPaymentScheduleOnce('full', [])
+
+    const result = await requestPayment({
+      playerId: 'p1', parentId: 'pa1', method: 'paypal',
+      parentName: 'Jane', playerName: 'Junior', label: 'august',
+    })
+    expect(result.error).toBe('This item is not currently payable')
+    expect(mockSupabase.insert).not.toHaveBeenCalled()
   })
 })
 

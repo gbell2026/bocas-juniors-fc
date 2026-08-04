@@ -1,10 +1,9 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getPaymentSettings, requestPayment, getAmountDue, getPaymentSchedule } from '@/app/actions/payment'
+import { getPaymentSettings, requestPayment, getPaymentSchedule } from '@/app/actions/payment'
 import type { PaymentMethod } from '@/lib/supabase/types'
 
 type Settings = Awaited<ReturnType<typeof getPaymentSettings>>
-type AmountDue = Awaited<ReturnType<typeof getAmountDue>>
 type Schedule = Awaited<ReturnType<typeof getPaymentSchedule>>
 type Props = { playerId: string; parentId: string; parentName: string; playerName: string }
 type MethodState = 'idle' | 'awaiting_confirm' | 'loading' | 'sent' | 'error'
@@ -26,9 +25,7 @@ const STATUS_DISPLAY: Record<Schedule[number]['status'], { text: string; classNa
 
 export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName }: Props) {
   const [settings, setSettings] = useState<Settings | null>(null)
-  const [due, setDue] = useState<AmountDue | undefined>(undefined) // undefined = loading, null = fully paid
   const [schedule, setSchedule] = useState<Schedule | null>(null)
-  const [regFeePaid, setRegFeePaid] = useState(false)
   const [monzoCopied, setMonzoCopied] = useState(false)
   const [revolutCopied, setRevolutCopied] = useState(false)
   const [methodState, setMethodState] = useState<Record<PaymentMethod, MethodState>>({
@@ -37,28 +34,26 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
 
   useEffect(() => {
     getPaymentSettings().then(setSettings)
-    refreshDue()
+    refreshSchedule()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- playerId is stable for this
     // component's lifetime (a fresh instance mounts per profile view); intentionally
     // fetch-on-mount only, matching this file's existing pattern before this change.
   }, [])
 
-  async function refreshDue() {
-    const [result, sched] = await Promise.all([getAmountDue(playerId), getPaymentSchedule(playerId)])
-    setDue(result)
-    setSchedule(sched)
-    setRegFeePaid(result === null || !result.isFirstInstallment)
+  async function refreshSchedule() {
+    setSchedule(await getPaymentSchedule(playerId))
   }
 
-  if (!settings || due === undefined) return <p className="text-brand-muted py-8 text-center">Loading payment options…</p>
+  if (!settings || schedule === null) return <p className="text-brand-muted py-8 text-center">Loading payment options…</p>
 
+  const regFeePaid = schedule.find(item => item.label === 'registration')?.status === 'paid'
   const regFeeStatus = (
     <p className={`text-sm font-bold ${regFeePaid ? 'text-green-600' : 'text-brand-primary'}`}>
       Registration fee: {regFeePaid ? 'Paid' : 'Outstanding'}
     </p>
   )
 
-  const scheduleTable = schedule && schedule.length > 0 && (
+  const scheduleTable = schedule.length > 0 && (
     <div className="border border-brand-line rounded overflow-hidden">
       <table className="w-full text-sm">
         <thead className="bg-brand-creamAlt">
@@ -83,26 +78,40 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
     </div>
   )
 
-  if (due === null) {
+  // The next payable item — skips anything already paid OR already reported
+  // and awaiting admin review, so a parent isn't blocked from reporting a
+  // second installment just because the first hasn't been confirmed yet.
+  const nextActionable = schedule.find(item => item.status === 'outstanding')
+
+  if (!nextActionable) {
+    const allPaid = schedule.every(item => item.status === 'paid')
     return (
       <div className="max-w-lg mx-auto py-8 px-4 space-y-3 text-center">
         {regFeeStatus}
         {scheduleTable}
         <p className="font-heading text-brand-ink text-xl uppercase tracking-wider">
-          You&apos;re all paid up for the season!
+          {allPaid ? "You're all paid up for the season!" : 'All payments reported — awaiting admin confirmation.'}
         </p>
       </div>
     )
   }
 
-  const fee = `$${(due.amountCents / 100).toFixed(2)}`
-  const feeTitle = due.label === 'registration' ? 'Pay Registration Fee' : 'Pay Membership Fee'
+  const fee = `$${(nextActionable.amountCents / 100).toFixed(2)}`
+  const feeTitle = nextActionable.label === 'registration' ? 'Pay Registration Fee' : 'Pay Membership Fee'
+  const nextActionableLabel = nextActionable.label
 
   async function handleConfirm(method: PaymentMethod) {
     setMethodState(s => ({ ...s, [method]: 'loading' }))
-    const result = await requestPayment({ playerId, parentId, method, parentName, playerName })
-    setMethodState(s => ({ ...s, [method]: result.error ? 'error' : 'sent' }))
-    if (!result.error) refreshDue()
+    const result = await requestPayment({ playerId, parentId, method, parentName, playerName, label: nextActionableLabel })
+    if (result.error) {
+      setMethodState(s => ({ ...s, [method]: 'error' }))
+      return
+    }
+    await refreshSchedule()
+    // Reset every method's UI state — the next actionable item (if any) is a
+    // different installment, so a stale "sent" message from this one would
+    // otherwise wrongly look like it also applies to the new amount due.
+    setMethodState({ paypal: 'idle', monzo: 'idle', revolut: 'idle', cash: 'idle' })
   }
 
   function copyToClipboard(text: string, setter: (v: boolean) => void) {
