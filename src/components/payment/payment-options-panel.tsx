@@ -70,7 +70,14 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
             <tbody>
               {schedule.map(item => (
                 <tr key={item.label} className="border-t align-middle">
-                  <td className="p-2 whitespace-nowrap">{LABEL_DISPLAY[item.label] ?? item.label}</td>
+                  <td className="p-2 whitespace-nowrap">
+                    {LABEL_DISPLAY[item.label] ?? item.label}
+                    {item.discounted && (
+                      <span className="ml-1.5 text-brand-primaryDeep text-[10px] font-bold uppercase tracking-wider align-middle">
+                        50% sibling discount
+                      </span>
+                    )}
+                  </td>
                   <td className="p-2 whitespace-nowrap">${(item.amountCents / 100).toFixed(2)}</td>
                   <td className={`p-2 font-medium whitespace-nowrap ${STATUS_DISPLAY[item.status].className}`}>
                     {STATUS_DISPLAY[item.status].text}

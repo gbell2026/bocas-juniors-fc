@@ -17,6 +17,7 @@ const mockSupabase = {
   select: jest.fn().mockReturnThis(),
   limit: jest.fn().mockReturnThis(),
   in: jest.fn(),
+  order: jest.fn(),
   single: jest.fn(),
 }
 
@@ -28,77 +29,114 @@ beforeEach(() => {
 })
 
 /**
- * getAmountDue makes exactly 3 sequential `.eq()` calls per invocation:
- *   1. players  .eq('id', playerId)          -> chainable, resolved via .single()
- *   2. payments .eq('player_id', playerId)    -> chainable
- *   3. payments .eq('status', 'succeeded')    -> IS the awaited value (no .single() on this query)
- * Queue exactly 3 mockImplementationOnce calls, in that order, for every test
- * that (directly or indirectly, e.g. via requestPayment/adminMarkCashPaid) calls
- * getAmountDue once. A test calling it twice needs 6 queued, in two groups of 3.
+ * Queues the full mock sequence for ONE getAmountDue(playerId) call — it now
+ * also calls isDiscountedSibling(playerId) internally, adding a second
+ * `.single()`, two more chainable `.eq()` calls, and one `.order()` call.
+ * Must be invoked once per getAmountDue call made during a test, in the
+ * exact order those calls happen (each mock function — eq/single/order —
+ * has its own independent FIFO queue, so this only needs to get each
+ * function's own call order right, not interleave across functions).
+ *
+ * `siblingIds` is the list of player ids under the same parent, in
+ * registration order — pass a list where the target player is NOT at
+ * index 0 to simulate the discount applying. Defaults to a solo child
+ * (never discounted).
  */
-function mockGetAmountDueOnce(plan: string, succeededLabels: (string | null)[]) {
-  mockSupabase.single.mockResolvedValueOnce({ data: { payment_plan: plan }, error: null })
+function queueGetAmountDue(plan: string, succeededLabels: (string | null)[], siblingIds: string[] = ['player-1']) {
+  mockSupabase.single
+    .mockResolvedValueOnce({ data: { payment_plan: plan }, error: null }) // players.eq('id',...).single() -> plan
+    .mockResolvedValueOnce({ data: { parent_id: 'parent-1' }, error: null }) // isDiscountedSibling: players.eq('id',...).single() -> parent_id
   ;(mockSupabase.eq as jest.Mock)
-    .mockImplementationOnce(() => mockSupabase) // players .eq('id', ...)
+    .mockImplementationOnce(() => mockSupabase) // players .eq('id', ...) [plan lookup]
     .mockImplementationOnce(() => mockSupabase) // payments .eq('player_id', ...)
-    .mockImplementationOnce(() => Promise.resolve({ // payments .eq('status', 'succeeded')
+    .mockImplementationOnce(() => Promise.resolve({ // payments .eq('status', 'succeeded') -- TERMINAL
       data: succeededLabels.map(installment_label => ({ installment_label })), error: null,
     }))
+    .mockImplementationOnce(() => mockSupabase) // isDiscountedSibling: players .eq('id', ...)
+    .mockImplementationOnce(() => mockSupabase) // isDiscountedSibling: players .eq('parent_id', ...)
+  mockSupabase.order.mockResolvedValueOnce({ data: siblingIds.map(id => ({ id })), error: null }) // isDiscountedSibling: siblings list
 }
 
 /**
- * getPaymentSchedule makes 1 `.single()` call (player's plan) followed by
- * 1 `.in('status', ...)` call (payments) — `.eq()` stays on its default
- * chainable mock, no per-call queueing needed.
+ * Same idea as queueGetAmountDue, for ONE getPaymentSchedule(playerId) call.
+ * The payments query terminates via `.in()` rather than a chainable `.eq()`,
+ * so no explicit `.eq()` overrides are needed for it (both `.eq()` calls
+ * involved — players.id and the isDiscountedSibling ones — stay on the
+ * default chainable mock).
  */
-function mockGetPaymentScheduleOnce(plan: string, payments: { installment_label: string; status: string }[]) {
-  mockSupabase.single.mockResolvedValueOnce({ data: { payment_plan: plan }, error: null })
-  mockSupabase.in.mockResolvedValueOnce({ data: payments, error: null })
+function queueGetPaymentSchedule(plan: string, payments: { installment_label: string; status: string }[], siblingIds: string[] = ['player-1']) {
+  mockSupabase.single
+    .mockResolvedValueOnce({ data: { payment_plan: plan }, error: null }) // plan lookup
+    .mockResolvedValueOnce({ data: { parent_id: 'parent-1' }, error: null }) // isDiscountedSibling: parent_id
+  mockSupabase.in.mockResolvedValueOnce({ data: payments, error: null }) // payments list
+  mockSupabase.order.mockResolvedValueOnce({ data: siblingIds.map(id => ({ id })), error: null }) // siblings list
 }
 
 describe('getPaymentSchedule', () => {
   it('marks every installment outstanding when nothing has been paid or requested', async () => {
-    mockGetPaymentScheduleOnce('full', [])
+    queueGetPaymentSchedule('full', [])
     const result = await getPaymentSchedule('player-1')
     expect(result).toEqual([
-      { label: 'registration', amountCents: 3000, status: 'outstanding' },
-      { label: 'full', amountCents: 21000, status: 'outstanding' },
+      { label: 'registration', amountCents: 3000, status: 'outstanding', discounted: false },
+      { label: 'full', amountCents: 21000, status: 'outstanding', discounted: false },
     ])
   })
 
   it('marks a succeeded installment as paid and a pending one as pending', async () => {
-    mockGetPaymentScheduleOnce('monthly', [
+    queueGetPaymentSchedule('monthly', [
       { installment_label: 'registration', status: 'succeeded' },
       { installment_label: 'august', status: 'pending' },
     ])
     const result = await getPaymentSchedule('player-1')
     expect(result).toEqual([
-      { label: 'registration', amountCents: 3000, status: 'paid' },
-      { label: 'august', amountCents: 3000, status: 'pending' },
-      { label: 'september', amountCents: 6000, status: 'outstanding' },
-      { label: 'october', amountCents: 6000, status: 'outstanding' },
-      { label: 'november', amountCents: 6000, status: 'outstanding' },
+      { label: 'registration', amountCents: 3000, status: 'paid', discounted: false },
+      { label: 'august', amountCents: 3000, status: 'pending', discounted: false },
+      { label: 'september', amountCents: 6000, status: 'outstanding', discounted: false },
+      { label: 'october', amountCents: 6000, status: 'outstanding', discounted: false },
+      { label: 'november', amountCents: 6000, status: 'outstanding', discounted: false },
+    ])
+  })
+
+  it('halves season-fee amounts and flags them discounted for a second child', async () => {
+    // player-2 is at index 1 (not 0) among the siblings -> qualifies for the discount
+    queueGetPaymentSchedule('full', [], ['player-1', 'player-2'])
+    const result = await getPaymentSchedule('player-2')
+    expect(result).toEqual([
+      { label: 'registration', amountCents: 3000, status: 'outstanding', discounted: false },
+      { label: 'full', amountCents: 10500, status: 'outstanding', discounted: true },
     ])
   })
 })
 
 describe('getAmountDue', () => {
   it('returns the one-time registration fee first for a full-plan player with no succeeded payments', async () => {
-    mockGetAmountDueOnce('full', [])
+    queueGetAmountDue('full', [])
     const result = await getAmountDue('player-1')
     expect(result).toEqual({ label: 'registration', amountCents: 3000, isFirstInstallment: true })
   })
 
   it('returns the full-plan season fee once the registration fee is paid', async () => {
-    mockGetAmountDueOnce('full', ['registration'])
+    queueGetAmountDue('full', ['registration'])
     const result = await getAmountDue('player-1')
     expect(result).toEqual({ label: 'full', amountCents: 21000, isFirstInstallment: false })
+  })
+
+  it('halves the season fee for a second child', async () => {
+    queueGetAmountDue('full', ['registration'], ['player-1', 'player-2'])
+    const result = await getAmountDue('player-2')
+    expect(result).toEqual({ label: 'full', amountCents: 10500, isFirstInstallment: false })
+  })
+
+  it('does not discount the registration fee itself for a second child', async () => {
+    queueGetAmountDue('full', [], ['player-1', 'player-2'])
+    const result = await getAmountDue('player-2')
+    expect(result).toEqual({ label: 'registration', amountCents: 3000, isFirstInstallment: true })
   })
 })
 
 describe('requestPayment', () => {
   it('inserts a pending payment for the requested installment when it is outstanding', async () => {
-    mockGetPaymentScheduleOnce('full', [])
+    queueGetPaymentSchedule('full', [])
     mockSupabase.insert.mockResolvedValue({ error: null })
 
     const result = await requestPayment({
@@ -116,7 +154,7 @@ describe('requestPayment', () => {
   })
 
   it('allows reporting the season fee while the registration fee is still pending review', async () => {
-    mockGetPaymentScheduleOnce('full', [{ installment_label: 'registration', status: 'pending' }])
+    queueGetPaymentSchedule('full', [{ installment_label: 'registration', status: 'pending' }])
     mockSupabase.insert.mockResolvedValue({ error: null })
 
     const result = await requestPayment({
@@ -129,8 +167,22 @@ describe('requestPayment', () => {
     )
   })
 
+  it('inserts the discounted amount for a second child', async () => {
+    queueGetPaymentSchedule('full', [], ['player-1', 'p2'])
+    mockSupabase.insert.mockResolvedValue({ error: null })
+
+    const result = await requestPayment({
+      playerId: 'p2', parentId: 'pa1', method: 'cash',
+      parentName: 'Jane', playerName: 'Junior Two', label: 'registration',
+    })
+    expect(result.error).toBeUndefined()
+    expect(mockSupabase.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: 3000, installment_label: 'registration' })
+    )
+  })
+
   it('returns an error and does not insert when the requested installment is already paid', async () => {
-    mockGetPaymentScheduleOnce('full', [{ installment_label: 'registration', status: 'succeeded' }])
+    queueGetPaymentSchedule('full', [{ installment_label: 'registration', status: 'succeeded' }])
 
     const result = await requestPayment({
       playerId: 'p1', parentId: 'pa1', method: 'paypal',
@@ -142,7 +194,7 @@ describe('requestPayment', () => {
   })
 
   it('returns an error and does not insert when the requested installment is already pending review', async () => {
-    mockGetPaymentScheduleOnce('full', [{ installment_label: 'registration', status: 'pending' }])
+    queueGetPaymentSchedule('full', [{ installment_label: 'registration', status: 'pending' }])
 
     const result = await requestPayment({
       playerId: 'p1', parentId: 'pa1', method: 'paypal',
@@ -153,7 +205,7 @@ describe('requestPayment', () => {
   })
 
   it('returns an error and does not insert for a label not in the player\'s plan', async () => {
-    mockGetPaymentScheduleOnce('full', [])
+    queueGetPaymentSchedule('full', [])
 
     const result = await requestPayment({
       playerId: 'p1', parentId: 'pa1', method: 'paypal',
@@ -166,7 +218,7 @@ describe('requestPayment', () => {
 
 describe('adminMarkCashPaid', () => {
   it('inserts a succeeded cash payment tagged with the currently-due installment', async () => {
-    mockGetAmountDueOnce('monthly', ['registration', 'august']) // registration + August already paid -> September ($60) is due
+    queueGetAmountDue('monthly', ['registration', 'august']) // registration + August already paid -> September ($60) is due
     mockSupabase.insert.mockResolvedValue({ error: null })
 
     const result = await adminMarkCashPaid({ playerId: 'p1', parentId: 'pa1' })
@@ -177,7 +229,7 @@ describe('adminMarkCashPaid', () => {
   })
 
   it('returns an error and does not insert when nothing is currently due', async () => {
-    mockGetAmountDueOnce('monthly', ['registration', 'august', 'september', 'october', 'november']) // fully paid
+    queueGetAmountDue('monthly', ['registration', 'august', 'september', 'october', 'november']) // fully paid
 
     const result = await adminMarkCashPaid({ playerId: 'p1', parentId: 'pa1' })
     expect(result.error).toBe('No payment is currently due for this player')
@@ -206,33 +258,30 @@ describe('getRegFeeAlertForUser', () => {
 
   it('returns null when the parent has no players', async () => {
     mockSupabase.single.mockResolvedValueOnce({ data: { id: 'parent-1' }, error: null }) // parent lookup
-    mockSupabase.limit.mockResolvedValueOnce({ data: [], error: null }) // players lookup
+    ;(mockSupabase.eq as jest.Mock)
+      .mockImplementationOnce(() => mockSupabase) // parents .eq('user_id', ...)
+      .mockImplementationOnce(() => Promise.resolve({ data: [], error: null })) // players .eq('parent_id', ...) TERMINAL
     const result = await getRegFeeAlertForUser('user-1')
     expect(result).toBeNull()
   })
 
-  it('reports regFeePaid: false when the registration fee is outstanding', async () => {
+  it('reports regFeePaid: false when the (only) child\'s registration fee is outstanding', async () => {
     mockSupabase.single.mockResolvedValueOnce({ data: { id: 'parent-1' }, error: null }) // parent lookup
-    mockSupabase.limit.mockResolvedValueOnce({ data: [{ id: 'player-1' }], error: null }) // players lookup
-    // This function's own 2 .eq() calls (parent's user_id, players' parent_id) must be
-    // explicitly queued as chainable before mockGetAmountDueOnce's 3 .eq() values, since
-    // the mock's once-queue is consumed strictly in call order, not by which helper queued it.
     ;(mockSupabase.eq as jest.Mock)
       .mockImplementationOnce(() => mockSupabase) // parents .eq('user_id', ...)
-      .mockImplementationOnce(() => mockSupabase) // players .eq('parent_id', ...)
-    mockGetAmountDueOnce('full', []) // nothing paid yet
+      .mockImplementationOnce(() => Promise.resolve({ data: [{ id: 'player-1' }], error: null })) // players .eq('parent_id', ...) TERMINAL
+    queueGetAmountDue('full', []) // nothing paid yet
 
     const result = await getRegFeeAlertForUser('user-1')
     expect(result).toEqual({ playerId: 'player-1', regFeePaid: false })
   })
 
-  it('reports regFeePaid: true when the registration fee installment has been paid', async () => {
+  it('reports regFeePaid: true once the registration fee installment is paid', async () => {
     mockSupabase.single.mockResolvedValueOnce({ data: { id: 'parent-1' }, error: null })
-    mockSupabase.limit.mockResolvedValueOnce({ data: [{ id: 'player-1' }], error: null })
     ;(mockSupabase.eq as jest.Mock)
-      .mockImplementationOnce(() => mockSupabase) // parents .eq('user_id', ...)
-      .mockImplementationOnce(() => mockSupabase) // players .eq('parent_id', ...)
-    mockGetAmountDueOnce('monthly', ['registration']) // registration fee paid, August now due
+      .mockImplementationOnce(() => mockSupabase)
+      .mockImplementationOnce(() => Promise.resolve({ data: [{ id: 'player-1' }], error: null }))
+    queueGetAmountDue('monthly', ['registration']) // registration fee paid, August now due
 
     const result = await getRegFeeAlertForUser('user-1')
     expect(result).toEqual({ playerId: 'player-1', regFeePaid: true })
@@ -240,11 +289,38 @@ describe('getRegFeeAlertForUser', () => {
 
   it('reports regFeePaid: true when the whole plan is fully paid up', async () => {
     mockSupabase.single.mockResolvedValueOnce({ data: { id: 'parent-1' }, error: null })
-    mockSupabase.limit.mockResolvedValueOnce({ data: [{ id: 'player-1' }], error: null })
+    ;(mockSupabase.eq as jest.Mock)
+      .mockImplementationOnce(() => mockSupabase)
+      .mockImplementationOnce(() => Promise.resolve({ data: [{ id: 'player-1' }], error: null }))
+    queueGetAmountDue('full', ['registration', 'full']) // getAmountDue resolves null (nothing left to pay)
+
+    const result = await getRegFeeAlertForUser('user-1')
+    expect(result).toEqual({ playerId: 'player-1', regFeePaid: true })
+  })
+
+  it('checks every child and flags the one still owing, when the first child is fully paid', async () => {
+    mockSupabase.single.mockResolvedValueOnce({ data: { id: 'parent-1' }, error: null }) // parent lookup
     ;(mockSupabase.eq as jest.Mock)
       .mockImplementationOnce(() => mockSupabase) // parents .eq('user_id', ...)
-      .mockImplementationOnce(() => mockSupabase) // players .eq('parent_id', ...)
-    mockGetAmountDueOnce('full', ['registration', 'full']) // getAmountDue resolves null (nothing left to pay)
+      .mockImplementationOnce(() => Promise.resolve({ // players .eq('parent_id', ...) TERMINAL — two children
+        data: [{ id: 'player-1' }, { id: 'player-2' }], error: null,
+      }))
+    queueGetAmountDue('full', ['registration', 'full'], ['player-1']) // child 1: fully paid
+    queueGetAmountDue('full', [], ['player-1', 'player-2']) // child 2: registration fee outstanding
+
+    const result = await getRegFeeAlertForUser('user-1')
+    expect(result).toEqual({ playerId: 'player-2', regFeePaid: false })
+  })
+
+  it('reports regFeePaid: true when every child is paid up', async () => {
+    mockSupabase.single.mockResolvedValueOnce({ data: { id: 'parent-1' }, error: null })
+    ;(mockSupabase.eq as jest.Mock)
+      .mockImplementationOnce(() => mockSupabase)
+      .mockImplementationOnce(() => Promise.resolve({
+        data: [{ id: 'player-1' }, { id: 'player-2' }], error: null,
+      }))
+    queueGetAmountDue('full', ['registration', 'full'], ['player-1'])
+    queueGetAmountDue('full', ['registration', 'full'], ['player-1', 'player-2'])
 
     const result = await getRegFeeAlertForUser('user-1')
     expect(result).toEqual({ playerId: 'player-1', regFeePaid: true })

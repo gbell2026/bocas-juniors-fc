@@ -1,5 +1,5 @@
 'use server'
-import { createSupabaseServiceClient } from '@/lib/supabase/server'
+import { createSupabaseServerClient, createSupabaseServiceClient } from '@/lib/supabase/server'
 import type { PaymentPlan } from '@/lib/supabase/types'
 
 export type RegisterInput = {
@@ -80,4 +80,58 @@ export async function registerParentAndPlayer(input: RegisterInput): Promise<Reg
   }
 
   return { playerId: player.id, parentId: parent.id, userId }
+}
+
+export type AddChildInput = {
+  playerName: string; dateOfBirth: string; position: string; paymentPlan: PaymentPlan
+}
+
+export type AddChildResult =
+  | { playerId: string; error?: never }
+  | { error: string; playerId?: never }
+
+// Adds a second (or later) child to an already-registered parent — no new
+// login, no new parent record. The parent is derived from the caller's real
+// session (never a client-supplied id) via the session-aware client, then
+// the service-role client does the actual write, matching the pattern
+// established for comment authorship in announcements.ts.
+export async function addChildToParent(input: AddChildInput): Promise<AddChildResult> {
+  const supabaseSession = await createSupabaseServerClient()
+  const { data: { user } } = await supabaseSession.auth.getUser()
+  if (!user) return { error: 'You must be logged in to add a child.' }
+
+  const supabase = createSupabaseServiceClient()
+
+  const { data: parent } = await supabase.from('parents').select('id, name, email').eq('user_id', user.id).single()
+  if (!parent) return { error: 'No parent account found for this login.' }
+
+  const { data: player, error: playerError } = await supabase
+    .from('players')
+    .insert({
+      parent_id: parent.id,
+      name: input.playerName,
+      date_of_birth: input.dateOfBirth,
+      position: input.position,
+      payment_plan: input.paymentPlan,
+    })
+    .select()
+    .single()
+  if (playerError || !player) return { error: 'Failed to add player record' }
+
+  // Notify admin (non-blocking — don't let email failures break registration)
+  try {
+    const { Resend } = await import('resend')
+    const resend = new Resend(process.env.RESEND_API_KEY)
+    const { error: emailError } = await resend.emails.send({
+      from: 'Tangerine Toucans <onboarding@resend.dev>',
+      to: ['g.bell2010@googlemail.com'],
+      subject: `New registration — ${input.playerName}`,
+      text: `New Registration (additional child)\n\nPlayer: ${input.playerName}\nDate of Birth: ${input.dateOfBirth}\nPosition: ${input.position}\nPayment Plan: ${input.paymentPlan}\n\nParent: ${parent.name}\nEmail: ${parent.email}`,
+    })
+    if (emailError) console.error('Resend error:', emailError)
+  } catch (e) {
+    console.error('Resend threw:', e)
+  }
+
+  return { playerId: player.id }
 }

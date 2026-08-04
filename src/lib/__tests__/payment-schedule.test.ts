@@ -74,3 +74,29 @@ describe('getPlanTotalCents', () => {
     expect(getPlanTotalCents('monthly')).toBe(24000)
   })
 })
+
+describe('sibling discount (discounted = true)', () => {
+  it('halves the full-plan season fee but not the registration fee', () => {
+    expect(getNextDue('full', [], true)).toEqual({ label: 'registration', amountCents: 3000, isFirstInstallment: true })
+    expect(getNextDue('full', ['registration'], true)).toEqual({ label: 'full', amountCents: 10500, isFirstInstallment: false })
+  })
+
+  it('halves every monthly installment but not the registration fee', () => {
+    expect(getNextDue('monthly', ['registration'], true)).toEqual({ label: 'august', amountCents: 1500, isFirstInstallment: false })
+    expect(getNextDue('monthly', ['registration', 'august'], true)).toEqual({ label: 'september', amountCents: 3000, isFirstInstallment: false })
+    expect(getNextDue('monthly', ['registration', 'august', 'september'], true)).toEqual({ label: 'october', amountCents: 3000, isFirstInstallment: false })
+    expect(getNextDue('monthly', ['registration', 'august', 'september', 'october'], true)).toEqual({ label: 'november', amountCents: 3000, isFirstInstallment: false })
+  })
+
+  it('full plan totals $135 discounted ($30 registration + $105 season)', () => {
+    expect(getPlanTotalCents('full', true)).toBe(13500)
+  })
+
+  it('monthly plan totals $135 discounted ($30 registration + $105 season)', () => {
+    expect(getPlanTotalCents('monthly', true)).toBe(13500)
+  })
+
+  it('defaults to full price when discounted is omitted', () => {
+    expect(getNextDue('full', ['registration'])).toEqual({ label: 'full', amountCents: 21000, isFirstInstallment: false })
+  })
+})

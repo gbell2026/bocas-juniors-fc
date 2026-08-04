@@ -6,10 +6,30 @@ import { getNextDue, getSchedule } from '@/lib/payment-schedule'
 export type RequestPaymentResult = { error?: string }
 
 /**
- * Computes what a player currently owes, based on their stored payment plan
- * and which installments already have a succeeded payment. Returns null if
- * every installment in their plan is paid. This is the single source of
- * truth for "amount due" — callers must not accept a client-supplied amount.
+ * A player qualifies for the 50% sibling discount on the season fee if
+ * they're not the first-registered child under their parent (by
+ * `created_at`). A parent with no `parent_id` match or a lookup failure is
+ * treated as not discounted — never silently discount when uncertain.
+ */
+async function isDiscountedSibling(playerId: string): Promise<boolean> {
+  const supabase = createSupabaseServiceClient()
+
+  const { data: player } = await supabase
+    .from('players').select('parent_id').eq('id', playerId).single()
+  if (!player) return false
+
+  const { data: siblings } = await supabase
+    .from('players').select('id').eq('parent_id', player.parent_id).order('created_at', { ascending: true })
+  const index = (siblings ?? []).findIndex(s => s.id === playerId)
+  return index > 0
+}
+
+/**
+ * Computes what a player currently owes, based on their stored payment plan,
+ * whether they qualify for the sibling discount, and which installments
+ * already have a succeeded payment. Returns null if every installment in
+ * their plan is paid. This is the single source of truth for "amount due" —
+ * callers must not accept a client-supplied amount.
  */
 export async function getAmountDue(playerId: string) {
   const supabase = createSupabaseServiceClient()
@@ -26,11 +46,12 @@ export async function getAmountDue(playerId: string) {
     .map(p => p.installment_label)
     .filter((label): label is InstallmentLabel => label !== null)
 
-  return getNextDue(plan, paidLabels)
+  const discounted = await isDiscountedSibling(playerId)
+  return getNextDue(plan, paidLabels, discounted)
 }
 
 export type ScheduleItemStatus = 'paid' | 'pending' | 'outstanding'
-export type ScheduleItem = { label: InstallmentLabel; amountCents: number; status: ScheduleItemStatus }
+export type ScheduleItem = { label: InstallmentLabel; amountCents: number; status: ScheduleItemStatus; discounted: boolean }
 
 /**
  * Full breakdown of every installment in a player's plan (registration fee
@@ -57,9 +78,11 @@ export async function getPaymentSchedule(playerId: string): Promise<ScheduleItem
     else if (p.status === 'pending') pendingLabels.add(p.installment_label)
   }
 
-  return getSchedule(plan).map(inst => ({
+  const discounted = await isDiscountedSibling(playerId)
+  return getSchedule(plan, discounted).map(inst => ({
     ...inst,
     status: paidLabels.has(inst.label) ? 'paid' : pendingLabels.has(inst.label) ? 'pending' : 'outstanding',
+    discounted: discounted && inst.label !== 'registration',
   }))
 }
 
@@ -165,23 +188,28 @@ export async function adminMarkCashPaid({
 }
 
 // Called by the nav bar to decide whether to show a "registration fee
-// outstanding" banner for the currently logged-in parent. Follows the
-// existing single-player-per-parent assumption used elsewhere (e.g.
-// profile/page.tsx's `parent?.players?.[0]`). Returns null if the user
-// has no parent record yet, or no player registered yet — the banner
-// simply doesn't show in either case.
+// outstanding" banner for the currently logged-in parent. Checks every
+// child under the parent (not just one), since a parent can now register
+// more than one — the banner shows if ANY child still owes their
+// registration fee. Returns null if the user has no parent record yet, or
+// no player registered yet — the banner simply doesn't show in either case.
 export async function getRegFeeAlertForUser(userId: string): Promise<{ playerId: string; regFeePaid: boolean } | null> {
   const supabase = createSupabaseServiceClient()
 
   const { data: parent } = await supabase.from('parents').select('id').eq('user_id', userId).single()
   if (!parent) return null
 
-  const { data: players } = await supabase.from('players').select('id').eq('parent_id', parent.id).limit(1)
-  const player = players?.[0]
-  if (!player) return null
+  const { data: players } = await supabase.from('players').select('id').eq('parent_id', parent.id)
+  if (!players || players.length === 0) return null
 
-  const due = await getAmountDue(player.id)
-  return { playerId: player.id, regFeePaid: due === null || !due.isFirstInstallment }
+  for (const player of players) {
+    const due = await getAmountDue(player.id)
+    if (due !== null && due.isFirstInstallment) {
+      return { playerId: player.id, regFeePaid: false }
+    }
+  }
+
+  return { playerId: players[0].id, regFeePaid: true }
 }
 
 // Server action called by PaymentOptionsPanel to fetch settings for display

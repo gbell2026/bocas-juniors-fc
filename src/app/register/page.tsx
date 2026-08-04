@@ -1,8 +1,10 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { PageHeader } from '@/components/page-header'
 import { RegistrationForm } from '@/components/register/registration-form'
 import { PaymentOptionsPanel } from '@/components/payment/payment-options-panel'
+import { createBrowserClient } from '@/lib/supabase/client'
 
 type Step = 'register' | 'pay'
 type Ids = { playerId: string; parentId: string; parentName: string; playerName: string }
@@ -23,6 +25,27 @@ function StepIndicator({ step }: { step: Step }) {
 export default function RegisterPage() {
   const [step, setStep] = useState<Step>('register')
   const [ids, setIds] = useState<Ids | null>(null)
+  const [loggedIn, setLoggedIn] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    const supabase = createBrowserClient()
+    supabase.auth.getUser().then(({ data }) => setLoggedIn(!!data.user))
+  }, [])
+
+  if (loggedIn) {
+    return (
+      <main className="bg-brand-cream min-h-screen">
+        <PageHeader title="Register" subtitle="Sign your child up today" />
+        <div className="py-8 px-4 max-w-md mx-auto text-center space-y-4">
+          <p className="text-brand-ink">
+            You&apos;re already logged in. Registering another child? Add them from your profile instead —
+            no need to create a new account.
+          </p>
+          <Link href="/profile" className="btn-primary inline-block">Go to My Profile</Link>
+        </div>
+      </main>
+    )
+  }
 
   if (step === 'pay' && ids) {
     return (
