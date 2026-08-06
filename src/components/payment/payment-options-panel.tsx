@@ -57,49 +57,85 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
           You&apos;re all paid up for the season!
         </p>
       ) : (
-        <div className="overflow-x-auto border border-brand-line rounded">
-          <table className="w-full text-sm">
-            <thead className="bg-brand-creamAlt">
-              <tr>
-                <th className="text-left p-2">Item</th>
-                <th className="text-left p-2">Amount</th>
-                <th className="text-left p-2">Status</th>
-                <th className="text-left p-2">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {schedule.map(item => (
-                <tr key={item.label} className="border-t align-middle">
-                  <td className="p-2 whitespace-nowrap">
-                    {LABEL_DISPLAY[item.label] ?? item.label}
+        <>
+          {/* Mobile: stacked cards — a 4-column table doesn't fit a phone
+              screen even with horizontal scroll, and the Action column
+              (the actual "Pay" controls) ends up scrolled out of view. */}
+          <div className="sm:hidden space-y-3" data-testid="mobile-schedule">
+            {schedule.map(item => (
+              <div key={item.label} className="border border-brand-line rounded p-3 bg-brand-tint space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-bold text-brand-ink">{LABEL_DISPLAY[item.label] ?? item.label}</p>
                     {item.discounted && (
-                      <span className="ml-1.5 text-brand-primaryDeep text-[10px] font-bold uppercase tracking-wider align-middle">
-                        50% sibling discount
-                      </span>
+                      <p className="text-brand-primaryDeep text-[10px] font-bold uppercase tracking-wider">50% sibling discount</p>
                     )}
-                  </td>
-                  <td className="p-2 whitespace-nowrap">${(item.amountCents / 100).toFixed(2)}</td>
-                  <td className={`p-2 font-medium whitespace-nowrap ${STATUS_DISPLAY[item.status].className}`}>
+                  </div>
+                  <p className={`text-xs font-medium whitespace-nowrap ${STATUS_DISPLAY[item.status].className}`}>
                     {STATUS_DISPLAY[item.status].text}
-                  </td>
-                  <td className="p-2">
-                    {item.status === 'outstanding' && (
-                      <PaymentActionCell
-                        item={item}
-                        settings={settings}
-                        onReport={async method => {
-                          const result = await requestPayment({ playerId, parentId, method, parentName, playerName, label: item.label })
-                          if (!result.error) refreshSchedule()
-                          return result
-                        }}
-                      />
-                    )}
-                  </td>
+                  </p>
+                </div>
+                <p className="text-lg font-bold text-brand-ink">${(item.amountCents / 100).toFixed(2)}</p>
+                {item.status === 'outstanding' && (
+                  <PaymentActionCell
+                    item={item}
+                    settings={settings}
+                    onReport={async method => {
+                      const result = await requestPayment({ playerId, parentId, method, parentName, playerName, label: item.label })
+                      if (!result.error) refreshSchedule()
+                      return result
+                    }}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop/tablet: compact table */}
+          <div className="hidden sm:block overflow-x-auto border border-brand-line rounded" data-testid="desktop-schedule">
+            <table className="w-full text-sm">
+              <thead className="bg-brand-creamAlt">
+                <tr>
+                  <th className="text-left p-2">Item</th>
+                  <th className="text-left p-2">Amount</th>
+                  <th className="text-left p-2">Status</th>
+                  <th className="text-left p-2">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {schedule.map(item => (
+                  <tr key={item.label} className="border-t align-middle">
+                    <td className="p-2 whitespace-nowrap">
+                      {LABEL_DISPLAY[item.label] ?? item.label}
+                      {item.discounted && (
+                        <span className="ml-1.5 text-brand-primaryDeep text-[10px] font-bold uppercase tracking-wider align-middle">
+                          50% sibling discount
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-2 whitespace-nowrap">${(item.amountCents / 100).toFixed(2)}</td>
+                    <td className={`p-2 font-medium whitespace-nowrap ${STATUS_DISPLAY[item.status].className}`}>
+                      {STATUS_DISPLAY[item.status].text}
+                    </td>
+                    <td className="p-2">
+                      {item.status === 'outstanding' && (
+                        <PaymentActionCell
+                          item={item}
+                          settings={settings}
+                          onReport={async method => {
+                            const result = await requestPayment({ playerId, parentId, method, parentName, playerName, label: item.label })
+                            if (!result.error) refreshSchedule()
+                            return result
+                          }}
+                        />
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   )
