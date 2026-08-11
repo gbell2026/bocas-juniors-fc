@@ -555,27 +555,48 @@ export type Database = {
       }
       staff_members: {
         Row: {
+          background: string | null
           bio: string
           created_at: string
+          favourite_team: string | null
+          fun_fact: string | null
           id: string
           name: string
+          nationality: string | null
+          one_line_intro: string | null
+          philosophy: string | null
           photo_cloudinary_public_id: string | null
+          qualifications: string | null
           role_title: string
         }
         Insert: {
+          background?: string | null
           bio: string
           created_at?: string
+          favourite_team?: string | null
+          fun_fact?: string | null
           id?: string
           name: string
+          nationality?: string | null
+          one_line_intro?: string | null
+          philosophy?: string | null
           photo_cloudinary_public_id?: string | null
+          qualifications?: string | null
           role_title: string
         }
         Update: {
+          background?: string | null
           bio?: string
           created_at?: string
+          favourite_team?: string | null
+          fun_fact?: string | null
           id?: string
           name?: string
+          nationality?: string | null
+          one_line_intro?: string | null
+          philosophy?: string | null
           photo_cloudinary_public_id?: string | null
+          qualifications?: string | null
           role_title?: string
         }
         Relationships: []

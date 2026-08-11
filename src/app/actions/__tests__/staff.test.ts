@@ -31,6 +31,34 @@ describe('createStaffMember', () => {
     const result = await createStaffMember({ name: 'x', roleTitle: 'y', bio: 'z' })
     expect(result.error).toBe('Failed to add staff member')
   })
+
+  it('maps the optional rich bio fields to snake_case, defaulting to null when omitted', async () => {
+    mockSupabase.insert.mockResolvedValueOnce({ error: null })
+    await createStaffMember({
+      name: 'Josh', roleTitle: 'Director of Coaching', bio: 'About Josh.',
+      nationality: 'American — Colorado, USA', oneLineIntro: 'A passionate youth coach.',
+      background: 'Played since age 4.', qualifications: 'USSF National D License.',
+      philosophy: 'Fun first.', favouriteTeam: 'Any team that competes.', funFact: 'Scored an odd goal once.',
+    })
+    expect(mockSupabase.insert).toHaveBeenCalledWith(expect.objectContaining({
+      nationality: 'American — Colorado, USA',
+      one_line_intro: 'A passionate youth coach.',
+      background: 'Played since age 4.',
+      qualifications: 'USSF National D License.',
+      philosophy: 'Fun first.',
+      favourite_team: 'Any team that competes.',
+      fun_fact: 'Scored an odd goal once.',
+    }))
+  })
+
+  it('defaults every optional rich field to null when not provided', async () => {
+    mockSupabase.insert.mockResolvedValueOnce({ error: null })
+    await createStaffMember({ name: 'Jane', roleTitle: 'Coach', bio: 'Bio.' })
+    expect(mockSupabase.insert).toHaveBeenCalledWith(expect.objectContaining({
+      nationality: null, one_line_intro: null, background: null,
+      qualifications: null, philosophy: null, favourite_team: null, fun_fact: null,
+    }))
+  })
 })
 
 describe('updateStaffMember', () => {

@@ -5,7 +5,19 @@ import type { getStaffMembers } from '@/app/actions/staff'
 import { cloudinaryUrl } from '@/lib/cloudinary-url'
 
 type Staff = Awaited<ReturnType<typeof getStaffMembers>>[number]
-type EditState = { name: string; roleTitle: string; bio: string; photoFile: File | null }
+
+type FormFields = {
+  name: string; roleTitle: string; bio: string
+  nationality: string; oneLineIntro: string; background: string
+  qualifications: string; philosophy: string; favouriteTeam: string; funFact: string
+}
+type EditState = FormFields & { photoFile: File | null }
+
+const EMPTY_FORM: FormFields = {
+  name: '', roleTitle: '', bio: '',
+  nationality: '', oneLineIntro: '', background: '',
+  qualifications: '', philosophy: '', favouriteTeam: '', funFact: '',
+}
 
 async function uploadPhoto(file: File): Promise<string | undefined> {
   const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!
@@ -19,11 +31,27 @@ async function uploadPhoto(file: File): Promise<string | undefined> {
   return data.public_id as string | undefined
 }
 
+function BioFields({ value, onChange }: { value: FormFields; onChange: (next: FormFields) => void }) {
+  const inputClass = 'input w-full'
+  return (
+    <>
+      <input placeholder="Name" required className={inputClass} value={value.name} onChange={e => onChange({ ...value, name: e.target.value })} />
+      <input placeholder="Role / Title" required className={inputClass} value={value.roleTitle} onChange={e => onChange({ ...value, roleTitle: e.target.value })} />
+      <input placeholder="Nationality (optional)" className={inputClass} value={value.nationality} onChange={e => onChange({ ...value, nationality: e.target.value })} />
+      <input placeholder="One-line intro (optional)" className={inputClass} value={value.oneLineIntro} onChange={e => onChange({ ...value, oneLineIntro: e.target.value })} />
+      <textarea placeholder="About you" required rows={3} className={inputClass} value={value.bio} onChange={e => onChange({ ...value, bio: e.target.value })} />
+      <textarea placeholder="Football or coaching background (optional)" rows={2} className={inputClass} value={value.background} onChange={e => onChange({ ...value, background: e.target.value })} />
+      <textarea placeholder="Qualifications or certifications (optional)" rows={2} className={inputClass} value={value.qualifications} onChange={e => onChange({ ...value, qualifications: e.target.value })} />
+      <textarea placeholder="Coaching philosophy or approach (optional)" rows={2} className={inputClass} value={value.philosophy} onChange={e => onChange({ ...value, philosophy: e.target.value })} />
+      <input placeholder="Favourite football team (optional)" className={inputClass} value={value.favouriteTeam} onChange={e => onChange({ ...value, favouriteTeam: e.target.value })} />
+      <textarea placeholder="Something fun (optional)" rows={2} className={inputClass} value={value.funFact} onChange={e => onChange({ ...value, funFact: e.target.value })} />
+    </>
+  )
+}
+
 export function StaffAdmin({ staff: initial }: { staff: Staff[] }) {
   const [staff, setStaff] = useState(initial)
-  const [name, setName] = useState('')
-  const [roleTitle, setRoleTitle] = useState('')
-  const [bio, setBio] = useState('')
+  const [form, setForm] = useState<FormFields>(EMPTY_FORM)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [creating, setCreating] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
@@ -34,7 +62,15 @@ export function StaffAdmin({ staff: initial }: { staff: Staff[] }) {
 
   function startEdit(s: Staff) {
     setEditingId(s.id)
-    setEdits(prev => ({ ...prev, [s.id]: { name: s.name, roleTitle: s.roleTitle, bio: s.bio, photoFile: null } }))
+    setEdits(prev => ({
+      ...prev,
+      [s.id]: {
+        name: s.name, roleTitle: s.roleTitle, bio: s.bio,
+        nationality: s.nationality ?? '', oneLineIntro: s.oneLineIntro ?? '', background: s.background ?? '',
+        qualifications: s.qualifications ?? '', philosophy: s.philosophy ?? '', favouriteTeam: s.favouriteTeam ?? '', funFact: s.funFact ?? '',
+        photoFile: null,
+      },
+    }))
   }
 
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
@@ -43,9 +79,13 @@ export function StaffAdmin({ staff: initial }: { staff: Staff[] }) {
     setCreating(true)
     try {
       const photoCloudinaryPublicId = photoFile ? await uploadPhoto(photoFile) : undefined
-      const result = await createStaffMember({ name, roleTitle, bio, photoCloudinaryPublicId })
+      const result = await createStaffMember({
+        name: form.name, roleTitle: form.roleTitle, bio: form.bio, photoCloudinaryPublicId,
+        nationality: form.nationality, oneLineIntro: form.oneLineIntro, background: form.background,
+        qualifications: form.qualifications, philosophy: form.philosophy, favouriteTeam: form.favouriteTeam, funFact: form.funFact,
+      })
       if (result.error) { setErrorMessage(result.error); return }
-      setName(''); setRoleTitle(''); setBio(''); setPhotoFile(null)
+      setForm(EMPTY_FORM); setPhotoFile(null)
       window.location.reload()
     } catch {
       setErrorMessage('Something went wrong. Please try again.')
@@ -57,7 +97,7 @@ export function StaffAdmin({ staff: initial }: { staff: Staff[] }) {
   async function handleSaveEdit(id: string) {
     const edit = edits[id]
     if (!edit || !edit.name || !edit.roleTitle || !edit.bio) {
-      setErrorMessage('Name, role, and bio are all required.')
+      setErrorMessage('Name, role, and "About you" are all required.')
       return
     }
     setErrorMessage(null)
@@ -67,10 +107,19 @@ export function StaffAdmin({ staff: initial }: { staff: Staff[] }) {
       const photoCloudinaryPublicId = edit.photoFile
         ? await uploadPhoto(edit.photoFile)
         : existing?.photoCloudinaryPublicId ?? null
-      const result = await updateStaffMember(id, { name: edit.name, roleTitle: edit.roleTitle, bio: edit.bio, photoCloudinaryPublicId })
+      const result = await updateStaffMember(id, {
+        name: edit.name, roleTitle: edit.roleTitle, bio: edit.bio, photoCloudinaryPublicId,
+        nationality: edit.nationality, oneLineIntro: edit.oneLineIntro, background: edit.background,
+        qualifications: edit.qualifications, philosophy: edit.philosophy, favouriteTeam: edit.favouriteTeam, funFact: edit.funFact,
+      })
       if (result.error) { setErrorMessage(result.error); return }
       setStaff(prev => prev.map(s => s.id === id
-        ? { ...s, name: edit.name, roleTitle: edit.roleTitle, bio: edit.bio, photoCloudinaryPublicId: photoCloudinaryPublicId ?? null }
+        ? {
+            ...s, name: edit.name, roleTitle: edit.roleTitle, bio: edit.bio, photoCloudinaryPublicId: photoCloudinaryPublicId ?? null,
+            nationality: edit.nationality || null, oneLineIntro: edit.oneLineIntro || null, background: edit.background || null,
+            qualifications: edit.qualifications || null, philosophy: edit.philosophy || null,
+            favouriteTeam: edit.favouriteTeam || null, funFact: edit.funFact || null,
+          }
         : s
       ))
       setEditingId(null)
@@ -105,20 +154,9 @@ export function StaffAdmin({ staff: initial }: { staff: Staff[] }) {
           <div key={s.id} className="bg-brand-tint border border-brand-line rounded p-3">
             {editingId === s.id ? (
               <div className="space-y-2">
-                <input
-                  className="input w-full" placeholder="Name"
-                  value={edits[s.id]?.name ?? ''}
-                  onChange={e => setEdits(prev => ({ ...prev, [s.id]: { ...prev[s.id], name: e.target.value } }))}
-                />
-                <input
-                  className="input w-full" placeholder="Role / Title"
-                  value={edits[s.id]?.roleTitle ?? ''}
-                  onChange={e => setEdits(prev => ({ ...prev, [s.id]: { ...prev[s.id], roleTitle: e.target.value } }))}
-                />
-                <textarea
-                  className="input w-full" rows={3} placeholder="Bio"
-                  value={edits[s.id]?.bio ?? ''}
-                  onChange={e => setEdits(prev => ({ ...prev, [s.id]: { ...prev[s.id], bio: e.target.value } }))}
+                <BioFields
+                  value={edits[s.id]}
+                  onChange={next => setEdits(prev => ({ ...prev, [s.id]: { ...prev[s.id], ...next } }))}
                 />
                 <input
                   type="file" accept="image/*" className="input w-full"
@@ -163,9 +201,7 @@ export function StaffAdmin({ staff: initial }: { staff: Staff[] }) {
 
       <form onSubmit={handleCreate} className="border border-brand-line rounded p-4 space-y-3">
         <p className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs">Add Staff Member</p>
-        <input placeholder="Name" required className="input w-full" value={name} onChange={e => setName(e.target.value)} />
-        <input placeholder="Role / Title" required className="input w-full" value={roleTitle} onChange={e => setRoleTitle(e.target.value)} />
-        <textarea placeholder="Bio" required rows={3} className="input w-full" value={bio} onChange={e => setBio(e.target.value)} />
+        <BioFields value={form} onChange={setForm} />
         <div>
           <label htmlFor="staffPhoto" className="block text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-1">Photo (optional)</label>
           <input id="staffPhoto" type="file" accept="image/*" className="input w-full" onChange={e => setPhotoFile(e.target.files?.[0] ?? null)} />
