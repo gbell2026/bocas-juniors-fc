@@ -3,11 +3,14 @@ import Link from 'next/link'
 import { getUpcomingSchedule } from '@/app/actions/schedule'
 import { UpcomingSchedule } from '@/components/upcoming-schedule'
 
-// Without this, Next.js statically generates the homepage at build time
+// Without these, Next.js statically generates the homepage at build time
 // (getUpcomingSchedule has no cookies/headers dependency to signal
-// otherwise) and would cache the schedule until the next deploy — a
-// newly-added practice or a same-day cancellation wouldn't show up.
+// otherwise) and caches the schedule — both the route itself (dynamic) and
+// the underlying Supabase fetch calls (revalidate) need to be forced fresh,
+// or a stale cached result (e.g. "no practices yet", from before one was
+// added) can persist and get served instead of current data.
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export default async function HomePage() {
   const schedule = await getUpcomingSchedule()
