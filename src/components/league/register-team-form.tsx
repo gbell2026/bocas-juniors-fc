@@ -1,19 +1,19 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { registerLeagueTeam, addLeaguePlayer, getOpenDivisions, getApprovedTeams } from '@/app/actions/league'
+import { registerLeagueTeam, addLeaguePlayer, addLeagueTeam, getOpenDivisions, getApprovedTeams, getApprovedClubs } from '@/app/actions/league'
 
-type Mode = 'newTeam' | 'addPlayer'
-type PlayerRow = { name: string; dateOfBirth: string; squadNumber: string }
+type Mode = 'newTeam' | 'addTeam' | 'addPlayer'
 type Division = Awaited<ReturnType<typeof getOpenDivisions>>[number]
 type ApprovedTeam = Awaited<ReturnType<typeof getApprovedTeams>>[number]
+type ApprovedClub = Awaited<ReturnType<typeof getApprovedClubs>>[number]
 
-const emptyPlayerRow: PlayerRow = { name: '', dateOfBirth: '', squadNumber: '' }
 const labelClass = 'block text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-1'
 
 export function RegisterTeamForm() {
   const [mode, setMode] = useState<Mode>('newTeam')
   const [divisions, setDivisions] = useState<Division[]>([])
   const [teams, setTeams] = useState<ApprovedTeam[]>([])
+  const [clubs, setClubs] = useState<ApprovedClub[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -25,7 +25,10 @@ export function RegisterTeamForm() {
   const [badgeFile, setBadgeFile] = useState<File | null>(null)
   const [teamName, setTeamName] = useState('')
   const [divisionId, setDivisionId] = useState('')
-  const [players, setPlayers] = useState<PlayerRow[]>([{ ...emptyPlayerRow }])
+
+  const [selectedClubId, setSelectedClubId] = useState('')
+  const [addTeamName, setAddTeamName] = useState('')
+  const [addTeamDivisionId, setAddTeamDivisionId] = useState('')
 
   const [selectedTeamId, setSelectedTeamId] = useState('')
   const [playerName, setPlayerName] = useState('')
@@ -35,19 +38,8 @@ export function RegisterTeamForm() {
   useEffect(() => {
     getOpenDivisions().then(setDivisions).catch(() => setDivisions([]))
     getApprovedTeams().then(setTeams).catch(() => setTeams([]))
+    getApprovedClubs().then(setClubs).catch(() => setClubs([]))
   }, [])
-
-  function updatePlayerRow(index: number, patch: Partial<PlayerRow>) {
-    setPlayers(prev => prev.map((p, i) => i === index ? { ...p, ...patch } : p))
-  }
-
-  function addPlayerRow() {
-    setPlayers(prev => [...prev, { ...emptyPlayerRow }])
-  }
-
-  function removePlayerRow(index: number) {
-    setPlayers(prev => prev.filter((_, i) => i !== index))
-  }
 
   async function uploadBadge(): Promise<string | undefined> {
     if (!badgeFile) return undefined
@@ -70,25 +62,36 @@ export function RegisterTeamForm() {
   async function handleNewTeamSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
-
-    if (players.some(p => !isValidSquadNumber(p.squadNumber))) {
-      setError('Squad numbers must be whole numbers greater than 0.')
-      return
-    }
-
     setLoading(true)
     try {
       const badgeCloudinaryPublicId = await uploadBadge()
       const result = await registerLeagueTeam({
-        clubName, contactName, contactEmail, contactPhone,
+        clubName,
+        contactName: contactName || undefined,
+        contactEmail: contactEmail || undefined,
+        contactPhone: contactPhone || undefined,
         badgeCloudinaryPublicId,
         teamName, divisionId,
-        players: players.map(p => ({ name: p.name, dateOfBirth: p.dateOfBirth, squadNumber: Number(p.squadNumber) })),
       })
       if (result.error) { setError(result.error); return }
       setSuccess(true)
     } catch {
       setError('Something went wrong submitting your registration. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleAddTeamSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
+    try {
+      const result = await addLeagueTeam({ clubId: selectedClubId, teamName: addTeamName, divisionId: addTeamDivisionId })
+      if (result.error) { setError(result.error); return }
+      setSuccess(true)
+    } catch {
+      setError('Something went wrong submitting your team. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -128,14 +131,22 @@ export function RegisterTeamForm() {
 
   return (
     <div className="max-w-md mx-auto space-y-6">
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         <button
           type="button"
           onClick={() => setMode('newTeam')}
           aria-pressed={mode === 'newTeam'}
           className={mode === 'newTeam' ? 'btn-primary text-sm flex-1' : 'btn-secondary text-sm flex-1'}
         >
-          Register New Team
+          Register New Club
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode('addTeam')}
+          aria-pressed={mode === 'addTeam'}
+          className={mode === 'addTeam' ? 'btn-primary text-sm flex-1' : 'btn-secondary text-sm flex-1'}
+        >
+          Add a Team
         </button>
         <button
           type="button"
@@ -147,8 +158,11 @@ export function RegisterTeamForm() {
         </button>
       </div>
 
-      {mode === 'newTeam' ? (
+      {mode === 'newTeam' && (
         <form onSubmit={handleNewTeamSubmit} className="space-y-6">
+          <p className="text-brand-muted text-xs">
+            Already registered a club? Use <span className="font-bold">Add a Team</span> instead to register another age group without re-entering your club details.
+          </p>
           <fieldset className="space-y-4">
             <legend className={labelClass}>Club Details</legend>
             <div>
@@ -156,16 +170,16 @@ export function RegisterTeamForm() {
               <input id="clubName" required className="input w-full" value={clubName} onChange={e => setClubName(e.target.value)} />
             </div>
             <div>
-              <label htmlFor="contactName" className={labelClass}>Contact Name</label>
-              <input id="contactName" required className="input w-full" value={contactName} onChange={e => setContactName(e.target.value)} />
+              <label htmlFor="contactName" className={labelClass}>Contact Name (optional)</label>
+              <input id="contactName" className="input w-full" value={contactName} onChange={e => setContactName(e.target.value)} />
             </div>
             <div>
-              <label htmlFor="contactEmail" className={labelClass}>Contact Email</label>
-              <input id="contactEmail" type="email" required className="input w-full" value={contactEmail} onChange={e => setContactEmail(e.target.value)} />
+              <label htmlFor="contactEmail" className={labelClass}>Contact Email (optional)</label>
+              <input id="contactEmail" type="email" className="input w-full" value={contactEmail} onChange={e => setContactEmail(e.target.value)} />
             </div>
             <div>
-              <label htmlFor="contactPhone" className={labelClass}>Contact Phone</label>
-              <input id="contactPhone" type="tel" required className="input w-full" value={contactPhone} onChange={e => setContactPhone(e.target.value)} />
+              <label htmlFor="contactPhone" className={labelClass}>Contact Phone (optional)</label>
+              <input id="contactPhone" type="tel" className="input w-full" value={contactPhone} onChange={e => setContactPhone(e.target.value)} />
             </div>
             <div>
               <label htmlFor="badgeFile" className={labelClass}>Club Badge (optional)</label>
@@ -188,45 +202,48 @@ export function RegisterTeamForm() {
             </div>
           </fieldset>
 
-          <fieldset className="space-y-3">
-            <legend className={labelClass}>Initial Roster</legend>
-            {players.map((p, i) => (
-              <div key={i} className="border border-brand-line rounded p-3 space-y-2">
-                <input
-                  placeholder="Player name" aria-label={`Player ${i + 1} name`} required className="input w-full"
-                  value={p.name} onChange={e => updatePlayerRow(i, { name: e.target.value })}
-                />
-                <div className="flex gap-2">
-                  <input
-                    type="date" aria-label={`Player ${i + 1} date of birth`} required className="input flex-1"
-                    value={p.dateOfBirth} onChange={e => updatePlayerRow(i, { dateOfBirth: e.target.value })}
-                  />
-                  <input
-                    type="number" placeholder="Squad #" aria-label={`Player ${i + 1} squad number`}
-                    min={1} step={1} required className="input w-24"
-                    value={p.squadNumber} onChange={e => updatePlayerRow(i, { squadNumber: e.target.value })}
-                  />
-                </div>
-                {players.length > 1 && (
-                  <button
-                    type="button" onClick={() => removePlayerRow(i)}
-                    aria-label={`Remove player ${i + 1}`}
-                    className="text-brand-primary text-xs"
-                  >
-                    Remove player
-                  </button>
-                )}
-              </div>
-            ))}
-            <button type="button" onClick={addPlayerRow} className="btn-secondary text-sm w-full">Add Another Player</button>
-          </fieldset>
+          <p className="text-brand-muted text-xs">
+            You can add players to your roster once this team is approved — use the <span className="font-bold">Add a Player</span> tab.
+          </p>
 
           {error && <p role="alert" className="text-red-500 text-sm">{error}</p>}
           <button type="submit" disabled={loading} className="btn-primary w-full">
             {loading ? 'Submitting…' : 'Submit Registration'}
           </button>
         </form>
-      ) : (
+      )}
+
+      {mode === 'addTeam' && (
+        <form onSubmit={handleAddTeamSubmit} className="space-y-4">
+          <p className="text-brand-muted text-xs">
+            Registering another age group for a club that&apos;s already been approved? Pick it below instead of submitting your club details again.
+          </p>
+          <div>
+            <label htmlFor="selectedClubId" className={labelClass}>Your Club</label>
+            <select id="selectedClubId" required className="input w-full" value={selectedClubId} onChange={e => setSelectedClubId(e.target.value)}>
+              <option value="">Select…</option>
+              {clubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="addTeamName" className={labelClass}>Team Name</label>
+            <input id="addTeamName" required className="input w-full" value={addTeamName} onChange={e => setAddTeamName(e.target.value)} />
+          </div>
+          <div>
+            <label htmlFor="addTeamDivisionId" className={labelClass}>Division</label>
+            <select id="addTeamDivisionId" required className="input w-full" value={addTeamDivisionId} onChange={e => setAddTeamDivisionId(e.target.value)}>
+              <option value="">Select…</option>
+              {divisions.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+          </div>
+          {error && <p role="alert" className="text-red-500 text-sm">{error}</p>}
+          <button type="submit" disabled={loading} className="btn-primary w-full">
+            {loading ? 'Submitting…' : 'Submit Team'}
+          </button>
+        </form>
+      )}
+
+      {mode === 'addPlayer' && (
         <form onSubmit={handleAddPlayerSubmit} className="space-y-4">
           <div>
             <label htmlFor="selectedTeamId" className={labelClass}>Your Team</label>

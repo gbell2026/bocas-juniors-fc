@@ -4,13 +4,12 @@ import { computeStandings } from '@/lib/league/standings'
 
 export type RegisterLeagueTeamInput = {
   clubName: string
-  contactName: string
-  contactEmail: string
-  contactPhone: string
+  contactName?: string
+  contactEmail?: string
+  contactPhone?: string
   badgeCloudinaryPublicId?: string
   teamName: string
   divisionId: string
-  players: { name: string; dateOfBirth: string; squadNumber: number }[]
 }
 
 export type RegisterLeagueTeamResult = { clubId?: string; teamId?: string; error?: string }
@@ -20,16 +19,15 @@ function isValidSquadNumber(n: number) {
 }
 
 // Public, unauthenticated: a club registering a brand-new team. Creates a
-// club + team + initial roster in one submission, all landing as 'pending'.
-// Rolls back everything already inserted if a later step fails, since a
-// half-created pending club/team with no roster is confusing junk for the
-// admin approval queue to sort through.
+// club + team, landing as 'pending'. No roster here — players are added
+// afterwards via addLeaguePlayer, once the team is approved, so a club
+// registering isn't blocked on having a finalised squad up front.
+// Contact details are optional (an admin can follow up directly once
+// approved); Club Name, Team Name, and Division stay required since a team
+// needs these to actually be schedulable. Rolls back the club if the team
+// insert fails, since a club with no team is confusing junk for the admin
+// approval queue to sort through.
 export async function registerLeagueTeam(input: RegisterLeagueTeamInput): Promise<RegisterLeagueTeamResult> {
-  if (input.players.length === 0) return { error: 'At least one player is required' }
-  if (input.players.some(p => !isValidSquadNumber(p.squadNumber))) {
-    return { error: 'Squad numbers must be whole numbers greater than 0.' }
-  }
-
   const supabase = createSupabaseServiceClient()
 
   // A division stops accepting new teams once its schedule has been
@@ -46,9 +44,9 @@ export async function registerLeagueTeam(input: RegisterLeagueTeamInput): Promis
     .from('league_clubs')
     .insert({
       name: input.clubName,
-      contact_name: input.contactName,
-      contact_email: input.contactEmail,
-      contact_phone: input.contactPhone,
+      contact_name: input.contactName || null,
+      contact_email: input.contactEmail || null,
+      contact_phone: input.contactPhone || null,
       badge_cloudinary_public_id: input.badgeCloudinaryPublicId ?? null,
     })
     .select()
@@ -65,21 +63,45 @@ export async function registerLeagueTeam(input: RegisterLeagueTeamInput): Promis
     return { error: 'Failed to create team record' }
   }
 
-  const { error: playersError } = await supabase.from('league_players').insert(
-    input.players.map(p => ({
-      team_id: team.id,
-      name: p.name,
-      date_of_birth: p.dateOfBirth,
-      squad_number: p.squadNumber,
-    }))
-  )
-  if (playersError) {
-    await supabase.from('league_teams').delete().eq('id', team.id)
-    await supabase.from('league_clubs').delete().eq('id', club.id)
-    return { error: 'Failed to register players' }
+  return { clubId: club.id, teamId: team.id }
+}
+
+// Public: approved clubs only — used by the "Add a Team" flow, letting an
+// already-approved club register another team (e.g. a second age group)
+// without re-entering their contact details or creating a duplicate club.
+export async function getApprovedClubs() {
+  const supabase = createSupabaseServiceClient()
+  const { data } = await supabase.from('league_clubs').select('id, name').eq('status', 'approved').order('name')
+  return data ?? []
+}
+
+export type AddLeagueTeamInput = { clubId: string; teamName: string; divisionId: string }
+export type AddLeagueTeamResult = { teamId?: string; error?: string }
+
+// Public: adds a new team to an already-approved club — same division-open
+// guard as registerLeagueTeam, plus confirming the club is a real, approved
+// club before attaching a team to it.
+export async function addLeagueTeam(input: AddLeagueTeamInput): Promise<AddLeagueTeamResult> {
+  const supabase = createSupabaseServiceClient()
+
+  const { data: existingFixture } = await supabase
+    .from('league_fixtures').select('id').eq('division_id', input.divisionId).limit(1)
+  if (existingFixture && existingFixture.length > 0) {
+    return { error: 'This division is no longer open for new team registrations.' }
   }
 
-  return { clubId: club.id, teamId: team.id }
+  const { data: club } = await supabase
+    .from('league_clubs').select('id').eq('id', input.clubId).eq('status', 'approved').single()
+  if (!club) return { error: 'Club not found' }
+
+  const { data: team, error: teamError } = await supabase
+    .from('league_teams')
+    .insert({ club_id: input.clubId, division_id: input.divisionId, name: input.teamName })
+    .select()
+    .single()
+  if (teamError || !team) return { error: 'Failed to create team record' }
+
+  return { teamId: team.id }
 }
 
 export type AddLeaguePlayerInput = {

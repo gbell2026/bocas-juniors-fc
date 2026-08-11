@@ -6,7 +6,7 @@ import {
   approveLeaguePlayer, rejectLeaguePlayer,
 } from '@/app/actions/league-admin'
 
-type PendingClub = { id: string; name: string; contact_name: string; contact_email: string; contact_phone: string }
+type PendingClub = { id: string; name: string; contact_name: string | null; contact_email: string | null; contact_phone: string | null }
 type PendingTeam = { id: string; name: string; clubName: string; divisionName: string }
 type PendingPlayer = { id: string; name: string; squadNumber: number; teamName: string; clubName: string }
 
@@ -83,7 +83,9 @@ export function LeaguePendingQueue({ clubs: initialClubs, teams: initialTeams, p
               <div key={c.id} className="bg-brand-tint border border-brand-line rounded p-3 flex items-center justify-between gap-4">
                 <div>
                   <p className="text-brand-ink font-bold text-sm">{c.name}</p>
-                  <p className="text-brand-muted text-xs">{c.contact_name} · {c.contact_email} · {c.contact_phone}</p>
+                  <p className="text-brand-muted text-xs">
+                    {[c.contact_name, c.contact_email, c.contact_phone].filter(Boolean).join(' · ') || 'No contact details provided'}
+                  </p>
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
                   <button onClick={() => handleApproveClub(c.id)} disabled={processing.has(c.id)} className="btn-primary text-xs px-3 py-1.5">Approve</button>

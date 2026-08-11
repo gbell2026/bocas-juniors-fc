@@ -134,9 +134,9 @@ export type Database = {
       league_clubs: {
         Row: {
           badge_cloudinary_public_id: string | null
-          contact_email: string
-          contact_name: string
-          contact_phone: string
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
           created_at: string
           id: string
           name: string
@@ -145,9 +145,9 @@ export type Database = {
         }
         Insert: {
           badge_cloudinary_public_id?: string | null
-          contact_email: string
-          contact_name: string
-          contact_phone: string
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
           created_at?: string
           id?: string
           name: string
@@ -156,9 +156,9 @@ export type Database = {
         }
         Update: {
           badge_cloudinary_public_id?: string | null
-          contact_email?: string
-          contact_name?: string
-          contact_phone?: string
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
           created_at?: string
           id?: string
           name?: string
