@@ -39,11 +39,18 @@ export function FixturesList({ divisionId }: { divisionId: string }) {
           <p className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-2">{formatMatchDate(date)}</p>
           <div className="space-y-2">
             {dayFixtures.map(f => (
-              <div key={f.id} className="bg-brand-tint border border-brand-line rounded p-3 flex items-center justify-between text-sm">
+              <div
+                key={f.id}
+                className={`bg-brand-tint border border-brand-line rounded p-3 flex items-center justify-between text-sm ${f.cancelled ? 'opacity-60' : ''}`}
+              >
                 <span className="flex-1">{f.homeTeamName}</span>
-                <span className="font-bold text-brand-ink px-3">
-                  {f.homeScore !== null && f.awayScore !== null ? `${f.homeScore} – ${f.awayScore}` : 'vs'}
-                </span>
+                {f.cancelled ? (
+                  <span className="text-red-600 text-xs font-bold uppercase tracking-wider px-3">Cancelled</span>
+                ) : (
+                  <span className="font-bold text-brand-ink px-3">
+                    {f.homeScore !== null && f.awayScore !== null ? `${f.homeScore} – ${f.awayScore}` : 'vs'}
+                  </span>
+                )}
                 <span className="flex-1 text-right">{f.awayTeamName}</span>
               </div>
             ))}

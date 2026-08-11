@@ -8,6 +8,7 @@ import { GetInvolvedSubmissions } from '@/components/admin/get-involved-submissi
 import { LeaguePendingQueue } from '@/components/admin/league-pending-queue'
 import { LeagueDivisions } from '@/components/admin/league-divisions'
 import { LeagueFixturesAdmin } from '@/components/admin/league-fixtures-admin'
+import { PracticesAdmin } from '@/components/admin/practices-admin'
 import { AnnouncementsAdmin } from '@/components/admin/announcements-admin'
 import { StaffAdmin } from '@/components/admin/staff-admin'
 import type { getAllPlayers, getPendingPayments, getPendingSubmissions, getGetInvolvedSubmissions } from '@/app/actions/admin'
@@ -15,6 +16,7 @@ import type { getPendingLeagueClubs, getPendingLeagueTeams, getPendingLeaguePlay
 import type { getApprovedTeams } from '@/app/actions/league'
 import type { getAnnouncements } from '@/app/actions/announcements'
 import type { getStaffMembers } from '@/app/actions/staff'
+import type { getAllPractices } from '@/app/actions/practices'
 
 type Tab = 'overview' | 'players' | 'submissions' | 'league' | 'content'
 
@@ -22,7 +24,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'overview', label: 'Overview' },
   { key: 'players', label: 'Players & Payments' },
   { key: 'submissions', label: 'Submissions' },
-  { key: 'league', label: 'League' },
+  { key: 'league', label: 'Schedule' },
   { key: 'content', label: 'Content' },
 ]
 
@@ -39,13 +41,14 @@ type Props = {
   approvedLeagueTeams: Awaited<ReturnType<typeof getApprovedTeams>>
   announcements: Awaited<ReturnType<typeof getAnnouncements>>
   staffMembers: Awaited<ReturnType<typeof getStaffMembers>>
+  practices: Awaited<ReturnType<typeof getAllPractices>>
   userId: string
 }
 
 export function AdminDashboard({
   totalRevenueCents, players, pendingPayments, pendingSubmissions, getInvolvedSubmissions,
   pendingLeagueClubs, pendingLeagueTeams, pendingLeaguePlayers, leagueDivisions, approvedLeagueTeams,
-  announcements, staffMembers, userId,
+  announcements, staffMembers, practices, userId,
 }: Props) {
   const [tab, setTab] = useState<Tab>('overview')
 
@@ -94,6 +97,7 @@ export function AdminDashboard({
 
       {tab === 'league' && (
         <div className="space-y-8">
+          <PracticesAdmin practices={practices} />
           <LeaguePendingQueue clubs={pendingLeagueClubs} teams={pendingLeagueTeams} players={pendingLeaguePlayers} />
           <LeagueDivisions divisions={leagueDivisions} />
           <LeagueFixturesAdmin divisions={leagueDivisions} teams={approvedLeagueTeams} />

@@ -195,6 +195,7 @@ export type Database = {
         Row: {
           away_score: number | null
           away_team_id: string
+          cancelled: boolean
           created_at: string
           division_id: string
           home_score: number | null
@@ -205,6 +206,7 @@ export type Database = {
         Insert: {
           away_score?: number | null
           away_team_id: string
+          cancelled?: boolean
           created_at?: string
           division_id: string
           home_score?: number | null
@@ -215,6 +217,7 @@ export type Database = {
         Update: {
           away_score?: number | null
           away_team_id?: string
+          cancelled?: boolean
           created_at?: string
           division_id?: string
           home_score?: number | null
@@ -502,6 +505,36 @@ export type Database = {
           },
         ]
       }
+      practices: {
+        Row: {
+          cancelled: boolean
+          created_at: string
+          id: string
+          location: string | null
+          notes: string | null
+          practice_date: string
+          practice_time: string
+        }
+        Insert: {
+          cancelled?: boolean
+          created_at?: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          practice_date: string
+          practice_time: string
+        }
+        Update: {
+          cancelled?: boolean
+          created_at?: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          practice_date?: string
+          practice_time?: string
+        }
+        Relationships: []
+      }
       settings: {
         Row: {
           key: string
@@ -758,3 +791,4 @@ export type LeagueFixture = Database['public']['Tables']['league_fixtures']['Row
 export type AnnouncementRow = Database['public']['Tables']['announcements']['Row']
 export type AnnouncementCommentRow = Database['public']['Tables']['announcement_comments']['Row']
 export type StaffMemberRow = Database['public']['Tables']['staff_members']['Row']
+export type Practice = Database['public']['Tables']['practices']['Row']

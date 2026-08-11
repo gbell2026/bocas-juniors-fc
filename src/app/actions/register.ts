@@ -79,7 +79,31 @@ export async function registerParentAndPlayer(input: RegisterInput): Promise<Reg
     console.error('Resend threw:', e)
   }
 
+  await sendParentConfirmationEmail(input.email, input.parentName, input.playerName)
+
   return { playerId: player.id, parentId: parent.id, userId }
+}
+
+// Confirmation email to the parent themselves. Non-blocking, same as the
+// admin notification. Note: this currently sends from Resend's shared
+// sandbox address (onboarding@resend.dev), which on an unverified Resend
+// account typically only delivers to the account owner's own verified
+// email — it will not reliably reach real parent inboxes until a custom
+// domain is verified in Resend and this `from` address is updated.
+async function sendParentConfirmationEmail(email: string, parentName: string, playerName: string) {
+  try {
+    const { Resend } = await import('resend')
+    const resend = new Resend(process.env.RESEND_API_KEY)
+    const { error: emailError } = await resend.emails.send({
+      from: 'Tangerine Toucans <onboarding@resend.dev>',
+      to: [email],
+      subject: `You're registered, ${parentName}!`,
+      text: `Hi ${parentName},\n\nThanks for registering ${playerName} with Tangerine Toucans FC! We're excited to have you join the club.\n\nYou can log in anytime at the club website to view your payment schedule, add another child, or check the latest news and upcoming fixtures.\n\nSee you on the pitch!\nTangerine Toucans FC`,
+    })
+    if (emailError) console.error('Resend error (parent confirmation):', emailError)
+  } catch (e) {
+    console.error('Resend threw (parent confirmation):', e)
+  }
 }
 
 export type AddChildInput = {
@@ -132,6 +156,8 @@ export async function addChildToParent(input: AddChildInput): Promise<AddChildRe
   } catch (e) {
     console.error('Resend threw:', e)
   }
+
+  await sendParentConfirmationEmail(parent.email, parent.name, input.playerName)
 
   return { playerId: player.id }
 }

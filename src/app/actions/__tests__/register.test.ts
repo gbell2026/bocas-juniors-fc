@@ -75,6 +75,10 @@ it('returns playerId on success', async () => {
     to: ['g.bell2010@googlemail.com'],
     subject: expect.stringContaining('Junior'),
   }))
+  expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({
+    to: ['jane@test.com'],
+    subject: expect.stringContaining('Jane'),
+  }))
 })
 
 it('returns an error if agreedToTerms is false, without creating anything', async () => {
@@ -114,6 +118,10 @@ describe('addChildToParent', () => {
     expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({
       to: ['g.bell2010@googlemail.com'],
       subject: expect.stringContaining('Second Kid'),
+    }))
+    expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({
+      to: ['jane@test.com'],
+      subject: expect.stringContaining('Jane'),
     }))
   })
 

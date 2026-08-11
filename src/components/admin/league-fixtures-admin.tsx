@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getFixturesForAdmin, updateFixture, addFixture, recordFixtureScore } from '@/app/actions/league-admin'
+import { getFixturesForAdmin, updateFixture, addFixture, recordFixtureScore, setFixtureCancelled } from '@/app/actions/league-admin'
 
 type Division = { id: string; name: string }
 type Team = { id: string; name: string; divisionId: string }
@@ -89,6 +89,20 @@ export function LeagueFixturesAdmin({ divisions, teams }: { divisions: Division[
     }
   }
 
+  async function handleToggleCancelled(fixtureId: string, cancelled: boolean) {
+    setErrorMessage(null)
+    setSaving(fixtureId)
+    try {
+      const result = await setFixtureCancelled(fixtureId, cancelled)
+      if (result.error) { setErrorMessage(result.error); return }
+      await refresh()
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
+    } finally {
+      setSaving(null)
+    }
+  }
+
   async function handleAddFixture(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setErrorMessage(null)
@@ -132,7 +146,10 @@ export function LeagueFixturesAdmin({ divisions, teams }: { divisions: Division[
           {fixtures.map(f => {
             const draft = draftFor(f.id, f)
             return (
-              <div key={f.id} className="bg-brand-tint border border-brand-line rounded p-3 flex items-center gap-3 flex-wrap">
+              <div key={f.id} className={`bg-brand-tint border border-brand-line rounded p-3 flex items-center gap-3 flex-wrap ${f.cancelled ? 'opacity-60' : ''}`}>
+                {f.cancelled && (
+                  <span className="text-red-600 text-[10px] font-bold uppercase tracking-wider">Cancelled</span>
+                )}
                 <input
                   key={`${f.id}-${f.matchDate}`}
                   type="date"
@@ -171,6 +188,13 @@ export function LeagueFixturesAdmin({ divisions, teams }: { divisions: Division[
                   className="btn-secondary text-xs px-3 py-1.5"
                 >
                   {saving === f.id ? 'Saving…' : 'Save Score'}
+                </button>
+                <button
+                  onClick={() => handleToggleCancelled(f.id, !f.cancelled)}
+                  disabled={saving === f.id}
+                  className="text-xs px-3 py-1.5 border border-brand-primary text-brand-primary rounded font-bold uppercase tracking-wider hover:bg-brand-primary hover:text-white transition disabled:opacity-50"
+                >
+                  {f.cancelled ? 'Un-cancel' : 'Cancel'}
                 </button>
               </div>
             )

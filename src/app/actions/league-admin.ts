@@ -212,6 +212,7 @@ export async function getFixturesForAdmin(divisionId: string) {
     awayTeamName: teamMap.get(f.away_team_id) ?? 'Unknown',
     homeScore: f.home_score,
     awayScore: f.away_score,
+    cancelled: f.cancelled,
   }))
 }
 
@@ -255,5 +256,12 @@ export async function recordFixtureScore(id: string, homeScore: number, awayScor
     if (error.code === '23514') return { error: 'Scores cannot be negative.' }
     return { error: 'Failed to save score' }
   }
+  return {}
+}
+
+export async function setFixtureCancelled(id: string, cancelled: boolean): Promise<{ error?: string }> {
+  const supabase = createSupabaseServiceClient()
+  const { error } = await supabase.from('league_fixtures').update({ cancelled }).eq('id', id)
+  if (error) return { error: 'Failed to update fixture' }
   return {}
 }

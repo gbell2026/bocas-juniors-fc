@@ -1,7 +1,17 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { getUpcomingSchedule } from '@/app/actions/schedule'
+import { UpcomingSchedule } from '@/components/upcoming-schedule'
 
-export default function HomePage() {
+// Without this, Next.js statically generates the homepage at build time
+// (getUpcomingSchedule has no cookies/headers dependency to signal
+// otherwise) and would cache the schedule until the next deploy — a
+// newly-added practice or a same-day cancellation wouldn't show up.
+export const dynamic = 'force-dynamic'
+
+export default async function HomePage() {
+  const schedule = await getUpcomingSchedule()
+
   return (
     <main className="bg-brand-cream min-h-screen">
       {/* Hero */}
@@ -48,6 +58,8 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <UpcomingSchedule schedule={schedule} />
 
       {/* Get Involved CTA */}
       <section className="py-14 px-4 bg-brand-ink border-t border-brand-charcoal text-center">

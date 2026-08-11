@@ -6,6 +6,7 @@ import { getPendingLeagueClubs, getPendingLeagueTeams, getPendingLeaguePlayers, 
 import { getApprovedTeams } from '@/app/actions/league'
 import { getAnnouncements } from '@/app/actions/announcements'
 import { getStaffMembers } from '@/app/actions/staff'
+import { getAllPractices } from '@/app/actions/practices'
 
 export default async function AdminPage() {
   const supabase = await createSupabaseServerClient()
@@ -15,7 +16,7 @@ export default async function AdminPage() {
   const [
     players, pendingPayments, totalRevenueCents, pendingSubmissions, getInvolvedSubmissions,
     pendingLeagueClubs, pendingLeagueTeams, pendingLeaguePlayers, leagueDivisions, approvedLeagueTeams,
-    announcements, staffMembers,
+    announcements, staffMembers, practices,
   ] = await Promise.all([
     getAllPlayers(),
     getPendingPayments(),
@@ -29,6 +30,7 @@ export default async function AdminPage() {
     getApprovedTeams(),
     getAnnouncements(),
     getStaffMembers(),
+    getAllPractices(),
   ])
 
   return (
@@ -45,6 +47,7 @@ export default async function AdminPage() {
       approvedLeagueTeams={approvedLeagueTeams}
       announcements={announcements}
       staffMembers={staffMembers}
+      practices={practices}
       userId={user.id}
     />
   )

@@ -3,7 +3,7 @@ jest.mock('@/lib/supabase/server', () => ({ createSupabaseServiceClient: jest.fn
 import {
   generateSchedule, approveLeaguePlayer, createDivision, updateDivision,
   approveLeagueClub, rejectLeagueClub, approveLeagueTeam, rejectLeagueTeam, rejectLeaguePlayer,
-  updateFixture, recordFixtureScore,
+  updateFixture, recordFixtureScore, setFixtureCancelled,
 } from '../league-admin'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 
@@ -180,5 +180,24 @@ describe('recordFixtureScore', () => {
 
     const result = await recordFixtureScore('fx-1', 2, 1)
     expect(result.error).toBeUndefined()
+  })
+})
+
+describe('setFixtureCancelled', () => {
+  it('marks a fixture cancelled', async () => {
+    mockSupabase.update.mockReturnValueOnce(mockSupabase)
+    mockSupabase.eq.mockResolvedValueOnce({ error: null })
+
+    const result = await setFixtureCancelled('fx-1', true)
+    expect(result.error).toBeUndefined()
+    expect(mockSupabase.update).toHaveBeenCalledWith({ cancelled: true })
+  })
+
+  it('surfaces a friendly error on DB failure', async () => {
+    mockSupabase.update.mockReturnValueOnce(mockSupabase)
+    mockSupabase.eq.mockResolvedValueOnce({ error: { message: 'db error' } })
+
+    const result = await setFixtureCancelled('fx-1', false)
+    expect(result.error).toBe('Failed to update fixture')
   })
 })

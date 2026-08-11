@@ -177,6 +177,7 @@ export async function getFixtures(divisionId: string) {
     awayTeamName: teamMap.get(f.away_team_id) ?? 'Unknown',
     homeScore: f.home_score,
     awayScore: f.away_score,
+    cancelled: f.cancelled,
   }))
 }
 
