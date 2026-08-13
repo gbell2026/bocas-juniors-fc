@@ -18,8 +18,6 @@ export function ManageLeagueTeams({ teams: initial, divisions }: Props) {
   const [saving, setSaving] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  if (teams.length === 0) return null
-
   function startEdit(t: Team) {
     setEditingId(t.id)
     setEdits(prev => ({ ...prev, [t.id]: { name: t.name, divisionId: t.divisionId, status: t.status } }))
@@ -53,6 +51,8 @@ export function ManageLeagueTeams({ teams: initial, divisions }: Props) {
     <section>
       <h2 className="font-heading text-lg uppercase tracking-wide text-brand-ink mb-3">Manage Teams ({teams.length})</h2>
       {errorMessage && <p className="text-brand-primary text-sm mb-2">{errorMessage}</p>}
+
+      {teams.length === 0 && <p className="text-brand-muted text-sm">No teams registered yet.</p>}
 
       <div className="space-y-2">
         {teams.map(t => (

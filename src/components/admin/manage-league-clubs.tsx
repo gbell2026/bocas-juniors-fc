@@ -36,8 +36,6 @@ export function ManageLeagueClubs({ clubs: initial }: { clubs: Club[] }) {
   const [saving, setSaving] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  if (clubs.length === 0) return null
-
   function startEdit(c: Club) {
     setEditingId(c.id)
     setEdits(prev => ({
@@ -103,6 +101,8 @@ export function ManageLeagueClubs({ clubs: initial }: { clubs: Club[] }) {
     <section>
       <h2 className="font-heading text-lg uppercase tracking-wide text-brand-ink mb-3">Manage Clubs ({clubs.length})</h2>
       {errorMessage && <p className="text-brand-primary text-sm mb-2">{errorMessage}</p>}
+
+      {clubs.length === 0 && <p className="text-brand-muted text-sm">No clubs registered yet.</p>}
 
       <div className="space-y-2">
         {clubs.map(c => (
