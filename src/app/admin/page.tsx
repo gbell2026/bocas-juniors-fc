@@ -2,7 +2,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { AdminDashboard } from '@/components/admin/admin-dashboard'
 import { getPendingPayments, getAllPlayers, getTotalRevenue, getPendingSubmissions, getGetInvolvedSubmissions } from '@/app/actions/admin'
-import { getPendingLeagueClubs, getPendingLeagueTeams, getPendingLeaguePlayers, getLeagueDivisionsAdmin } from '@/app/actions/league-admin'
+import { getPendingLeagueClubs, getPendingLeagueTeams, getPendingLeaguePlayers, getLeagueDivisionsAdmin, getAllLeagueClubs, getAllLeagueTeams } from '@/app/actions/league-admin'
 import { getApprovedTeams } from '@/app/actions/league'
 import { getAnnouncements } from '@/app/actions/announcements'
 import { getStaffMembers } from '@/app/actions/staff'
@@ -16,6 +16,7 @@ export default async function AdminPage() {
   const [
     players, pendingPayments, totalRevenueCents, pendingSubmissions, getInvolvedSubmissions,
     pendingLeagueClubs, pendingLeagueTeams, pendingLeaguePlayers, leagueDivisions, approvedLeagueTeams,
+    allLeagueClubs, allLeagueTeams,
     announcements, staffMembers, practices,
   ] = await Promise.all([
     getAllPlayers(),
@@ -28,6 +29,8 @@ export default async function AdminPage() {
     getPendingLeaguePlayers(),
     getLeagueDivisionsAdmin(),
     getApprovedTeams(),
+    getAllLeagueClubs(),
+    getAllLeagueTeams(),
     getAnnouncements(),
     getStaffMembers(),
     getAllPractices(),
@@ -45,6 +48,8 @@ export default async function AdminPage() {
       pendingLeaguePlayers={pendingLeaguePlayers}
       leagueDivisions={leagueDivisions}
       approvedLeagueTeams={approvedLeagueTeams}
+      allLeagueClubs={allLeagueClubs}
+      allLeagueTeams={allLeagueTeams}
       announcements={announcements}
       staffMembers={staffMembers}
       practices={practices}

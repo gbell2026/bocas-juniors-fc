@@ -4,6 +4,7 @@ import {
   generateSchedule, approveLeaguePlayer, createDivision, updateDivision,
   approveLeagueClub, rejectLeagueClub, approveLeagueTeam, rejectLeagueTeam, rejectLeaguePlayer,
   updateFixture, recordFixtureScore, setFixtureCancelled,
+  updateLeagueClub, updateLeagueTeam,
 } from '../league-admin'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 
@@ -180,6 +181,71 @@ describe('recordFixtureScore', () => {
 
     const result = await recordFixtureScore('fx-1', 2, 1)
     expect(result.error).toBeUndefined()
+  })
+})
+
+describe('updateLeagueClub', () => {
+  it('only patches the fields provided, plus updated_at', async () => {
+    mockSupabase.update.mockReturnValueOnce(mockSupabase)
+    mockSupabase.eq.mockResolvedValueOnce({ error: null })
+
+    const result = await updateLeagueClub('club-1', { name: 'Riverside FC', status: 'approved' })
+    expect(result.error).toBeUndefined()
+    expect(mockSupabase.update).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'Riverside FC', status: 'approved', updated_at: expect.any(String),
+    }))
+    const patch = (mockSupabase.update as jest.Mock).mock.calls[0][0]
+    expect(patch).not.toHaveProperty('contact_email')
+    expect(patch).not.toHaveProperty('badge_cloudinary_public_id')
+  })
+
+  it('explicitly clears the badge when badgeCloudinaryPublicId is null, distinct from omitting it', async () => {
+    mockSupabase.update.mockReturnValueOnce(mockSupabase)
+    mockSupabase.eq.mockResolvedValueOnce({ error: null })
+
+    await updateLeagueClub('club-1', { badgeCloudinaryPublicId: null })
+    expect(mockSupabase.update).toHaveBeenCalledWith(expect.objectContaining({
+      badge_cloudinary_public_id: null,
+    }))
+  })
+
+  it('sets a new badge public id when provided', async () => {
+    mockSupabase.update.mockReturnValueOnce(mockSupabase)
+    mockSupabase.eq.mockResolvedValueOnce({ error: null })
+
+    await updateLeagueClub('club-1', { badgeCloudinaryPublicId: 'tangerine-toucans/abc123' })
+    expect(mockSupabase.update).toHaveBeenCalledWith(expect.objectContaining({
+      badge_cloudinary_public_id: 'tangerine-toucans/abc123',
+    }))
+  })
+
+  it('surfaces a friendly error on DB failure', async () => {
+    mockSupabase.update.mockReturnValueOnce(mockSupabase)
+    mockSupabase.eq.mockResolvedValueOnce({ error: { message: 'db error' } })
+
+    const result = await updateLeagueClub('club-1', { name: 'Riverside FC' })
+    expect(result.error).toBe('Failed to update club')
+  })
+})
+
+describe('updateLeagueTeam', () => {
+  it('patches name, division, and status using snake_case columns', async () => {
+    mockSupabase.update.mockReturnValueOnce(mockSupabase)
+    mockSupabase.eq.mockResolvedValueOnce({ error: null })
+
+    const result = await updateLeagueTeam('team-1', { name: 'U12 Blue', divisionId: 'div-2', status: 'approved' })
+    expect(result.error).toBeUndefined()
+    expect(mockSupabase.update).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'U12 Blue', division_id: 'div-2', status: 'approved', updated_at: expect.any(String),
+    }))
+  })
+
+  it('surfaces a friendly error on DB failure', async () => {
+    mockSupabase.update.mockReturnValueOnce(mockSupabase)
+    mockSupabase.eq.mockResolvedValueOnce({ error: { message: 'db error' } })
+
+    const result = await updateLeagueTeam('team-1', { name: 'U12 Blue' })
+    expect(result.error).toBe('Failed to update team')
   })
 })
 

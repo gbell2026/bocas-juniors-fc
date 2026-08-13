@@ -24,6 +24,36 @@ export async function rejectLeagueClub(id: string): Promise<{ error?: string }> 
   return {}
 }
 
+export async function getAllLeagueClubs() {
+  const supabase = createSupabaseServiceClient()
+  const { data } = await supabase.from('league_clubs').select('*').order('name')
+  return data ?? []
+}
+
+export type UpdateLeagueClubInput = {
+  name?: string
+  contactName?: string | null
+  contactEmail?: string | null
+  contactPhone?: string | null
+  status?: 'pending' | 'approved' | 'rejected'
+  badgeCloudinaryPublicId?: string | null
+}
+
+export async function updateLeagueClub(id: string, input: UpdateLeagueClubInput): Promise<{ error?: string }> {
+  const supabase = createSupabaseServiceClient()
+  const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  if (input.name !== undefined) patch.name = input.name
+  if (input.contactName !== undefined) patch.contact_name = input.contactName
+  if (input.contactEmail !== undefined) patch.contact_email = input.contactEmail
+  if (input.contactPhone !== undefined) patch.contact_phone = input.contactPhone
+  if (input.status !== undefined) patch.status = input.status
+  if (input.badgeCloudinaryPublicId !== undefined) patch.badge_cloudinary_public_id = input.badgeCloudinaryPublicId
+
+  const { error } = await supabase.from('league_clubs').update(patch).eq('id', id)
+  if (error) return { error: 'Failed to update club' }
+  return {}
+}
+
 // --- Teams ---
 
 export async function getPendingLeagueTeams() {
@@ -53,6 +83,36 @@ export async function rejectLeagueTeam(id: string): Promise<{ error?: string }> 
   const supabase = createSupabaseServiceClient()
   const { error } = await supabase.from('league_teams').update({ status: 'rejected', updated_at: new Date().toISOString() }).eq('id', id)
   if (error) return { error: 'Failed to reject team' }
+  return {}
+}
+
+export async function getAllLeagueTeams() {
+  const supabase = createSupabaseServiceClient()
+  const { data } = await supabase
+    .from('league_teams')
+    .select('*, league_clubs(name), league_divisions(name)')
+    .order('name')
+  return (data ?? []).map(t => ({
+    id: t.id,
+    name: t.name,
+    status: t.status,
+    divisionId: t.division_id,
+    clubName: (t.league_clubs as any)?.name ?? '',
+    divisionName: (t.league_divisions as any)?.name ?? '',
+  }))
+}
+
+export type UpdateLeagueTeamInput = { name?: string; divisionId?: string; status?: 'pending' | 'approved' | 'rejected' }
+
+export async function updateLeagueTeam(id: string, input: UpdateLeagueTeamInput): Promise<{ error?: string }> {
+  const supabase = createSupabaseServiceClient()
+  const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  if (input.name !== undefined) patch.name = input.name
+  if (input.divisionId !== undefined) patch.division_id = input.divisionId
+  if (input.status !== undefined) patch.status = input.status
+
+  const { error } = await supabase.from('league_teams').update(patch).eq('id', id)
+  if (error) return { error: 'Failed to update team' }
   return {}
 }
 

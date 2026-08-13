@@ -8,11 +8,13 @@ import { GetInvolvedSubmissions } from '@/components/admin/get-involved-submissi
 import { LeaguePendingQueue } from '@/components/admin/league-pending-queue'
 import { LeagueDivisions } from '@/components/admin/league-divisions'
 import { LeagueFixturesAdmin } from '@/components/admin/league-fixtures-admin'
+import { ManageLeagueClubs } from '@/components/admin/manage-league-clubs'
+import { ManageLeagueTeams } from '@/components/admin/manage-league-teams'
 import { PracticesAdmin } from '@/components/admin/practices-admin'
 import { AnnouncementsAdmin } from '@/components/admin/announcements-admin'
 import { StaffAdmin } from '@/components/admin/staff-admin'
 import type { getAllPlayers, getPendingPayments, getPendingSubmissions, getGetInvolvedSubmissions } from '@/app/actions/admin'
-import type { getPendingLeagueClubs, getPendingLeagueTeams, getPendingLeaguePlayers, getLeagueDivisionsAdmin } from '@/app/actions/league-admin'
+import type { getPendingLeagueClubs, getPendingLeagueTeams, getPendingLeaguePlayers, getLeagueDivisionsAdmin, getAllLeagueClubs, getAllLeagueTeams } from '@/app/actions/league-admin'
 import type { getApprovedTeams } from '@/app/actions/league'
 import type { getAnnouncements } from '@/app/actions/announcements'
 import type { getStaffMembers } from '@/app/actions/staff'
@@ -39,6 +41,8 @@ type Props = {
   pendingLeaguePlayers: Awaited<ReturnType<typeof getPendingLeaguePlayers>>
   leagueDivisions: Awaited<ReturnType<typeof getLeagueDivisionsAdmin>>
   approvedLeagueTeams: Awaited<ReturnType<typeof getApprovedTeams>>
+  allLeagueClubs: Awaited<ReturnType<typeof getAllLeagueClubs>>
+  allLeagueTeams: Awaited<ReturnType<typeof getAllLeagueTeams>>
   announcements: Awaited<ReturnType<typeof getAnnouncements>>
   staffMembers: Awaited<ReturnType<typeof getStaffMembers>>
   practices: Awaited<ReturnType<typeof getAllPractices>>
@@ -48,6 +52,7 @@ type Props = {
 export function AdminDashboard({
   totalRevenueCents, players, pendingPayments, pendingSubmissions, getInvolvedSubmissions,
   pendingLeagueClubs, pendingLeagueTeams, pendingLeaguePlayers, leagueDivisions, approvedLeagueTeams,
+  allLeagueClubs, allLeagueTeams,
   announcements, staffMembers, practices, userId,
 }: Props) {
   const [tab, setTab] = useState<Tab>('overview')
@@ -101,6 +106,8 @@ export function AdminDashboard({
           <LeaguePendingQueue clubs={pendingLeagueClubs} teams={pendingLeagueTeams} players={pendingLeaguePlayers} />
           <LeagueDivisions divisions={leagueDivisions} />
           <LeagueFixturesAdmin divisions={leagueDivisions} teams={approvedLeagueTeams} />
+          <ManageLeagueClubs clubs={allLeagueClubs} />
+          <ManageLeagueTeams teams={allLeagueTeams} divisions={leagueDivisions} />
         </div>
       )}
 
