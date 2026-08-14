@@ -1,7 +1,8 @@
 # Bocas Juniors FC — User Media Submissions Spec
 
 **Date:** 2026-03-31
-**Scope:** Allow any site visitor (no login required) to submit photos and videos from the gallery page. Submissions are held in a pending queue and must be approved by an admin before appearing in the gallery. Max 50MB per file.
+**Scope:** Allow any site visitor (no login required) to submit photos and videos from the gallery page. Submissions are held in a pending queue and must be approved by an admin before appearing
+ in the gallery. Max 50MB per file.
 
 ---
 
