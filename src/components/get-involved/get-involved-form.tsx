@@ -2,19 +2,21 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { submitGetInvolved } from '@/app/actions/get-involved'
-
-const INTEREST_OPTIONS = [
-  'Sponsoring the website',
-  'Sponsoring the kit',
-  'Helping on game days',
-  'Donating equipment',
-  'Becoming a volunteer',
-  'Other',
-]
+import { useLocale } from '@/lib/i18n/locale-context'
+import { translateError } from '@/lib/i18n/error-messages'
+import { en } from '@/lib/i18n/en'
 
 type Status = 'idle' | 'submitting' | 'success' | 'error'
 
+// Stored/submitted values are always the English label, regardless of UI
+// language — the admin panel (English-only, out of scope for translation)
+// displays `interests` verbatim, so the stored value must stay
+// locale-independent even though the checkbox label shown to the user
+// is translated.
+const INTEREST_KEYS = Object.keys(en.getInvolved.interestOptions) as (keyof typeof en.getInvolved.interestOptions)[]
+
 export function GetInvolvedForm() {
+  const { locale, t } = useLocale()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [organisation, setOrganisation] = useState('')
@@ -23,9 +25,9 @@ export function GetInvolvedForm() {
   const [status, setStatus] = useState<Status>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  function toggleInterest(option: string) {
+  function toggleInterest(englishLabel: string) {
     setInterests(prev =>
-      prev.includes(option) ? prev.filter(i => i !== option) : [...prev, option]
+      prev.includes(englishLabel) ? prev.filter(i => i !== englishLabel) : [...prev, englishLabel]
     )
   }
 
@@ -47,22 +49,22 @@ export function GetInvolvedForm() {
 
       if (error) {
         setStatus('error')
-        setErrorMessage(error)
+        setErrorMessage(translateError(locale, error))
       } else {
         setStatus('success')
       }
     } catch {
       setStatus('error')
-      setErrorMessage('Something went wrong. Please try again.')
+      setErrorMessage(translateError(locale, 'submission_failed'))
     }
   }
 
   if (status === 'success') {
     return (
       <div className="text-center py-12">
-        <p className="text-brand-ink font-bold text-lg mb-2">Thanks for getting in touch!</p>
-        <p className="text-brand-muted text-sm mb-6">We&apos;ll be in contact soon.</p>
-        <Link href="/" className="btn-secondary">Back to Home</Link>
+        <p className="text-brand-ink font-bold text-lg mb-2">{t.getInvolved.thanksTitle}</p>
+        <p className="text-brand-muted text-sm mb-6">{t.getInvolved.thanksBody}</p>
+        <Link href="/" className="btn-secondary">{t.getInvolved.backToHome}</Link>
       </div>
     )
   }
@@ -73,11 +75,11 @@ export function GetInvolvedForm() {
 
       <div>
         <label className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-1 block">
-          Name *
+          {t.getInvolved.nameLabel}
         </label>
         <input
           className="input w-full"
-          placeholder="Your name"
+          placeholder={t.getInvolved.namePlaceholder}
           value={name}
           onChange={e => setName(e.target.value)}
           disabled={status === 'submitting'}
@@ -86,12 +88,12 @@ export function GetInvolvedForm() {
 
       <div>
         <label className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-1 block">
-          Email *
+          {t.getInvolved.emailLabel}
         </label>
         <input
           className="input w-full"
           type="email"
-          placeholder="Email address"
+          placeholder={t.getInvolved.emailPlaceholder}
           value={email}
           onChange={e => setEmail(e.target.value)}
           disabled={status === 'submitting'}
@@ -100,11 +102,11 @@ export function GetInvolvedForm() {
 
       <div>
         <label className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-1 block">
-          Business / Organisation
+          {t.getInvolved.orgLabel}
         </label>
         <input
           className="input w-full"
-          placeholder="Business or organisation name (optional)"
+          placeholder={t.getInvolved.orgPlaceholder}
           value={organisation}
           onChange={e => setOrganisation(e.target.value)}
           disabled={status === 'submitting'}
@@ -113,32 +115,35 @@ export function GetInvolvedForm() {
 
       <div>
         <label className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-1 block">
-          I&apos;m interested in... *
+          {t.getInvolved.interestsLabel}
         </label>
         <div className="space-y-2 mt-2">
-          {INTEREST_OPTIONS.map(option => (
-            <label key={option} className="flex items-center gap-2 text-brand-ink/80 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={interests.includes(option)}
-                onChange={() => toggleInterest(option)}
-                className="accent-[#F26522]"
-                disabled={status === 'submitting'}
-              />
-              {option}
-            </label>
-          ))}
+          {INTEREST_KEYS.map(key => {
+            const englishLabel = en.getInvolved.interestOptions[key]
+            return (
+              <label key={key} className="flex items-center gap-2 text-brand-ink/80 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={interests.includes(englishLabel)}
+                  onChange={() => toggleInterest(englishLabel)}
+                  className="accent-[#F26522]"
+                  disabled={status === 'submitting'}
+                />
+                {t.getInvolved.interestOptions[key]}
+              </label>
+            )
+          })}
         </div>
       </div>
 
       <div>
         <label className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-1 block">
-          Message
+          {t.getInvolved.messageLabel}
         </label>
         <textarea
           className="input w-full"
           rows={4}
-          placeholder="Anything else you'd like us to know? (optional)"
+          placeholder={t.getInvolved.messagePlaceholder}
           value={message}
           onChange={e => setMessage(e.target.value)}
           disabled={status === 'submitting'}
@@ -150,7 +155,7 @@ export function GetInvolvedForm() {
         disabled={!canSubmit}
         className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {status === 'submitting' ? 'Sending...' : 'Send'}
+        {status === 'submitting' ? t.getInvolved.sending : t.getInvolved.send}
       </button>
     </form>
   )

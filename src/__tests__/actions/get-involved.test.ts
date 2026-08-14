@@ -11,7 +11,7 @@ describe('submitGetInvolved', () => {
       email: 'test@test.com',
       interests: ['Sponsoring the kit'],
     })
-    expect(result).toEqual({ error: 'Please fill in all required fields.' })
+    expect(result).toEqual({ error: 'required_fields' })
   })
 
   it('returns error when interests array is empty', async () => {
@@ -20,6 +20,6 @@ describe('submitGetInvolved', () => {
       email: 'jane@test.com',
       interests: [],
     })
-    expect(result).toEqual({ error: 'Please fill in all required fields.' })
+    expect(result).toEqual({ error: 'required_fields' })
   })
 })

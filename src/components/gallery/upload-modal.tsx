@@ -1,6 +1,9 @@
 'use client'
 import { useRef, useState } from 'react'
 import { submitMediaRecord } from '@/app/actions/media-submissions'
+import { useLocale } from '@/lib/i18n/locale-context'
+import { translateError } from '@/lib/i18n/error-messages'
+import type { en } from '@/lib/i18n/en'
 
 const MAX_BYTES = 50 * 1024 * 1024 // 50MB
 
@@ -32,7 +35,8 @@ function uploadToCloudinary(
   file: File,
   cloudName: string,
   uploadPreset: string,
-  onProgress: (pct: number) => void
+  onProgress: (pct: number) => void,
+  t: typeof en['gallery']
 ): Promise<{ publicId: string | null; error: string | null }> {
   return new Promise(resolve => {
     const xhr = new XMLHttpRequest()
@@ -48,18 +52,19 @@ function uploadToCloudinary(
       try {
         const data = JSON.parse(xhr.responseText)
         if (data.public_id) resolve({ publicId: data.public_id, error: null })
-        else resolve({ publicId: null, error: data.error?.message ?? 'Upload failed' })
+        else resolve({ publicId: null, error: data.error?.message ?? t.uploadFailed })
       } catch {
-        resolve({ publicId: null, error: 'Upload failed' })
+        resolve({ publicId: null, error: t.uploadFailed })
       }
     }
-    xhr.onerror = () => resolve({ publicId: null, error: 'Network error' })
+    xhr.onerror = () => resolve({ publicId: null, error: t.networkError })
     xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`)
     xhr.send(fd)
   })
 }
 
 export function UploadModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { locale, t } = useLocale()
   const [files, setFiles] = useState<FileEntry[]>([])
   const [submitterName, setSubmitterName] = useState('')
   const [phase, setPhase] = useState<Phase>('selecting')
@@ -89,7 +94,7 @@ export function UploadModal({ open, onClose }: { open: boolean; onClose: () => v
       if (f.size > MAX_BYTES) rejected.push(f.name)
       else valid.push(makeEntry(f))
     }
-    setSizeErrors(rejected.length ? [`${rejected.join(', ')} too large (max 50MB)`] : [])
+    setSizeErrors(rejected.length ? [t.gallery.tooLarge(rejected.join(', '))] : [])
     if (valid.length) setFiles(prev => [...prev, ...valid])
   }
 
@@ -117,10 +122,11 @@ export function UploadModal({ open, onClose }: { open: boolean; onClose: () => v
         entry.file,
         cloudName,
         uploadPreset,
-        (pct) => updateEntry(entry.id, { progress: pct })
+        (pct) => updateEntry(entry.id, { progress: pct }),
+        t.gallery
       )
       if (!publicId) {
-        updateEntry(entry.id, { status: 'error', error: uploadError ?? 'Upload failed' })
+        updateEntry(entry.id, { status: 'error', error: uploadError ?? t.gallery.uploadFailed })
         continue
       }
       const type = entry.file.type.startsWith('video/') ? 'video' : 'photo'
@@ -130,7 +136,7 @@ export function UploadModal({ open, onClose }: { open: boolean; onClose: () => v
         caption: entry.caption || undefined,
         submitterName: submitterName || undefined,
       })
-      if (dbError) updateEntry(entry.id, { status: 'error', error: dbError, progress: 100 })
+      if (dbError) updateEntry(entry.id, { status: 'error', error: translateError(locale, dbError), progress: 100 })
       else {
         updateEntry(entry.id, { status: 'done', progress: 100 })
         anySucceeded = true
@@ -148,9 +154,9 @@ export function UploadModal({ open, onClose }: { open: boolean; onClose: () => v
       <div className="bg-white w-full sm:max-w-xl sm:rounded-lg max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-brand-line">
-          <h2 className="font-heading text-brand-ink uppercase tracking-wider text-lg">Submit a Photo/Video</h2>
+          <h2 className="font-heading text-brand-ink uppercase tracking-wider text-lg">{t.gallery.submitPhoto}</h2>
           <button
-            aria-label="close"
+            aria-label={t.gallery.close}
             onClick={handleClose}
             className="text-brand-muted hover:text-brand-ink text-2xl leading-none"
           >
@@ -161,9 +167,9 @@ export function UploadModal({ open, onClose }: { open: boolean; onClose: () => v
         <div className="p-5">
           {phase === 'complete' ? (
             <div className="text-center py-8">
-              <p className="text-brand-ink font-bold text-lg mb-2">Thanks for sharing!</p>
-              <p className="text-brand-muted text-sm mb-6">Your photos will appear once approved.</p>
-              <button onClick={handleClose} className="btn-primary">Close</button>
+              <p className="text-brand-ink font-bold text-lg mb-2">{t.gallery.thanksTitle}</p>
+              <p className="text-brand-muted text-sm mb-6">{t.gallery.thanksBody}</p>
+              <button onClick={handleClose} className="btn-primary">{t.gallery.close}</button>
             </div>
           ) : (
             <>
@@ -179,8 +185,8 @@ export function UploadModal({ open, onClose }: { open: boolean; onClose: () => v
                   addFiles(Array.from(e.dataTransfer.files))
                 }}
               >
-                <p className="text-sm font-bold uppercase tracking-wider">Tap to add photos/videos</p>
-                <p className="text-xs mt-1">or drag and drop · max 50MB per file</p>
+                <p className="text-sm font-bold uppercase tracking-wider">{t.gallery.tapToAdd}</p>
+                <p className="text-xs mt-1">{t.gallery.dragOrDrop}</p>
               </div>
               <input
                 ref={inputRef}
@@ -211,7 +217,7 @@ export function UploadModal({ open, onClose }: { open: boolean; onClose: () => v
                         <button
                           onClick={() => removeFile(entry.id)}
                           className="absolute top-1 right-1 bg-black/60 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center hover:bg-brand-primary"
-                          aria-label={`remove ${entry.file.name}`}
+                          aria-label={t.gallery.removeFile(entry.file.name)}
                         >
                           ×
                         </button>
@@ -225,14 +231,14 @@ export function UploadModal({ open, onClose }: { open: boolean; onClose: () => v
                           </div>
                         )}
                         {entry.status === 'done' && (
-                          <p className="text-brand-primaryDeep text-[10px] mt-1 text-center">✓ Uploaded</p>
+                          <p className="text-brand-primaryDeep text-[10px] mt-1 text-center">{t.gallery.uploaded}</p>
                         )}
                         {entry.status === 'error' && (
                           <p className="text-brand-primary text-[10px] mt-1">{entry.error}</p>
                         )}
                         <input
                           className="input w-full mt-1 text-xs py-1"
-                          placeholder="Add a caption…"
+                          placeholder={t.gallery.captionPlaceholder}
                           value={entry.caption}
                           onChange={e => updateEntry(entry.id, { caption: e.target.value })}
                           disabled={phase === 'uploading'}
@@ -244,11 +250,11 @@ export function UploadModal({ open, onClose }: { open: boolean; onClose: () => v
                   {/* Name field */}
                   <div className="mt-4">
                     <label className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs block mb-1">
-                      Your name (optional)
+                      {t.gallery.nameLabel}
                     </label>
                     <input
                       className="input w-full"
-                      placeholder="Your name"
+                      placeholder={t.gallery.namePlaceholder}
                       value={submitterName}
                       onChange={e => setSubmitterName(e.target.value)}
                       disabled={phase === 'uploading'}
@@ -263,10 +269,7 @@ export function UploadModal({ open, onClose }: { open: boolean; onClose: () => v
                 disabled={files.length === 0 || phase === 'uploading'}
                 className="btn-primary w-full mt-5 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {phase === 'uploading'
-                  ? 'Uploading…'
-                  : `Upload${files.length > 0 ? ` ${files.length} file${files.length > 1 ? 's' : ''}` : ''}`
-                }
+                {phase === 'uploading' ? t.gallery.uploading : t.gallery.uploadButton(files.length)}
               </button>
             </>
           )}

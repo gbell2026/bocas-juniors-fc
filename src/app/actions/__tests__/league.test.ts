@@ -31,7 +31,7 @@ describe('registerLeagueTeam', () => {
     mockSupabase.limit.mockResolvedValueOnce({ data: [{ id: 'fx-1' }], error: null })
 
     const result = await registerLeagueTeam(validInput)
-    expect(result.error).toBe('This division is no longer open for new team registrations.')
+    expect(result.error).toBe('division_closed')
     expect(mockSupabase.insert).not.toHaveBeenCalled()
   })
 
@@ -76,7 +76,7 @@ describe('registerLeagueTeam', () => {
     mockSupabase.delete.mockReturnValue(mockSupabase)
 
     const result = await registerLeagueTeam(validInput)
-    expect(result.error).toBe('Failed to create team record')
+    expect(result.error).toBe('submission_failed')
     expect(mockSupabase.from).toHaveBeenCalledWith('league_clubs')
     expect(mockSupabase.delete).toHaveBeenCalledTimes(1)
     expect(mockSupabase.eq).toHaveBeenCalledWith('id', 'club-1')
@@ -98,7 +98,7 @@ describe('addLeagueTeam', () => {
   it('rejects a submission targeting a division whose schedule has already been generated', async () => {
     mockSupabase.limit.mockResolvedValueOnce({ data: [{ id: 'fx-1' }], error: null })
     const result = await addLeagueTeam(validInput)
-    expect(result.error).toBe('This division is no longer open for new team registrations.')
+    expect(result.error).toBe('division_closed')
     expect(mockSupabase.insert).not.toHaveBeenCalled()
   })
 
@@ -106,7 +106,7 @@ describe('addLeagueTeam', () => {
     mockSupabase.limit.mockResolvedValueOnce({ data: [], error: null })
     mockSupabase.single.mockResolvedValueOnce({ data: null, error: null })
     const result = await addLeagueTeam(validInput)
-    expect(result.error).toBe('Club not found')
+    expect(result.error).toBe('club_not_found')
     expect(mockSupabase.insert).not.toHaveBeenCalled()
   })
 
@@ -130,21 +130,21 @@ describe('addLeaguePlayer', () => {
 
   it('rejects an invalid squad number before touching the database', async () => {
     const result = await addLeaguePlayer({ ...validInput, squadNumber: -1 })
-    expect(result.error).toBe('Squad number must be a whole number greater than 0.')
+    expect(result.error).toBe('invalid_squad_number')
     expect(mockSupabase.insert).not.toHaveBeenCalled()
   })
 
   it('rejects when the team does not exist', async () => {
     mockSupabase.single.mockResolvedValueOnce({ data: null, error: null })
     const result = await addLeaguePlayer(validInput)
-    expect(result.error).toBe('Team not found')
+    expect(result.error).toBe('team_not_found')
     expect(mockSupabase.insert).not.toHaveBeenCalled()
   })
 
   it('rejects when the team is not yet approved', async () => {
     mockSupabase.single.mockResolvedValueOnce({ data: { id: 'team-1', status: 'pending' }, error: null })
     const result = await addLeaguePlayer(validInput)
-    expect(result.error).toBe('Team not found')
+    expect(result.error).toBe('team_not_found')
     expect(mockSupabase.insert).not.toHaveBeenCalled()
   })
 

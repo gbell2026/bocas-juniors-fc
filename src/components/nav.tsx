@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { useEffect, useState } from 'react'
 import { getRegFeeAlertForUser } from '@/app/actions/payment'
+import { useLocale } from '@/lib/i18n/locale-context'
+import { LanguageToggle } from '@/components/language-toggle'
 
 const socialLinks = [
   {
@@ -29,21 +31,22 @@ const socialLinks = [
   },
 ]
 
-const links = [
-  { href: '/', label: 'Home' },
-  { href: '/gallery', label: 'Gallery' },
-  { href: '/league', label: 'League' },
-  { href: '/announcements', label: 'Announcements' },
-  { href: '/team', label: 'Our Team' },
-  { href: '/register', label: 'Register' },
-  { href: '/contact', label: 'Contact' },
-]
-
 export function Nav() {
   const pathname = usePathname()
+  const { t } = useLocale()
   const [user, setUser] = useState<{ id: string } | null>(null)
   const [regFeeUnpaid, setRegFeeUnpaid] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  const links = [
+    { href: '/', label: t.nav.home },
+    { href: '/gallery', label: t.nav.gallery },
+    { href: '/league', label: t.nav.league },
+    { href: '/announcements', label: t.nav.announcements },
+    { href: '/team', label: t.nav.team },
+    { href: '/register', label: t.nav.register },
+    { href: '/contact', label: t.nav.contact },
+  ]
 
   useEffect(() => {
     const supabase = createBrowserClient()
@@ -74,18 +77,18 @@ export function Nav() {
         href="/profile"
         className="bg-brand-charcoal border border-brand-mutedLight/30 text-white px-4 py-1.5 rounded hover:border-brand-primary transition text-center"
       >
-        My Profile
+        {t.nav.myProfile}
       </Link>
       <button
         onClick={handleLogout}
         className="text-white/60 hover:text-white transition text-left md:text-center"
       >
-        Log Out
+        {t.nav.logout}
       </button>
     </>
   ) : (
     <Link href="/login" className="bg-brand-primary text-white px-4 py-1.5 rounded text-center">
-      Log In
+      {t.nav.login}
     </Link>
   )
 
@@ -124,13 +127,14 @@ export function Nav() {
             </Link>
           ))}
           {authLinks}
+          <LanguageToggle />
         </div>
 
         {/* Mobile hamburger toggle */}
         <button
           onClick={() => setMobileMenuOpen(open => !open)}
           className="md:hidden text-white p-1"
-          aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+          aria-label={mobileMenuOpen ? t.nav.closeMenu : t.nav.openMenu}
           aria-expanded={mobileMenuOpen}
         >
           {mobileMenuOpen ? (
@@ -160,14 +164,15 @@ export function Nav() {
           <div className="flex flex-col gap-3 pt-2 border-t border-white/10">
             {authLinks}
           </div>
+          <LanguageToggle />
         </div>
       )}
 
       {regFeeUnpaid && (
         <div className="bg-brand-primary text-white text-center text-xs sm:text-sm font-bold uppercase tracking-wider py-2 px-4 flex items-center justify-center gap-3 flex-wrap">
-          <span>Registration fee outstanding</span>
+          <span>{t.nav.regFeeOutstanding}</span>
           <Link href="/profile" className="underline underline-offset-2 hover:no-underline">
-            Pay Now →
+            {t.nav.payNow} →
           </Link>
         </div>
       )}

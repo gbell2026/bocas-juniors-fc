@@ -1,30 +1,36 @@
 import { PageHeader } from '@/components/page-header'
+import { getLocale } from '@/lib/i18n/get-locale'
+import { en } from '@/lib/i18n/en'
+import { es } from '@/lib/i18n/es'
 
-const contacts = [
-  {
-    name: 'Gilles Benyon-Bell',
-    role: 'Manager',
-    email: 'g.bell2010@gmail.com',
-    phone: '+44 7462 557960 (WhatsApp)',
-  },
-  {
-    name: 'Josh Floryance',
-    role: 'Coach',
-    email: null,
-    phone: null,
-  },
-  {
-    name: 'Jorge Vega',
-    role: 'Coach',
-    email: null,
-    phone: null,
-  },
-]
+export default async function ContactPage() {
+  const locale = await getLocale()
+  const t = locale === 'es' ? es : en
 
-export default function ContactPage() {
+  const contacts = [
+    {
+      name: 'Gilles Benyon-Bell',
+      role: t.contact.manager,
+      email: 'g.bell2010@gmail.com',
+      phone: '+44 7462 557960 (WhatsApp)',
+    },
+    {
+      name: 'Josh Floryance',
+      role: t.contact.coach,
+      email: null,
+      phone: null,
+    },
+    {
+      name: 'Jorge Vega',
+      role: t.contact.coach,
+      email: null,
+      phone: null,
+    },
+  ]
+
   return (
     <main className="bg-brand-cream min-h-screen">
-      <PageHeader title="Contact Us" subtitle="Get in touch with the team" />
+      <PageHeader title={t.contact.title} subtitle={t.contact.subtitle} />
       <div className="max-w-2xl mx-auto py-8 px-4 space-y-4">
         {contacts.map(c => (
           <div

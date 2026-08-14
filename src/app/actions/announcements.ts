@@ -63,8 +63,8 @@ export async function deleteAnnouncement(id: string): Promise<{ error?: string }
 export async function postComment(announcementId: string, body: string): Promise<{ error?: string }> {
   const supabaseSession = await createSupabaseServerClient()
   const { data: { user } } = await supabaseSession.auth.getUser()
-  if (!user) return { error: 'You must be logged in to comment.' }
-  if (!body.trim()) return { error: 'Comment cannot be empty.' }
+  if (!user) return { error: 'must_be_logged_in' }
+  if (!body.trim()) return { error: 'comment_required' }
 
   const supabase = createSupabaseServiceClient()
   const { data: parent } = await supabase.from('parents').select('name').eq('user_id', user.id).single()
@@ -76,7 +76,7 @@ export async function postComment(announcementId: string, body: string): Promise
     author_name: authorName,
     body,
   })
-  if (error) return { error: 'Failed to post comment' }
+  if (error) return { error: 'comment_failed' }
   return {}
 }
 

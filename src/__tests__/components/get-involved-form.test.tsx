@@ -1,5 +1,6 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
 import { GetInvolvedForm } from '@/components/get-involved/get-involved-form'
+import { renderWithLocale as render } from '@/lib/i18n/test-utils'
 
 jest.mock('@/app/actions/get-involved', () => ({
   submitGetInvolved: jest.fn().mockResolvedValue({ error: null }),

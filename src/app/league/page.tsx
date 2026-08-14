@@ -5,18 +5,13 @@ import { FixturesList } from '@/components/league/fixtures-list'
 import { StandingsTable } from '@/components/league/standings-table'
 import { RegisterTeamForm } from '@/components/league/register-team-form'
 import { getDivisions } from '@/app/actions/league'
+import { useLocale } from '@/lib/i18n/locale-context'
 
 type Tab = 'fixtures' | 'table' | 'topscorer' | 'register'
 type Division = Awaited<ReturnType<typeof getDivisions>>[number]
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: 'fixtures', label: 'Fixtures' },
-  { key: 'table', label: 'Table' },
-  { key: 'topscorer', label: 'Top Scorer' },
-  { key: 'register', label: 'Register Team' },
-]
-
 export default function LeaguePage() {
+  const { t } = useLocale()
   const [tab, setTab] = useState<Tab>('fixtures')
   const [divisions, setDivisions] = useState<Division[]>([])
   const [divisionId, setDivisionId] = useState('')
@@ -30,19 +25,26 @@ export default function LeaguePage() {
       .catch(err => console.error('Failed to load League divisions:', err))
   }, [])
 
+  const TABS: { key: Tab; label: string }[] = [
+    { key: 'fixtures', label: t.league.tabFixtures },
+    { key: 'table', label: t.league.tabTable },
+    { key: 'topscorer', label: t.league.tabTopScorer },
+    { key: 'register', label: t.league.tabRegister },
+  ]
+
   return (
     <main className="bg-brand-cream min-h-screen">
-      <PageHeader title="League" subtitle="Fixtures, Table & Team Registration" />
+      <PageHeader title={t.league.title} subtitle={t.league.subtitle} />
       <div className="flex border-b border-brand-line overflow-x-auto">
-        {TABS.map(t => (
+        {TABS.map(tabDef => (
           <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
+            key={tabDef.key}
+            onClick={() => setTab(tabDef.key)}
             className={`flex-1 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap px-4 ${
-              tab === t.key ? 'bg-brand-primary text-white' : 'bg-brand-tint text-brand-mutedWarm'
+              tab === tabDef.key ? 'bg-brand-primary text-white' : 'bg-brand-tint text-brand-mutedWarm'
             }`}
           >
-            {t.label}
+            {tabDef.label}
           </button>
         ))}
       </div>
@@ -51,7 +53,7 @@ export default function LeaguePage() {
         {(tab === 'fixtures' || tab === 'table') && divisions.length > 0 && (
           <div className="mb-6">
             <label htmlFor="divisionSelect" className="block text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-1">
-              Division
+              {t.league.divisionLabel}
             </label>
             <select
               id="divisionSelect"
@@ -65,13 +67,13 @@ export default function LeaguePage() {
         )}
 
         {tab === 'fixtures' && (
-          divisionId ? <FixturesList divisionId={divisionId} /> : <p className="text-brand-muted py-8 text-center">No divisions yet.</p>
+          divisionId ? <FixturesList divisionId={divisionId} /> : <p className="text-brand-muted py-8 text-center">{t.league.noDivisions}</p>
         )}
         {tab === 'table' && (
-          divisionId ? <StandingsTable divisionId={divisionId} /> : <p className="text-brand-muted py-8 text-center">No divisions yet.</p>
+          divisionId ? <StandingsTable divisionId={divisionId} /> : <p className="text-brand-muted py-8 text-center">{t.league.noDivisions}</p>
         )}
         {tab === 'topscorer' && (
-          <p className="text-brand-muted py-8 text-center">Top Scorer leaderboard is coming soon!</p>
+          <p className="text-brand-muted py-8 text-center">{t.league.topScorerComingSoon}</p>
         )}
         {tab === 'register' && <RegisterTeamForm />}
       </div>

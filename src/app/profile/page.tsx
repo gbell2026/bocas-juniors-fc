@@ -4,6 +4,9 @@ import { PaymentHistory } from '@/components/profile/payment-history'
 import { PlayerInfo } from '@/components/profile/player-info'
 import { PaymentOptionsPanel } from '@/components/payment/payment-options-panel'
 import { AddChildSection } from '@/components/profile/add-child-section'
+import { getLocale } from '@/lib/i18n/get-locale'
+import { en } from '@/lib/i18n/en'
+import { es } from '@/lib/i18n/es'
 
 export default async function ProfilePage() {
   const supabase = await createSupabaseServerClient()
@@ -19,14 +22,16 @@ export default async function ProfilePage() {
   // Registration order matters — it determines which child (if any)
   // qualifies for the sibling discount (see getPaymentSchedule).
   const players = (parent?.players ?? []).slice().sort((a, b) => a.created_at.localeCompare(b.created_at))
+  const locale = await getLocale()
+  const t = locale === 'es' ? es : en
 
   return (
     <main className="bg-brand-cream min-h-screen max-w-2xl mx-auto py-8 px-4 space-y-8">
-      <h1 className="font-heading text-2xl uppercase tracking-wide text-brand-ink">My Profile</h1>
+      <h1 className="font-heading text-2xl uppercase tracking-wide text-brand-ink">{t.profile.title}</h1>
 
       {players.map(player => (
         <div key={player.id} className="space-y-4 pb-8 border-b border-brand-line last:border-b-0">
-          <PlayerInfo player={player} />
+          <PlayerInfo player={player} locale={locale} />
           <PaymentOptionsPanel
             playerId={player.id}
             parentId={parent?.id ?? ''}
@@ -38,7 +43,7 @@ export default async function ProfilePage() {
 
       <AddChildSection />
 
-      <PaymentHistory payments={payments ?? []} />
+      <PaymentHistory payments={payments ?? []} locale={locale} />
     </main>
   )
 }

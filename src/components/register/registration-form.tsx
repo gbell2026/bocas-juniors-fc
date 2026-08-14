@@ -2,10 +2,13 @@
 import { useState } from 'react'
 import { registerParentAndPlayer } from '@/app/actions/register'
 import type { PaymentPlan } from '@/lib/supabase/types'
+import { useLocale } from '@/lib/i18n/locale-context'
+import { translateError } from '@/lib/i18n/error-messages'
 
 type Props = { onSuccess: (playerId: string, parentId: string, parentName: string, playerName: string) => void }
 
 export function RegistrationForm({ onSuccess }: Props) {
+  const { locale, t } = useLocale()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -26,7 +29,7 @@ export function RegistrationForm({ onSuccess }: Props) {
       agreedToTerms: fd.get('agreedToTerms') === 'on',
     })
     setLoading(false)
-    if (result.error) { setError(result.error); return }
+    if (result.error) { setError(translateError(locale, result.error)); return }
     onSuccess(result.playerId!, result.parentId!, fd.get('parentName') as string, fd.get('playerName') as string)
   }
 
@@ -35,63 +38,63 @@ export function RegistrationForm({ onSuccess }: Props) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-md mx-auto">
       <fieldset className="space-y-4">
-        <legend className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-2">Player Details</legend>
+        <legend className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-2">{t.register.playerDetailsLegend}</legend>
         <div>
-          <label htmlFor="playerName" className={labelClass}>Player Name</label>
+          <label htmlFor="playerName" className={labelClass}>{t.register.playerNameLabel}</label>
           <input id="playerName" name="playerName" required className="input w-full" />
         </div>
         <div>
-          <label htmlFor="dateOfBirth" className={labelClass}>Date of Birth</label>
+          <label htmlFor="dateOfBirth" className={labelClass}>{t.register.dobLabel}</label>
           <input id="dateOfBirth" name="dateOfBirth" type="date" required className="input w-full" />
         </div>
         <div>
-          <label htmlFor="position" className={labelClass}>Position</label>
+          <label htmlFor="position" className={labelClass}>{t.register.positionLabel}</label>
           <select id="position" name="position" required className="input w-full">
-            <option value="">Select…</option>
-            {['Goalkeeper', 'Defender', 'Midfielder', 'Forward'].map(p => (
-              <option key={p} value={p}>{p}</option>
+            <option value="">{t.register.select}</option>
+            {(['Goalkeeper', 'Defender', 'Midfielder', 'Forward'] as const).map(p => (
+              <option key={p} value={p}>{t.register.positions[p.toLowerCase() as 'goalkeeper' | 'defender' | 'midfielder' | 'forward']}</option>
             ))}
           </select>
         </div>
       </fieldset>
 
       <fieldset className="space-y-4">
-        <legend className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-2">Parent / Guardian Details</legend>
+        <legend className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-2">{t.register.parentDetailsLegend}</legend>
         <div>
-          <label htmlFor="parentName" className={labelClass}>Parent Name</label>
+          <label htmlFor="parentName" className={labelClass}>{t.register.parentNameLabel}</label>
           <input id="parentName" name="parentName" required className="input w-full" />
         </div>
         <div>
-          <label htmlFor="email" className={labelClass}>Email</label>
+          <label htmlFor="email" className={labelClass}>{t.register.emailLabel}</label>
           <input id="email" name="email" type="email" required className="input w-full" />
         </div>
         <div>
-          <label htmlFor="phone" className={labelClass}>Phone</label>
+          <label htmlFor="phone" className={labelClass}>{t.register.phoneLabel}</label>
           <input id="phone" name="phone" type="tel" required className="input w-full" />
         </div>
         <div>
-          <label htmlFor="password" className={labelClass}>Password</label>
+          <label htmlFor="password" className={labelClass}>{t.register.passwordLabel}</label>
           <input id="password" name="password" type="password" minLength={8} required className="input w-full" />
         </div>
       </fieldset>
 
       <fieldset className="space-y-3">
-        <legend className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-2">Payment Plan</legend>
+        <legend className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-2">{t.register.paymentPlanLegend}</legend>
         <p className="text-sm text-brand-muted">
-          A one-time <span className="font-bold">$30 registration fee</span> applies to every plan, paid separately and first.
+          {t.register.regFeeNotice} <span className="font-bold">{t.register.regFeeNoticeBold}</span> {t.register.regFeeNoticeSuffix}
         </p>
         <label className="flex items-start gap-2 cursor-pointer">
           <input type="radio" name="paymentPlan" value="full" required className="mt-1" />
           <span>
-            <span className="block font-bold">Pay in Full — $210 season fee</span>
-            <span className="block text-sm text-brand-muted">One payment covering the whole season (August–November), plus the $30 registration fee.</span>
+            <span className="block font-bold">{t.register.planFullTitle}</span>
+            <span className="block text-sm text-brand-muted">{t.register.planFullBody}</span>
           </span>
         </label>
         <label className="flex items-start gap-2 cursor-pointer">
           <input type="radio" name="paymentPlan" value="monthly" required className="mt-1" />
           <span>
-            <span className="block font-bold">Monthly — $210 season total</span>
-            <span className="block text-sm text-brand-muted">$30 in August, then $60/month September–November, plus the $30 registration fee.</span>
+            <span className="block font-bold">{t.register.planMonthlyTitle}</span>
+            <span className="block text-sm text-brand-muted">{t.register.planMonthlyBody}</span>
           </span>
         </label>
       </fieldset>
@@ -99,15 +102,13 @@ export function RegistrationForm({ onSuccess }: Props) {
       <label className="flex items-start gap-2 text-sm cursor-pointer">
         <input type="checkbox" name="agreedToTerms" required className="mt-1" />
         <span>
-          I understand that regardless of the payment plan I choose, I am financially liable for
-          the $30 one-time registration fee plus the full $210 season fee (August–November),
-          even if my child stops playing before the season ends.
+          {t.register.termsText}
         </span>
       </label>
 
       {error && <p className="text-red-500 text-sm">{error}</p>}
       <button type="submit" disabled={loading} className="btn-primary w-full">
-        {loading ? 'Registering…' : 'Register & Pay'}
+        {loading ? t.register.registering : t.register.submitButton}
       </button>
     </form>
   )

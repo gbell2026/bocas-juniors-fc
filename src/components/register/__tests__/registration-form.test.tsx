@@ -1,5 +1,6 @@
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import { RegistrationForm } from '../registration-form'
+import { renderWithLocale as render } from '@/lib/i18n/test-utils'
 
 jest.mock('@/app/actions/register', () => ({
   registerParentAndPlayer: jest.fn().mockResolvedValue({ playerId: 'p1', parentId: 'pa1', userId: 'u1' }),

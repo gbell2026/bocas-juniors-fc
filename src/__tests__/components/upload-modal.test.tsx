@@ -1,5 +1,6 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react'
 import { UploadModal } from '@/components/gallery/upload-modal'
+import { renderWithLocale as render } from '@/lib/i18n/test-utils'
 
 // Suppress XMLHttpRequest not implemented warnings in jsdom
 global.XMLHttpRequest = jest.fn(() => ({

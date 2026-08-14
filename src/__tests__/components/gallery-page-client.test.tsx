@@ -1,5 +1,6 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react'
 import { GalleryPageClient } from '@/components/gallery/gallery-page-client'
+import { renderWithLocale as render } from '@/lib/i18n/test-utils'
 
 // Mock heavy dependencies
 jest.mock('@/components/gallery/gallery-client', () => ({

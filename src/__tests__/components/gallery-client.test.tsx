@@ -1,6 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react'
 import { GalleryClient } from '@/components/gallery/gallery-client'
 import type { Media } from '@/lib/supabase/types'
+import { renderWithLocale as render } from '@/lib/i18n/test-utils'
 
 // Mock the lightbox — it's not what we're testing
 jest.mock('yet-another-react-lightbox', () => ({

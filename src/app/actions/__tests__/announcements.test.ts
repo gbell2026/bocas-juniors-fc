@@ -92,7 +92,7 @@ describe('postComment', () => {
   it('rejects when there is no authenticated user, without touching the database', async () => {
     mockSession.auth.getUser.mockResolvedValueOnce({ data: { user: null } })
     const result = await postComment('a1', 'hello')
-    expect(result.error).toBe('You must be logged in to comment.')
+    expect(result.error).toBe('must_be_logged_in')
     expect(mockService.insert).not.toHaveBeenCalled()
   })
 
@@ -124,13 +124,13 @@ describe('postComment', () => {
     mockService.insert.mockResolvedValueOnce({ error: { message: 'db error' } })
 
     const result = await postComment('a1', 'hello')
-    expect(result.error).toBe('Failed to post comment')
+    expect(result.error).toBe('comment_failed')
   })
 
   it('rejects a blank comment body without touching the database', async () => {
     mockSession.auth.getUser.mockResolvedValueOnce({ data: { user: { id: 'user-1' } } })
     const result = await postComment('a1', '   ')
-    expect(result.error).toBe('Comment cannot be empty.')
+    expect(result.error).toBe('comment_required')
     expect(mockService.insert).not.toHaveBeenCalled()
   })
 })

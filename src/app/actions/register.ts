@@ -14,7 +14,7 @@ export type RegisterResult =
 
 export async function registerParentAndPlayer(input: RegisterInput): Promise<RegisterResult> {
   if (!input.agreedToTerms) {
-    return { error: 'You must agree to the registration terms.' }
+    return { error: 'must_agree_terms' }
   }
 
   const supabase = createSupabaseServiceClient()
@@ -25,7 +25,7 @@ export async function registerParentAndPlayer(input: RegisterInput): Promise<Reg
     password: input.password,
     email_confirm: true, // skip email verification gate
   })
-  if (authError || !authData.user) return { error: authError?.message ?? 'Registration failed' }
+  if (authError || !authData.user) return { error: 'auth_error' }
   const userId = authData.user.id
 
   // 2. Insert parent row
@@ -36,7 +36,7 @@ export async function registerParentAndPlayer(input: RegisterInput): Promise<Reg
     .single()
   if (parentError || !parent) {
     await supabase.auth.admin.deleteUser(userId) // rollback
-    return { error: 'Failed to create parent record' }
+    return { error: 'submission_failed' }
   }
 
   // 3. Insert player row
@@ -53,7 +53,7 @@ export async function registerParentAndPlayer(input: RegisterInput): Promise<Reg
     .single()
   if (playerError || !player) {
     await supabase.auth.admin.deleteUser(userId) // rollback
-    return { error: 'Failed to create player record' }
+    return { error: 'submission_failed' }
   }
 
   // 4. Assign parent role
@@ -61,7 +61,7 @@ export async function registerParentAndPlayer(input: RegisterInput): Promise<Reg
     .from('user_roles').insert({ user_id: userId, role: 'parent' })
   if (roleError) {
     await supabase.auth.admin.deleteUser(userId) // rollback
-    return { error: 'Failed to assign role' }
+    return { error: 'submission_failed' }
   }
 
   // Notify admin (non-blocking — don't let email failures break registration)
@@ -122,12 +122,12 @@ export type AddChildResult =
 export async function addChildToParent(input: AddChildInput): Promise<AddChildResult> {
   const supabaseSession = await createSupabaseServerClient()
   const { data: { user } } = await supabaseSession.auth.getUser()
-  if (!user) return { error: 'You must be logged in to add a child.' }
+  if (!user) return { error: 'login_required_child' }
 
   const supabase = createSupabaseServiceClient()
 
   const { data: parent } = await supabase.from('parents').select('id, name, email').eq('user_id', user.id).single()
-  if (!parent) return { error: 'No parent account found for this login.' }
+  if (!parent) return { error: 'parent_not_found' }
 
   const { data: player, error: playerError } = await supabase
     .from('players')
@@ -140,7 +140,7 @@ export async function addChildToParent(input: AddChildInput): Promise<AddChildRe
     })
     .select()
     .single()
-  if (playerError || !player) return { error: 'Failed to add player record' }
+  if (playerError || !player) return { error: 'submission_failed' }
 
   // Notify admin (non-blocking — don't let email failures break registration)
   try {

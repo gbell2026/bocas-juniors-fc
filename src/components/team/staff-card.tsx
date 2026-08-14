@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { cloudinaryUrl } from '@/lib/cloudinary-url'
 import type { getStaffMembers } from '@/app/actions/staff'
+import { useLocale } from '@/lib/i18n/locale-context'
 
 type StaffMember = Awaited<ReturnType<typeof getStaffMembers>>[number]
 
@@ -21,6 +22,7 @@ function DetailBlock({ label, value }: { label: string; value: string | null }) 
 // of always rendering inline, since a fully filled-out bio otherwise turns
 // every card into a wall of text.
 export function StaffCard({ staff: s }: { staff: StaffMember }) {
+  const { t } = useLocale()
   const [expanded, setExpanded] = useState(false)
   const hasMore = !!(s.background || s.qualifications || s.philosophy || s.favouriteTeam || s.funFact)
 
@@ -52,17 +54,17 @@ export function StaffCard({ staff: s }: { staff: StaffMember }) {
           aria-expanded={expanded}
           className="text-brand-primaryDeep text-xs font-bold uppercase tracking-wider mt-3 underline"
         >
-          {expanded ? 'Show less ▲' : 'Read more ▼'}
+          {expanded ? `${t.team.showLess} ▲` : `${t.team.readMore} ▼`}
         </button>
       )}
 
       {expanded && (
         <div className="mt-3 pt-3 border-t border-brand-line space-y-2">
-          <DetailBlock label="Background" value={s.background} />
-          <DetailBlock label="Qualifications" value={s.qualifications} />
-          <DetailBlock label="Coaching Philosophy" value={s.philosophy} />
-          <DetailBlock label="Favourite Team" value={s.favouriteTeam} />
-          <DetailBlock label="Fun Fact" value={s.funFact} />
+          <DetailBlock label={t.team.background} value={s.background} />
+          <DetailBlock label={t.team.qualifications} value={s.qualifications} />
+          <DetailBlock label={t.team.philosophy} value={s.philosophy} />
+          <DetailBlock label={t.team.favouriteTeam} value={s.favouriteTeam} />
+          <DetailBlock label={t.team.funFact} value={s.funFact} />
         </div>
       )}
     </div>

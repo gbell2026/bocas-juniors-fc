@@ -2,10 +2,12 @@
 import { useEffect, useState } from 'react'
 import { getStandings } from '@/app/actions/league'
 import { cloudinaryUrl } from '@/lib/cloudinary-url'
+import { useLocale } from '@/lib/i18n/locale-context'
 
 type StandingsRow = Awaited<ReturnType<typeof getStandings>>[number]
 
 export function StandingsTable({ divisionId }: { divisionId: string }) {
+  const { t } = useLocale()
   const [rows, setRows] = useState<StandingsRow[] | null>(null)
 
   useEffect(() => {
@@ -17,15 +19,17 @@ export function StandingsTable({ divisionId }: { divisionId: string }) {
     return () => { cancelled = true }
   }, [divisionId])
 
-  if (rows === null) return <p className="text-brand-muted py-8 text-center">Loading table…</p>
-  if (rows.length === 0) return <p className="text-brand-muted py-8 text-center">No teams registered in this division yet.</p>
+  if (rows === null) return <p className="text-brand-muted py-8 text-center">{t.league.standings.loading}</p>
+  if (rows.length === 0) return <p className="text-brand-muted py-8 text-center">{t.league.standings.empty}</p>
+
+  const headers = ['#', t.league.standings.team, t.league.standings.played, t.league.standings.won, t.league.standings.drawn, t.league.standings.lost, t.league.standings.goalDifference, t.league.standings.points]
 
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead className="bg-brand-creamAlt">
           <tr>
-            {['#', 'Team', 'P', 'W', 'D', 'L', 'GD', 'Pts'].map(h => (
+            {headers.map(h => (
               <th key={h} className="text-left p-2">{h}</th>
             ))}
           </tr>

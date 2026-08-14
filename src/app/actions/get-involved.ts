@@ -15,7 +15,7 @@ export async function submitGetInvolved({
   message?: string
 }): Promise<{ error: string | null }> {
   if (!name || !email || interests.length === 0) {
-    return { error: 'Please fill in all required fields.' }
+    return { error: 'required_fields' }
   }
 
   const supabase = createSupabaseServiceClient()
@@ -26,7 +26,7 @@ export async function submitGetInvolved({
     interests,
     message: message || null,
   })
-  if (dbError) return { error: dbError.message }
+  if (dbError) return { error: 'submission_failed' }
 
   // Send email notification (non-blocking — don't let email failures break the form)
   try {

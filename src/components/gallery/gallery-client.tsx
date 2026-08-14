@@ -5,6 +5,7 @@ import Video from 'yet-another-react-lightbox/plugins/video'
 import 'yet-another-react-lightbox/styles.css'
 import { MasonryGrid } from './masonry-grid'
 import type { Media } from '@/lib/supabase/types'
+import { useLocale } from '@/lib/i18n/locale-context'
 
 type Filter = 'all' | 'photo' | 'video'
 
@@ -17,15 +18,16 @@ function cloudinaryVideoUrl(publicId: string) {
   return `https://res.cloudinary.com/${cloud}/video/upload/q_auto/${publicId}.mp4`
 }
 
-const tabs: { label: string; value: Filter }[] = [
-  { label: 'All', value: 'all' },
-  { label: 'Photos', value: 'photo' },
-  { label: 'Videos', value: 'video' },
-]
-
 export function GalleryClient({ items }: { items: Media[] }) {
+  const { t } = useLocale()
   const [index, setIndex] = useState(-1)
   const [filter, setFilter] = useState<Filter>('all')
+
+  const tabs: { label: string; value: Filter }[] = [
+    { label: t.gallery.tabAll, value: 'all' },
+    { label: t.gallery.tabPhotos, value: 'photo' },
+    { label: t.gallery.tabVideos, value: 'video' },
+  ]
 
   const filtered = filter === 'all' ? items : items.filter(i => i.type === filter)
 

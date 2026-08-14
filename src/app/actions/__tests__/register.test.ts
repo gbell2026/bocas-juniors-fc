@@ -41,7 +41,7 @@ it('returns error if auth.admin.createUser fails', async () => {
     playerName: 'Junior', dateOfBirth: '2015-06-01', position: 'Forward',
     paymentPlan: 'full', agreedToTerms: true,
   })
-  expect(result.error).toBe('Email taken')
+  expect(result.error).toBe('auth_error')
 })
 
 it('returns playerId on success', async () => {
@@ -87,7 +87,7 @@ it('returns an error if agreedToTerms is false, without creating anything', asyn
     playerName: 'Junior', dateOfBirth: '2015-06-01', position: 'Forward',
     paymentPlan: 'full', agreedToTerms: false,
   })
-  expect(result.error).toBe('You must agree to the registration terms.')
+  expect(result.error).toBe('must_agree_terms')
   expect(mockSupabase.auth.admin.createUser).not.toHaveBeenCalled()
 })
 
@@ -97,7 +97,7 @@ describe('addChildToParent', () => {
     const result = await addChildToParent({
       playerName: 'Second Kid', dateOfBirth: '2017-01-01', position: 'Midfielder', paymentPlan: 'full',
     })
-    expect(result.error).toBe('You must be logged in to add a child.')
+    expect(result.error).toBe('login_required_child')
     expect(mockSupabase.insert).not.toHaveBeenCalled()
   })
 
@@ -132,7 +132,7 @@ describe('addChildToParent', () => {
     const result = await addChildToParent({
       playerName: 'Second Kid', dateOfBirth: '2017-01-01', position: 'Midfielder', paymentPlan: 'full',
     })
-    expect(result.error).toBe('No parent account found for this login.')
+    expect(result.error).toBe('parent_not_found')
     expect(mockSupabase.insert).not.toHaveBeenCalled()
   })
 
@@ -145,6 +145,6 @@ describe('addChildToParent', () => {
     const result = await addChildToParent({
       playerName: 'Second Kid', dateOfBirth: '2017-01-01', position: 'Midfielder', paymentPlan: 'full',
     })
-    expect(result.error).toBe('Failed to add player record')
+    expect(result.error).toBe('submission_failed')
   })
 })

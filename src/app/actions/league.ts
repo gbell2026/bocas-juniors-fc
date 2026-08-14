@@ -37,7 +37,7 @@ export async function registerLeagueTeam(input: RegisterLeagueTeamInput): Promis
   const { data: existingFixture } = await supabase
     .from('league_fixtures').select('id').eq('division_id', input.divisionId).limit(1)
   if (existingFixture && existingFixture.length > 0) {
-    return { error: 'This division is no longer open for new team registrations.' }
+    return { error: 'division_closed' }
   }
 
   const { data: club, error: clubError } = await supabase
@@ -51,7 +51,7 @@ export async function registerLeagueTeam(input: RegisterLeagueTeamInput): Promis
     })
     .select()
     .single()
-  if (clubError || !club) return { error: 'Failed to create club record' }
+  if (clubError || !club) return { error: 'submission_failed' }
 
   const { data: team, error: teamError } = await supabase
     .from('league_teams')
@@ -60,7 +60,7 @@ export async function registerLeagueTeam(input: RegisterLeagueTeamInput): Promis
     .single()
   if (teamError || !team) {
     await supabase.from('league_clubs').delete().eq('id', club.id)
-    return { error: 'Failed to create team record' }
+    return { error: 'submission_failed' }
   }
 
   return { clubId: club.id, teamId: team.id }
@@ -87,19 +87,19 @@ export async function addLeagueTeam(input: AddLeagueTeamInput): Promise<AddLeagu
   const { data: existingFixture } = await supabase
     .from('league_fixtures').select('id').eq('division_id', input.divisionId).limit(1)
   if (existingFixture && existingFixture.length > 0) {
-    return { error: 'This division is no longer open for new team registrations.' }
+    return { error: 'division_closed' }
   }
 
   const { data: club } = await supabase
     .from('league_clubs').select('id').eq('id', input.clubId).eq('status', 'approved').single()
-  if (!club) return { error: 'Club not found' }
+  if (!club) return { error: 'club_not_found' }
 
   const { data: team, error: teamError } = await supabase
     .from('league_teams')
     .insert({ club_id: input.clubId, division_id: input.divisionId, name: input.teamName })
     .select()
     .single()
-  if (teamError || !team) return { error: 'Failed to create team record' }
+  if (teamError || !team) return { error: 'submission_failed' }
 
   return { teamId: team.id }
 }
@@ -117,14 +117,14 @@ export type AddLeaguePlayerInput = {
 // the gap against a stale/direct call.
 export async function addLeaguePlayer(input: AddLeaguePlayerInput): Promise<{ error?: string }> {
   if (!isValidSquadNumber(input.squadNumber)) {
-    return { error: 'Squad number must be a whole number greater than 0.' }
+    return { error: 'invalid_squad_number' }
   }
 
   const supabase = createSupabaseServiceClient()
 
   const { data: team } = await supabase
     .from('league_teams').select('id, status').eq('id', input.teamId).single()
-  if (!team || team.status !== 'approved') return { error: 'Team not found' }
+  if (!team || team.status !== 'approved') return { error: 'team_not_found' }
 
   const { error } = await supabase.from('league_players').insert({
     team_id: input.teamId,
@@ -132,7 +132,7 @@ export async function addLeaguePlayer(input: AddLeaguePlayerInput): Promise<{ er
     date_of_birth: input.dateOfBirth,
     squad_number: input.squadNumber,
   })
-  if (error) return { error: 'Failed to submit player' }
+  if (error) return { error: 'submission_failed' }
   return {}
 }
 

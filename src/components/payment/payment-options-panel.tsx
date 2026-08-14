@@ -2,27 +2,20 @@
 import { useEffect, useState } from 'react'
 import { getPaymentSettings, requestPayment, getPaymentSchedule } from '@/app/actions/payment'
 import { PaymentActionCell } from './payment-action-cell'
+import { useLocale } from '@/lib/i18n/locale-context'
 
 type Settings = Awaited<ReturnType<typeof getPaymentSettings>>
 type Schedule = Awaited<ReturnType<typeof getPaymentSchedule>>
 type Props = { playerId: string; parentId: string; parentName: string; playerName: string }
 
-const LABEL_DISPLAY: Record<string, string> = {
-  registration: 'Registration Fee',
-  full: 'Season Fee (Full)',
-  august: 'August',
-  september: 'September',
-  october: 'October',
-  november: 'November',
-}
-
-const STATUS_DISPLAY: Record<Schedule[number]['status'], { text: string; className: string }> = {
-  paid: { text: 'Paid', className: 'text-green-600' },
-  pending: { text: 'Pending Review', className: 'text-yellow-600' },
-  outstanding: { text: 'Outstanding', className: 'text-brand-primary' },
-}
-
 export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName }: Props) {
+  const { t } = useLocale()
+  const LABEL_DISPLAY: Record<string, string> = t.payment.labels
+  const STATUS_DISPLAY: Record<Schedule[number]['status'], { text: string; className: string }> = {
+    paid: { text: t.payment.paid, className: 'text-green-600' },
+    pending: { text: t.payment.pendingReview, className: 'text-yellow-600' },
+    outstanding: { text: t.payment.outstanding, className: 'text-brand-primary' },
+  }
   const [settings, setSettings] = useState<Settings | null>(null)
   const [schedule, setSchedule] = useState<Schedule | null>(null)
 
@@ -38,7 +31,7 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
     setSchedule(await getPaymentSchedule(playerId))
   }
 
-  if (!settings || schedule === null) return <p className="text-brand-muted py-8 text-center">Loading payment options…</p>
+  if (!settings || schedule === null) return <p className="text-brand-muted py-8 text-center">{t.payment.loading}</p>
 
   const regFeePaid = schedule.find(item => item.label === 'registration')?.status === 'paid'
   const allPaid = schedule.every(item => item.status === 'paid')
@@ -46,15 +39,15 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
   return (
     <div className="max-w-2xl mx-auto py-8 px-4 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h2 className="font-heading text-brand-ink text-xl uppercase tracking-wider">Payment Schedule</h2>
+        <h2 className="font-heading text-brand-ink text-xl uppercase tracking-wider">{t.payment.scheduleTitle}</h2>
         <p className={`text-sm font-bold ${regFeePaid ? 'text-green-600' : 'text-brand-primary'}`}>
-          Registration fee: {regFeePaid ? 'Paid' : 'Outstanding'}
+          {t.payment.regFeeLabel} {regFeePaid ? t.payment.paid : t.payment.outstanding}
         </p>
       </div>
 
       {allPaid ? (
         <p className="font-heading text-brand-ink text-xl uppercase tracking-wider text-center py-4">
-          You&apos;re all paid up for the season!
+          {t.payment.allPaidUp}
         </p>
       ) : (
         <>
@@ -68,7 +61,7 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
                   <div>
                     <p className="font-bold text-brand-ink">{LABEL_DISPLAY[item.label] ?? item.label}</p>
                     {item.discounted && (
-                      <p className="text-brand-primaryDeep text-[10px] font-bold uppercase tracking-wider">50% sibling discount</p>
+                      <p className="text-brand-primaryDeep text-[10px] font-bold uppercase tracking-wider">{t.payment.siblingDiscount}</p>
                     )}
                   </div>
                   <p className={`text-xs font-medium whitespace-nowrap ${STATUS_DISPLAY[item.status].className}`}>
@@ -96,10 +89,10 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
             <table className="w-full text-sm">
               <thead className="bg-brand-creamAlt">
                 <tr>
-                  <th className="text-left p-2">Item</th>
-                  <th className="text-left p-2">Amount</th>
-                  <th className="text-left p-2">Status</th>
-                  <th className="text-left p-2">Action</th>
+                  <th className="text-left p-2">{t.payment.itemHeader}</th>
+                  <th className="text-left p-2">{t.payment.amountHeader}</th>
+                  <th className="text-left p-2">{t.payment.statusHeader}</th>
+                  <th className="text-left p-2">{t.payment.actionHeader}</th>
                 </tr>
               </thead>
               <tbody>
@@ -109,7 +102,7 @@ export function PaymentOptionsPanel({ playerId, parentId, parentName, playerName
                       {LABEL_DISPLAY[item.label] ?? item.label}
                       {item.discounted && (
                         <span className="ml-1.5 text-brand-primaryDeep text-[10px] font-bold uppercase tracking-wider align-middle">
-                          50% sibling discount
+                          {t.payment.siblingDiscount}
                         </span>
                       )}
                     </td>

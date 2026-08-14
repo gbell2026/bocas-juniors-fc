@@ -22,5 +22,5 @@ export async function submitMediaRecord({
     published: false,
     pinned: false,
   })
-  return { error: error ? error.message : null }
+  return { error: error ? 'submission_failed' : null }
 }

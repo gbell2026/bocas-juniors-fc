@@ -2,6 +2,9 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { getUpcomingSchedule } from '@/app/actions/schedule'
 import { UpcomingSchedule } from '@/components/upcoming-schedule'
+import { getLocale } from '@/lib/i18n/get-locale'
+import { en } from '@/lib/i18n/en'
+import { es } from '@/lib/i18n/es'
 
 // Without these, Next.js statically generates the homepage at build time
 // (getUpcomingSchedule has no cookies/headers dependency to signal
@@ -14,6 +17,8 @@ export const revalidate = 0
 
 export default async function HomePage() {
   const schedule = await getUpcomingSchedule()
+  const locale = await getLocale()
+  const t = locale === 'es' ? es : en
 
   return (
     <main className="bg-brand-cream min-h-screen">
@@ -49,30 +54,30 @@ export default async function HomePage() {
             Tangerine Toucans
           </h1>
           <p className="text-brand-primary font-bold uppercase tracking-[0.3em] text-xs mt-3">
-            Youth Football · Bocas del Toro, Panama
+            {t.home.tagline}
           </p>
           <div className="flex gap-4 mt-7 flex-wrap justify-center">
             <Link href="/register" className="btn-primary">
-              Register Your Child
+              {t.home.registerChild}
             </Link>
             <Link href="/gallery" className="btn-secondary">
-              View Gallery
+              {t.home.viewGallery}
             </Link>
           </div>
         </div>
       </section>
 
-      <UpcomingSchedule schedule={schedule} />
+      <UpcomingSchedule schedule={schedule} locale={locale} />
 
       {/* Get Involved CTA */}
       <section className="py-14 px-4 bg-brand-ink border-t border-brand-charcoal text-center">
-        <h2 className="font-heading text-white text-4xl uppercase tracking-wider mb-3">Get Involved</h2>
+        <h2 className="font-heading text-white text-4xl uppercase tracking-wider mb-3">{t.home.getInvolved}</h2>
         <p className="text-white/60 mb-7 max-w-md mx-auto">
-          Want to support the Tangerine Toucans? We&apos;re looking for sponsors, volunteers, and partners to help grow the club.
+          {t.home.getInvolvedBody}
         </p>
-        <Link href="/get-involved" className="btn-primary">Become a Supporter</Link>
+        <Link href="/get-involved" className="btn-primary">{t.home.becomeSupporter}</Link>
         <div className="mt-10 pt-8 border-t border-brand-charcoal">
-          <p className="text-xs text-white/30 uppercase tracking-widest mb-3">Proudly supported by</p>
+          <p className="text-xs text-white/30 uppercase tracking-widest mb-3">{t.home.proudlySupportedBy}</p>
           <div className="flex items-center justify-center gap-8 flex-wrap">
             <Image
               src="/bocas-dance-logo.png"
@@ -99,7 +104,7 @@ export default async function HomePage() {
         href="https://wa.me/447462557960"
         target="_blank"
         rel="noopener noreferrer"
-        aria-label="Contact us on WhatsApp"
+        aria-label={t.home.whatsappAria}
         className="fixed bottom-6 right-6 z-50 flex items-center justify-center w-14 h-14 rounded-full shadow-lg hover:scale-110 transition"
         style={{ background: '#25D366' }}
       >

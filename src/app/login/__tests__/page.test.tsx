@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import LoginPage from '../page'
+import { renderWithLocale as render } from '@/lib/i18n/test-utils'
 
-jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }))
+jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn(), refresh: jest.fn() }) }))
 jest.mock('@/lib/supabase/client', () => ({
   createBrowserClient: () => ({
     auth: { signInWithPassword: jest.fn().mockResolvedValue({ error: null }) }

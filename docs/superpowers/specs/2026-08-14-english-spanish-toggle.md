@@ -73,7 +73,7 @@ export const en = {
   register: { /* registration form labels, validation copy, plan descriptions */ },
   login: { /* ... */ },
   profile: { /* ... */ },
-} as const
+}
 
 // es.ts
 export const es = {
@@ -82,7 +82,7 @@ export const es = {
 } satisfies typeof en
 ```
 
-`as const` on `en` gives literal string types (not just `string`), so `satisfies typeof en` on `es` genuinely checks key structure, not just "any strings present."
+**No `as const` on `en`** — that would infer each value as its literal string type (e.g. `"Home"`), and `satisfies typeof en` would then require `es` to use those exact same English words. Plain inferred `string` types are what let `satisfies` check *key structure* (missing/extra keys) while allowing different string content per language.
 
 ---
 
