@@ -64,7 +64,7 @@ export const en = {
   nav: { home: 'Home', team: 'Team', league: 'League', gallery: 'Gallery', announcements: 'Announcements', getInvolved: 'Get Involved', contact: 'Contact', register: 'Register', login: 'Log In', profile: 'My Profile', logout: 'Log Out' },
   common: { submit: 'Submit', cancel: 'Cancel', save: 'Save', loading: 'Loading…', close: 'Close' },
   home: { /* hero, sponsors section, CTA copy */ },
-  team: { title: 'Our Team', subtitle: 'Coaches & Admin Staff', empty: 'No staff members listed yet.', readMore: 'Read more', showLess: 'Show less', background: 'Background', qualifications: 'Qualifications', philosophy: 'Coaching Philosophy', favouriteTeam: 'Favourite Team', funFact: 'Fun Fact' },
+  team: { title: 'Our Team', subtitle: 'Coaches & Admin Staff', empty: 'No staff members listed yet.', readMore: 'Read more', showLess: 'Show less', background: 'Background', qualifications: 'Qualifications', philosophy: 'Coaching Philosophy', favouriteTeam: 'Favourite Team', funFact: 'Fun Fact' }, // readMore/showLess are the text only — staff-card.tsx appends the ▼/▲ glyph itself, see Pages In Scope note
   contact: { /* ... */ },
   getInvolved: { /* form labels, CTA copy — not the admin-entered sponsor content itself */ },
   gallery: { submitPhoto: 'Submit a Photo/Video', /* ... */ },
@@ -158,13 +158,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
 ## Usage Patterns
 
-**Server components** (most pages): call `getLocale()` then look up the dictionary directly:
+Roughly half of the in-scope pages are already `'use client'` — verified against current source, not assumed:
+
+- **Server components:** `src/app/page.tsx` (homepage), `src/app/contact/page.tsx`, `src/app/get-involved/page.tsx`, `src/app/gallery/page.tsx`, `src/app/profile/page.tsx`
+- **Client components:** `src/app/announcements/page.tsx`, `src/app/league/page.tsx`, `src/app/register/page.tsx`, `src/app/login/page.tsx`, `src/app/team/page.tsx`, plus `nav.tsx` and all form components
+
+**Server components:** call `getLocale()` then look up the dictionary directly:
 ```tsx
 const locale = await getLocale()
 const t = locale === 'es' ? es : en
 ```
 
-**Client components** (nav, forms, `/team` which is already client-fetched): `const { t } = useLocale()`.
+**Client components:** `const { t } = useLocale()`.
 
 ---
 
@@ -195,25 +200,47 @@ Placed in `src/components/nav.tsx`, alongside the existing nav links (desktop la
 
 ## Public Form Error Codes
 
-Public-facing server actions that currently return hardcoded English strings get changed to return codes. Scope: `src/app/actions/register.ts` (or wherever registration form validation lives), `src/components/get-involved/get-involved-form.tsx`'s backing action, `src/app/contact` if it has a backing action. **Admin-only actions (`league-admin.ts`, `admin.ts`, `staff.ts`, etc.) are unchanged** — admin stays English-only, no code-ification needed there.
+Public-facing server actions that currently return hardcoded English strings, or pass through raw Supabase/DB error text, get changed to return codes. **Admin-only actions (`league-admin.ts`, `admin.ts`, `staff.ts`, etc.) are unchanged** — admin stays English-only, no code-ification needed there.
 
-Pattern:
+**In scope:**
+- `src/app/actions/register.ts` — currently returns curated strings for known validation failures (fine, becomes codes) *and* `authError?.message ?? 'Registration failed'` for auth errors (passes through raw Supabase text — becomes a generic `auth_error` code instead, see below).
+- `src/app/actions/get-involved.ts` — currently returns `dbError.message` directly on failure (raw DB text passed straight to the user) — becomes a generic `submission_failed` code instead.
+- `src/app/actions/media-submissions.ts` (`submitMediaRecord`) — same raw-passthrough issue as get-involved. Becomes `submission_failed` on DB failure.
+- `src/components/gallery/upload-modal.tsx` — two distinct error paths here:
+  - The Cloudinary upload path itself (not a server action) currently sets hardcoded strings `'Upload failed'` / `'Network error'` directly in component state. These become translated inline via `t.gallery.uploadFailed` / `t.gallery.networkError` rather than the error-code+lookup pattern, since there's no server action boundary to cross here — the component already knows which failure occurred.
+  - The `dbError` returned by `submitMediaRecord` (now a `submission_failed` code, per above) must be run through the same `errorMessages[locale][code] ?? code` lookup as `register.ts`/`get-involved.ts` consumers before being assigned to `entry.error` — currently `entry.error` would otherwise display the literal string `"submission_failed"` to the user instead of a translated message.
+
+**Known-cause validation errors keep specific codes** (e.g. `email_required`); **errors from an external system (DB, auth provider) collapse to one generic code per action** rather than trying to translate arbitrary upstream error text:
+
 ```ts
-// before
-return { error: 'Email is required' }
+// before (register.ts)
+return { error: authError?.message ?? 'Registration failed' }
 // after
-return { error: 'email_required' }
+return { error: 'auth_error' }
+
+// before (get-involved.ts / media-submissions.ts)
+return { error: dbError.message }
+// after
+return { error: 'submission_failed' }
 ```
 
 **File:** `src/lib/i18n/error-messages.ts` ← new
 ```ts
 export const errorMessages = {
-  en: { email_required: 'Email is required', ... },
-  es: { email_required: 'El correo electrónico es obligatorio', ... },
+  en: { email_required: 'Email is required', auth_error: 'Something went wrong signing you up. Please try again.', submission_failed: 'Something went wrong. Please try again.', ... },
+  es: { email_required: 'El correo electrónico es obligatorio', auth_error: 'Ocurrió un error al registrarte. Inténtalo de nuevo.', submission_failed: 'Algo salió mal. Inténtalo de nuevo.', ... },
 } as const
 ```
 
-The calling client component looks up `errorMessages[locale][code] ?? code` (falls back to the raw code if somehow untranslated, rather than crashing — this one spot keeps a runtime fallback since, unlike the dictionaries, these codes aren't guaranteed exhaustive by `satisfies` across two independently-maintained action files and a messages file).
+The calling client component looks up `errorMessages[locale][code] ?? code` (falls back to the raw code if somehow untranslated, rather than crashing — this one spot keeps a runtime fallback since, unlike the dictionaries, these codes aren't guaranteed exhaustive by `satisfies` across several independently-maintained action files and a messages file).
+
+**`/login` is a special case, not covered by the above.** `src/app/login/page.tsx` calls `supabase.auth.signInWithPassword()` directly from the client (no server action to codify) and renders `error.message` verbatim (e.g. "Invalid login credentials"). Fix: catch the error client-side and map the handful of known Supabase auth-error message strings to translation keys (e.g. match `'Invalid login credentials'` → `t.login.invalidCredentials`), falling back to a generic `t.login.error` for anything unrecognized. This is a string-match against Supabase's current error text, which is not a stable contract — the fallback message is what keeps this from breaking if that wording changes upstream.
+
+---
+
+## Date/Time Formatting
+
+`src/components/upcoming-schedule.tsx`, `src/components/announcements/announcement-card.tsx`, and `src/components/league/fixtures-list.tsx` all hardcode `Intl.DateTimeFormat('en-GB', …)`. In scope: pass the current locale through and use `Intl.DateTimeFormat(locale === 'es' ? 'es-ES' : 'en-GB', …)` so dates render with Spanish weekday/month names when toggled. Mechanical change once `locale` is available in each component: `announcement-card.tsx` and `fixtures-list.tsx` are rendered within already-client pages per Usage Patterns above, so they can call `useLocale()` directly; `upcoming-schedule.tsx` is rendered by `src/app/page.tsx`, a server component — its parent calls `getLocale()` once and passes `locale` down as a prop instead. Grep for other `Intl.DateTimeFormat`/`toLocaleDateString` call sites during implementation in case there are more beyond these three.
 
 ---
 
@@ -221,17 +248,17 @@ The calling client component looks up `errorMessages[locale][code] ?? code` (fal
 
 Extraction happens page-by-page during implementation, not enumerated exhaustively here. In scope:
 
-- `src/components/nav.tsx` (including mobile menu)
+- `src/components/nav.tsx` (including the mobile menu *and* the registration-fee-outstanding banner — a distinct dynamic UI element, not just the static links)
 - `src/components/page-header.tsx`
-- `src/app/page.tsx` (homepage)
+- `src/app/page.tsx` (homepage) + `src/components/upcoming-schedule.tsx` ("Practice"/"Match" labels, plus date formatting per above)
 - `src/app/contact/page.tsx`
-- `src/app/get-involved/page.tsx` + `src/components/get-involved/get-involved-form.tsx` (form chrome, not admin-entered sponsor copy)
-- `src/app/gallery/page.tsx` + gallery components (chrome only — captions/submitter names are user content, not translated)
-- `src/app/announcements/page.tsx` + `src/components/announcements/announcement-card.tsx` (page chrome only — announcement bodies are admin content)
-- `src/app/league/page.tsx` + league display components (chrome only — club/team/division names are proper nouns, not translated)
+- `src/app/get-involved/page.tsx` + `src/components/get-involved/get-involved-form.tsx` (form chrome, including the static `INTEREST_OPTIONS` checkbox labels — these are predefined UI options, not admin-entered content, so in scope; the admin-entered sponsor copy itself is not)
+- `src/app/gallery/page.tsx` + gallery components incl. `upload-modal.tsx` (chrome + upload error messages per Error Codes section — captions/submitter names are user content, not translated)
+- `src/app/announcements/page.tsx` + `src/components/announcements/announcement-card.tsx` (page chrome + date formatting — announcement bodies are admin content, not translated)
+- `src/app/league/page.tsx` + league display components incl. `fixtures-list.tsx` (chrome + date formatting — club/team/division names are proper nouns, not translated)
 - `src/app/register/page.tsx` + `src/components/register/registration-form.tsx` + `src/components/payment/*` (this is the largest single surface — full registration flow, plan descriptions, validation messages)
-- `src/app/team/page.tsx` + `src/components/team/staff-card.tsx` (chrome only — bios themselves are admin content)
-- `src/app/login/page.tsx`
+- `src/app/team/page.tsx` + `src/components/team/staff-card.tsx` (chrome only — bios themselves are admin content; note the actual strings are `"Read more ▼"` / `"Show less ▲"` — the arrow glyph stays outside the translated string, e.g. `` `${t.team.readMore} ▼` ``, not baked into the dictionary value)
+- `src/app/login/page.tsx` (see the `/login` special case under Error Codes)
 - `src/app/profile/page.tsx` + `src/components/profile/*`
 
 **Explicitly excluded:** everything under `src/app/admin/`, `src/components/admin/`, admin-only server actions.
