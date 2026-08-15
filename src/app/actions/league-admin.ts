@@ -217,9 +217,12 @@ export async function updateDivision(id: string, input: UpdateDivisionInput): Pr
 }
 
 // Generates a full home-and-away round-robin for a division's approved
-// teams. Refuses to run if the division already has any fixtures (full
+// teams, one round per Sunday (Saturday is kept free as a weather-rearrange
+// day, never used for originally-scheduled fixtures — see round-robin.ts).
+// Refuses to run if the division already has any fixtures (full
 // regeneration isn't supported — see the spec's "Fixtures & schedule
-// generation" section) or if fewer than 2 teams are approved.
+// generation" section), if fewer than 2 teams are approved, or if there
+// aren't enough Sundays before the season end date to fit every round.
 export async function generateSchedule(divisionId: string): Promise<{ error?: string }> {
   const supabase = createSupabaseServiceClient()
 
@@ -238,10 +241,11 @@ export async function generateSchedule(divisionId: string): Promise<{ error?: st
   const teamIds = (teams ?? []).map(t => t.id)
   if (teamIds.length < 2) return { error: 'Need at least 2 approved teams to generate a schedule' }
 
-  const fixtures = generateRoundRobin(teamIds, division.season_start_date, division.season_end_date)
+  const result = generateRoundRobin(teamIds, division.season_start_date, division.season_end_date)
+  if (!result.ok) return { error: result.error }
 
   const { error } = await supabase.from('league_fixtures').insert(
-    fixtures.map(f => ({
+    result.fixtures.map(f => ({
       division_id: divisionId,
       home_team_id: f.homeTeamId,
       away_team_id: f.awayTeamId,

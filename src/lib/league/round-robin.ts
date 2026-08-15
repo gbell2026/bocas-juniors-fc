@@ -1,5 +1,9 @@
 export type RoundRobinFixture = { homeTeamId: string; awayTeamId: string; matchDate: string }
 
+export type RoundRobinResult =
+  | { ok: true; fixtures: RoundRobinFixture[] }
+  | { ok: false; error: string }
+
 const BYE = Symbol('bye')
 type Seat = string | typeof BYE
 
@@ -38,12 +42,24 @@ function circleMethodSingleLeg(teamIds: string[]): { home: string; away: string 
   return rounds
 }
 
+// Every match is played on a Sunday, one round per week, with Saturday kept
+// free as a fallback day for weather-postponed rearrangements rather than
+// being used for originally-scheduled fixtures. Dates are computed in UTC
+// (matching how match_date is displayed elsewhere) to avoid an off-by-one
+// day shift depending on the server's local timezone.
+function firstSundayOnOrAfter(date: Date): Date {
+  const sunday = new Date(date)
+  const daysUntilSunday = (7 - sunday.getUTCDay()) % 7
+  sunday.setUTCDate(sunday.getUTCDate() + daysUntilSunday)
+  return sunday
+}
+
 export function generateRoundRobin(
   teamIds: string[],
   startDate: string,
   endDate: string
-): RoundRobinFixture[] {
-  if (teamIds.length < 2) return []
+): RoundRobinResult {
+  if (teamIds.length < 2) return { ok: true, fixtures: [] }
 
   const leg1Rounds = circleMethodSingleLeg(teamIds)
   // Leg 2 is leg 1 with home/away reversed — guarantees every pairing
@@ -51,19 +67,28 @@ export function generateRoundRobin(
   const leg2Rounds = leg1Rounds.map(round => round.map(p => ({ home: p.away, away: p.home })))
   const allRounds = [...leg1Rounds, ...leg2Rounds]
 
-  const start = new Date(startDate)
+  const firstSunday = firstSundayOnOrAfter(new Date(startDate))
   const end = new Date(endDate)
-  const totalMs = end.getTime() - start.getTime()
-  const stepMs = allRounds.length > 1 ? totalMs / (allRounds.length - 1) : 0
+
+  const lastRoundDate = new Date(firstSunday)
+  lastRoundDate.setUTCDate(lastRoundDate.getUTCDate() + 7 * (allRounds.length - 1))
+
+  if (lastRoundDate > end) {
+    return {
+      ok: false,
+      error: `Not enough Sundays between the start and end date to fit ${allRounds.length} rounds (one per week) — extend the season end date or reduce the number of teams.`,
+    }
+  }
 
   const fixtures: RoundRobinFixture[] = []
   allRounds.forEach((round, roundIndex) => {
-    const roundDate = new Date(start.getTime() + stepMs * roundIndex)
+    const roundDate = new Date(firstSunday)
+    roundDate.setUTCDate(roundDate.getUTCDate() + 7 * roundIndex)
     const matchDate = roundDate.toISOString().slice(0, 10)
     round.forEach(pairing => {
       fixtures.push({ homeTeamId: pairing.home, awayTeamId: pairing.away, matchDate })
     })
   })
 
-  return fixtures
+  return { ok: true, fixtures }
 }
