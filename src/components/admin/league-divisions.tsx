@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { createDivision, updateDivision, generateSchedule } from '@/app/actions/league-admin'
+import { createDivision, updateDivision, generateSchedule, generateAlignedSchedule } from '@/app/actions/league-admin'
 
 type Division = { id: string; name: string; season_start_date: string; season_end_date: string }
 
@@ -11,6 +11,7 @@ export function LeagueDivisions({ divisions: initial }: { divisions: Division[] 
   const [seasonEndDate, setSeasonEndDate] = useState('')
   const [creating, setCreating] = useState(false)
   const [generating, setGenerating] = useState<string | null>(null)
+  const [generatingAligned, setGeneratingAligned] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [edits, setEdits] = useState<Record<string, { name: string; seasonStartDate: string; seasonEndDate: string }>>({})
   const [saving, setSaving] = useState<string | null>(null)
@@ -75,6 +76,20 @@ export function LeagueDivisions({ divisions: initial }: { divisions: Division[] 
     }
   }
 
+  async function handleGenerateAligned() {
+    setErrorMessage(null)
+    setGeneratingAligned(true)
+    try {
+      const result = await generateAlignedSchedule(divisions.map(d => d.id))
+      if (result.error) { setErrorMessage(result.error); return }
+      window.location.reload()
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
+    } finally {
+      setGeneratingAligned(false)
+    }
+  }
+
   return (
     <section>
       <h2 className="font-heading text-lg uppercase tracking-wide text-brand-ink mb-3">League Divisions</h2>
@@ -130,6 +145,21 @@ export function LeagueDivisions({ divisions: initial }: { divisions: Division[] 
           </div>
         ))}
       </div>
+
+      {divisions.length >= 2 && (
+        <div className="mb-4">
+          <button
+            onClick={handleGenerateAligned}
+            disabled={generatingAligned}
+            className="btn-secondary text-xs px-3 py-1.5"
+          >
+            {generatingAligned ? 'Generating…' : 'Generate Aligned Schedule (All Divisions)'}
+          </button>
+          <p className="text-brand-muted text-[10px] mt-1">
+            Requires every division to have the same season dates and no existing fixtures. Any club fielding a team in more than one division always plays on the same date across age groups, and Tangerine Toucans plays every round including round 1.
+          </p>
+        </div>
+      )}
 
       <form onSubmit={handleCreate} className="border border-brand-line rounded p-4 space-y-3">
         <p className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs">New Division</p>

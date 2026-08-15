@@ -1,7 +1,7 @@
 jest.mock('@/lib/supabase/server', () => ({ createSupabaseServiceClient: jest.fn() }))
 
 import {
-  generateSchedule, approveLeaguePlayer, createDivision, updateDivision,
+  generateSchedule, generateAlignedSchedule, approveLeaguePlayer, createDivision, updateDivision,
   approveLeagueClub, rejectLeagueClub, approveLeagueTeam, rejectLeagueTeam, rejectLeaguePlayer,
   updateFixture, recordFixtureScore, setFixtureCancelled,
   updateLeagueClub, updateLeagueTeam,
@@ -15,6 +15,7 @@ const mockSupabase = {
   eq: jest.fn().mockReturnThis(),
   select: jest.fn().mockReturnThis(),
   limit: jest.fn().mockReturnThis(),
+  in: jest.fn().mockReturnThis(),
   single: jest.fn(),
 }
 
@@ -69,6 +70,91 @@ describe('generateSchedule', () => {
       expect.objectContaining({ division_id: 'div-1', home_team_id: 'team-1', away_team_id: 'team-2' }),
       expect.objectContaining({ division_id: 'div-1', home_team_id: 'team-2', away_team_id: 'team-1' }),
     ])
+  })
+})
+
+describe('generateAlignedSchedule', () => {
+  it('rejects fewer than 2 divisions without touching the database', async () => {
+    const result = await generateAlignedSchedule(['div-1'])
+    expect(result.error).toBe('Aligned generation needs at least 2 divisions.')
+    expect(mockSupabase.from).not.toHaveBeenCalled()
+  })
+
+  it('rejects when one of the divisions already has fixtures', async () => {
+    mockSupabase.limit.mockResolvedValueOnce({ data: [{ id: 'fx-1' }], error: null })
+    const result = await generateAlignedSchedule(['div-u10', 'div-u14'])
+    expect(result.error).toBe('One or more of these divisions already has a schedule. Delete existing fixtures first.')
+    expect(mockSupabase.insert).not.toHaveBeenCalled()
+  })
+
+  it('rejects when divisions have different season dates', async () => {
+    mockSupabase.limit.mockResolvedValueOnce({ data: [], error: null })
+    mockSupabase.in.mockReturnValueOnce(mockSupabase).mockResolvedValueOnce({
+      data: [
+        { id: 'div-u10', season_start_date: '2026-09-06', season_end_date: '2026-12-01' },
+        { id: 'div-u14', season_start_date: '2026-09-13', season_end_date: '2026-12-01' },
+      ],
+      error: null,
+    })
+    const result = await generateAlignedSchedule(['div-u10', 'div-u14'])
+    expect(result.error).toBe('All divisions must share the same season start and end date to generate an aligned schedule.')
+    expect(mockSupabase.insert).not.toHaveBeenCalled()
+  })
+
+  it('rejects when no Tangerine Toucans team exists in the given divisions', async () => {
+    mockSupabase.limit.mockResolvedValueOnce({ data: [], error: null })
+    mockSupabase.in
+      .mockReturnValueOnce(mockSupabase)
+      .mockResolvedValueOnce({
+        data: [
+          { id: 'div-u10', season_start_date: '2026-09-06', season_end_date: '2026-12-01' },
+          { id: 'div-u14', season_start_date: '2026-09-06', season_end_date: '2026-12-01' },
+        ],
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: [
+          { id: 't1', division_id: 'div-u10', club_id: 'c1', league_clubs: { name: 'Caranero FC' } },
+          { id: 't2', division_id: 'div-u14', club_id: 'c1', league_clubs: { name: 'Caranero FC' } },
+        ],
+        error: null,
+      })
+    const result = await generateAlignedSchedule(['div-u10', 'div-u14'])
+    expect(result.error).toBe('Could not find a "Tangerine Toucans" team in these divisions to anchor the schedule.')
+    expect(mockSupabase.insert).not.toHaveBeenCalled()
+  })
+
+  it('generates and saves aligned fixtures across all given divisions, with the shared club on the same date in each', async () => {
+    mockSupabase.limit.mockResolvedValueOnce({ data: [], error: null })
+    mockSupabase.in
+      .mockReturnValueOnce(mockSupabase)
+      .mockResolvedValueOnce({
+        data: [
+          { id: 'div-u10', season_start_date: '2026-09-06', season_end_date: '2026-12-01' },
+          { id: 'div-u14', season_start_date: '2026-09-06', season_end_date: '2026-12-01' },
+        ],
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: [
+          { id: 'u10-toucans', division_id: 'div-u10', club_id: 'toucans', league_clubs: { name: 'Tangerine Toucans' } },
+          { id: 'u10-caranero', division_id: 'div-u10', club_id: 'caranero', league_clubs: { name: 'Caranero FC' } },
+          { id: 'u14-toucans', division_id: 'div-u14', club_id: 'toucans', league_clubs: { name: 'Tangerine Toucans' } },
+          { id: 'u14-caranero', division_id: 'div-u14', club_id: 'caranero', league_clubs: { name: 'Caranero FC' } },
+        ],
+        error: null,
+      })
+    mockSupabase.insert.mockResolvedValueOnce({ error: null })
+
+    const result = await generateAlignedSchedule(['div-u10', 'div-u14'])
+    expect(result.error).toBeUndefined()
+
+    const insertedRows = (mockSupabase.insert as jest.Mock).mock.calls[0][0] as { division_id: string; home_team_id: string; away_team_id: string; match_date: string }[]
+    expect(insertedRows).toHaveLength(4) // 2 rounds x 2 divisions
+
+    const u10Dates = insertedRows.filter(r => r.division_id === 'div-u10').map(r => r.match_date).sort()
+    const u14Dates = insertedRows.filter(r => r.division_id === 'div-u14').map(r => r.match_date).sort()
+    expect(u10Dates).toEqual(u14Dates)
   })
 })
 

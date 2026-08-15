@@ -15,7 +15,13 @@ type Seat = string | typeof BYE
  * for the team paired against it.
  */
 function circleMethodSingleLeg(teamIds: string[]): { home: string; away: string }[][] {
-  const seats: Seat[] = teamIds.length % 2 === 0 ? [...teamIds] : [...teamIds, BYE]
+  // For an odd count, the bye seat goes right after the first team, not at
+  // the end. arr[0] never rotates (see below) and is always paired against
+  // arr[n-1] — appending BYE at the end would put it there in round 0,
+  // meaning the very first team in the input sits out the opening round. It
+  // still gets exactly one bye somewhere in the cycle (required for
+  // fairness), just not round 0.
+  const seats: Seat[] = teamIds.length % 2 === 0 ? [...teamIds] : [teamIds[0], BYE, ...teamIds.slice(1)]
   const n = seats.length
   const rounds: { home: string; away: string }[][] = []
   const arr = [...seats]

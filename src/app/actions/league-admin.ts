@@ -1,6 +1,7 @@
 'use server'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 import { generateRoundRobin } from '@/lib/league/round-robin'
+import { alignTeamOrders } from '@/lib/league/align-team-order'
 
 // --- Clubs ---
 
@@ -253,6 +254,75 @@ export async function generateSchedule(divisionId: string): Promise<{ error?: st
     }))
   )
   if (error) return { error: 'Failed to save generated schedule' }
+  return {}
+}
+
+// Like generateSchedule, but coordinates multiple divisions at once so any
+// club fielding a team in more than one of them always plays on the same
+// date across all their age groups — see align-team-order.ts for why this
+// is possible using generateRoundRobin's purely positional pairing. The
+// anchor club (hardcoded to "Tangerine Toucans", the home club) is
+// guaranteed to play in every single round, including round 1.
+export async function generateAlignedSchedule(divisionIds: string[]): Promise<{ error?: string }> {
+  const supabase = createSupabaseServiceClient()
+
+  if (divisionIds.length < 2) return { error: 'Aligned generation needs at least 2 divisions.' }
+
+  const { data: existingFixtures } = await supabase
+    .from('league_fixtures').select('id').in('division_id', divisionIds).limit(1)
+  if (existingFixtures && existingFixtures.length > 0) {
+    return { error: 'One or more of these divisions already has a schedule. Delete existing fixtures first.' }
+  }
+
+  const { data: divisions } = await supabase
+    .from('league_divisions').select('id, season_start_date, season_end_date').in('id', divisionIds)
+  if (!divisions || divisions.length !== divisionIds.length) return { error: 'One or more divisions not found' }
+
+  const startDates = new Set(divisions.map(d => d.season_start_date))
+  const endDates = new Set(divisions.map(d => d.season_end_date))
+  if (startDates.size > 1 || endDates.size > 1) {
+    return { error: 'All divisions must share the same season start and end date to generate an aligned schedule.' }
+  }
+  const startDate = divisions[0].season_start_date
+  const endDate = divisions[0].season_end_date
+
+  const { data: teamRows } = await supabase
+    .from('league_teams')
+    .select('id, division_id, club_id, league_clubs(name)')
+    .eq('status', 'approved')
+    .in('division_id', divisionIds)
+
+  const anchorClub = (teamRows ?? []).find(t => (t.league_clubs as any)?.name === 'Tangerine Toucans')
+  if (!anchorClub) return { error: 'Could not find a "Tangerine Toucans" team in these divisions to anchor the schedule.' }
+
+  const rosters = divisionIds.map(divisionId => ({
+    divisionId,
+    teams: (teamRows ?? [])
+      .filter(t => t.division_id === divisionId)
+      .map(t => ({ teamId: t.id, clubId: t.club_id })),
+  }))
+
+  const aligned = alignTeamOrders(rosters, anchorClub.club_id)
+  if (!aligned.ok) return { error: aligned.error }
+
+  const allFixtureRows: { division_id: string; home_team_id: string; away_team_id: string; match_date: string }[] = []
+  for (const divisionId of divisionIds) {
+    const orderedTeamIds = aligned.orderedTeamIds.get(divisionId) ?? []
+    if (orderedTeamIds.length < 2) return { error: `Need at least 2 approved teams in division ${divisionId}` }
+
+    const result = generateRoundRobin(orderedTeamIds, startDate, endDate)
+    if (!result.ok) return { error: result.error }
+
+    allFixtureRows.push(...result.fixtures.map(f => ({
+      division_id: divisionId,
+      home_team_id: f.homeTeamId,
+      away_team_id: f.awayTeamId,
+      match_date: f.matchDate,
+    })))
+  }
+
+  const { error: insertError } = await supabase.from('league_fixtures').insert(allFixtureRows)
+  if (insertError) return { error: 'Failed to save generated schedule' }
   return {}
 }
 

@@ -76,6 +76,21 @@ describe('generateRoundRobin', () => {
     expect(result.error).toBeTruthy()
   })
 
+  it('never gives the first team in the input a bye in the opening round, for an odd team count', () => {
+    // With an odd count, someone gets a bye every round — but the first
+    // team in the array is the one callers rely on to play in round 1
+    // (e.g. align-team-order.ts's anchor club). Regression test: this used
+    // to append the bye slot at the very end, which paired it against the
+    // fixed first team specifically in round 0.
+    const result = generateRoundRobin(['anchor', 'b', 'c', 'd', 'e'], '2026-09-06', '2026-12-01')
+    if (!result.ok) throw new Error('expected ok result')
+    const firstSunday = result.fixtures.map(f => f.matchDate).sort()[0]
+    const anchorPlaysFirstRound = result.fixtures.some(
+      f => f.matchDate === firstSunday && (f.homeTeamId === 'anchor' || f.awayTeamId === 'anchor')
+    )
+    expect(anchorPlaysFirstRound).toBe(true)
+  })
+
   it('every fixture has a valid ISO date string', () => {
     const result = generateRoundRobin(['a', 'b'], '2026-08-01', '2026-08-15')
     if (!result.ok) throw new Error('expected ok result')
