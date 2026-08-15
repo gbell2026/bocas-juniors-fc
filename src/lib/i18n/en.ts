@@ -8,6 +8,7 @@ export const en = {
     register: 'Register',
     contact: 'Contact',
     myProfile: 'My Profile',
+    roster: 'Roster',
     logout: 'Log Out',
     login: 'Log In',
     openMenu: 'Open menu',

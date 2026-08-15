@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { useEffect, useState } from 'react'
 import { getRegFeeAlertForUser } from '@/app/actions/payment'
+import { getUserRole } from '@/app/actions/auth'
 import { useLocale } from '@/lib/i18n/locale-context'
 import { LanguageToggle } from '@/components/language-toggle'
 
@@ -35,6 +36,7 @@ export function Nav() {
   const pathname = usePathname()
   const { t } = useLocale()
   const [user, setUser] = useState<{ id: string } | null>(null)
+  const [role, setRole] = useState<string | null>(null)
   const [regFeeUnpaid, setRegFeeUnpaid] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
@@ -54,10 +56,11 @@ export function Nav() {
   }, [])
 
   useEffect(() => {
-    if (!user) { setRegFeeUnpaid(false); return }
+    if (!user) { setRegFeeUnpaid(false); setRole(null); return }
     getRegFeeAlertForUser(user.id)
       .then(alert => setRegFeeUnpaid(alert !== null && !alert.regFeePaid))
       .catch(err => console.error('Failed to check registration fee status:', err))
+    getUserRole(user.id).then(setRole).catch(() => setRole(null))
   }, [user])
 
   // Close the mobile menu automatically after navigating to a new page.
@@ -74,10 +77,10 @@ export function Nav() {
   const authLinks = user ? (
     <>
       <Link
-        href="/profile"
+        href={role === 'coach' ? '/roster' : '/profile'}
         className="bg-brand-charcoal border border-brand-mutedLight/30 text-white px-4 py-1.5 rounded hover:border-brand-primary transition text-center"
       >
-        {t.nav.myProfile}
+        {role === 'coach' ? t.nav.roster : t.nav.myProfile}
       </Link>
       <button
         onClick={handleLogout}

@@ -460,6 +460,7 @@ export type Database = {
       }
       players: {
         Row: {
+          age_groups: string[]
           created_at: string
           date_of_birth: string
           id: string
@@ -472,6 +473,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          age_groups?: string[]
           created_at?: string
           date_of_birth: string
           id?: string
@@ -484,6 +486,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          age_groups?: string[]
           created_at?: string
           date_of_birth?: string
           id?: string

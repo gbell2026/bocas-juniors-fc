@@ -10,6 +10,7 @@ export const es = {
     register: 'Inscribirse',
     contact: 'Contacto',
     myProfile: 'Mi Perfil',
+    roster: 'Plantilla',
     logout: 'Cerrar Sesión',
     login: 'Iniciar Sesión',
     openMenu: 'Abrir menú',

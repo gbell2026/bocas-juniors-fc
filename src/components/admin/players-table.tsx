@@ -1,7 +1,8 @@
 'use client'
 import { useState } from 'react'
-import { updatePlayerStatus, updatePlayerPaymentPlan } from '@/app/actions/admin'
+import { updatePlayerStatus, updatePlayerPaymentPlan, updatePlayerAgeGroups } from '@/app/actions/admin'
 import { adminMarkCashPaid } from '@/app/actions/payment'
+import { AGE_GROUPS } from '@/lib/age-groups'
 import type { Player, PaymentPlan } from '@/lib/supabase/types'
 
 type PlayerWithParent = Player & {
@@ -12,17 +13,26 @@ type PlayerWithParent = Player & {
 
 export function PlayersTable({ players }: { players: PlayerWithParent[] }) {
   const [updating, setUpdating] = useState<string | null>(null)
-  const [edits, setEdits] = useState<Record<string, { status: string; returnDate: string; paymentPlan: PaymentPlan }>>({})
+  const [edits, setEdits] = useState<Record<string, { status: string; returnDate: string; paymentPlan: PaymentPlan; ageGroups: string[] }>>({})
 
   function getEdit(p: PlayerWithParent) {
-    return edits[p.id] ?? { status: p.status, returnDate: p.return_date ?? '', paymentPlan: p.payment_plan }
+    return edits[p.id] ?? { status: p.status, returnDate: p.return_date ?? '', paymentPlan: p.payment_plan, ageGroups: p.age_groups }
+  }
+
+  function toggleAgeGroup(p: PlayerWithParent, group: string) {
+    const edit = getEdit(p)
+    const ageGroups = edit.ageGroups.includes(group)
+      ? edit.ageGroups.filter(g => g !== group)
+      : [...edit.ageGroups, group]
+    setEdits(prev => ({ ...prev, [p.id]: { ...edit, ageGroups } }))
   }
 
   async function handleStatusSave(p: PlayerWithParent) {
-    const { status, returnDate, paymentPlan } = getEdit(p)
+    const { status, returnDate, paymentPlan, ageGroups } = getEdit(p)
     setUpdating(p.id)
     await updatePlayerStatus(p.id, status as import('@/lib/supabase/types').PlayerStatus, returnDate || undefined)
     await updatePlayerPaymentPlan(p.id, paymentPlan)
+    await updatePlayerAgeGroups(p.id, ageGroups)
     setUpdating(null)
     window.location.reload()
   }
@@ -39,7 +49,7 @@ export function PlayersTable({ players }: { players: PlayerWithParent[] }) {
       <table className="w-full text-sm">
         <thead className="bg-brand-creamAlt">
           <tr>
-            {['Player', 'Position', 'DOB', 'Parent', 'Plan', 'Reg. Fee', 'Status', 'Return Date', 'Last Paid', 'Actions'].map(h => (
+            {['Player', 'Position', 'Age Group', 'DOB', 'Parent', 'Plan', 'Reg. Fee', 'Status', 'Return Date', 'Last Paid', 'Actions'].map(h => (
               <th key={h} className="text-left p-3">{h}</th>
             ))}
           </tr>
@@ -52,6 +62,21 @@ export function PlayersTable({ players }: { players: PlayerWithParent[] }) {
               <tr key={p.id} className="border-t align-top">
                 <td className="p-3 font-medium">{p.name}</td>
                 <td className="p-3">{p.position}</td>
+                <td className="p-3">
+                  <div className="flex flex-col gap-0.5">
+                    {AGE_GROUPS.map(group => (
+                      <label key={group} className="flex items-center gap-1 text-xs cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={edit.ageGroups.includes(group)}
+                          disabled={updating === p.id}
+                          onChange={() => toggleAgeGroup(p, group)}
+                        />
+                        {group}
+                      </label>
+                    ))}
+                  </div>
+                </td>
                 <td className="p-3">{p.date_of_birth}</td>
                 <td className="p-3">{p.parents?.name}</td>
                 <td className="p-3">

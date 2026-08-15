@@ -1,7 +1,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { AdminDashboard } from '@/components/admin/admin-dashboard'
-import { getPendingPayments, getAllPlayers, getTotalRevenue, getPendingSubmissions, getGetInvolvedSubmissions } from '@/app/actions/admin'
+import { getPendingPayments, getAllPlayers, getTotalRevenue, getPendingSubmissions, getGetInvolvedSubmissions, getCoachAccounts } from '@/app/actions/admin'
 import { getPendingLeagueClubs, getPendingLeagueTeams, getPendingLeaguePlayers, getLeagueDivisionsAdmin, getAllLeagueClubs, getAllLeagueTeams } from '@/app/actions/league-admin'
 import { getApprovedTeams } from '@/app/actions/league'
 import { getAnnouncements } from '@/app/actions/announcements'
@@ -17,7 +17,7 @@ export default async function AdminPage() {
     players, pendingPayments, totalRevenueCents, pendingSubmissions, getInvolvedSubmissions,
     pendingLeagueClubs, pendingLeagueTeams, pendingLeaguePlayers, leagueDivisions, approvedLeagueTeams,
     allLeagueClubs, allLeagueTeams,
-    announcements, staffMembers, practices,
+    announcements, staffMembers, practices, coachAccounts,
   ] = await Promise.all([
     getAllPlayers(),
     getPendingPayments(),
@@ -34,6 +34,7 @@ export default async function AdminPage() {
     getAnnouncements(),
     getStaffMembers(),
     getAllPractices(),
+    getCoachAccounts(),
   ])
 
   return (
@@ -53,6 +54,7 @@ export default async function AdminPage() {
       announcements={announcements}
       staffMembers={staffMembers}
       practices={practices}
+      coachAccounts={coachAccounts}
       userId={user.id}
     />
   )

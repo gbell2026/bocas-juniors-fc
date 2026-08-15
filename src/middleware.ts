@@ -21,7 +21,7 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const isProtected = ['/profile', '/admin'].some(p =>
+  const isProtected = ['/profile', '/admin', '/roster'].some(p =>
     request.nextUrl.pathname.startsWith(p)
   )
 
@@ -54,9 +54,28 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Coach/admin guard — same reasoning and pattern as the /admin block above.
+  if (user && request.nextUrl.pathname.startsWith('/roster')) {
+    const { createClient } = await import('@supabase/supabase-js')
+    const serviceClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+    const { data: roleRow } = await serviceClient
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single()
+    if (roleRow?.role !== 'admin' && roleRow?.role !== 'coach') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      return NextResponse.redirect(url)
+    }
+  }
+
   return response
 }
 
 export const config = {
-  matcher: ['/profile/:path*', '/admin/:path*'],
+  matcher: ['/profile/:path*', '/admin/:path*', '/roster/:path*'],
 }

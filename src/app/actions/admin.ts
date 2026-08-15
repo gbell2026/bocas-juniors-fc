@@ -60,6 +60,7 @@ export async function getAllPlayers() {
       ...p,
       lastPaidAt: succeeded.map((pay: any) => pay.paid_at).sort().at(-1) ?? null,
       regFeePaid: isRegistrationFeePaid(p.payment_plan, paidLabels),
+      ageGroups: p.age_groups,
     }
   })
 }
@@ -67,6 +68,54 @@ export async function getAllPlayers() {
 export async function updatePlayerPaymentPlan(playerId: string, paymentPlan: PaymentPlan) {
   const supabase = createSupabaseServiceClient()
   await supabase.from('players').update({ payment_plan: paymentPlan }).eq('id', playerId)
+}
+
+export async function updatePlayerAgeGroups(playerId: string, ageGroups: string[]) {
+  const supabase = createSupabaseServiceClient()
+  await supabase.from('players').update({ age_groups: ageGroups }).eq('id', playerId)
+}
+
+// Admin: create a login for a coach. Mirrors registerParentAndPlayer's
+// create-then-rollback pattern — a coach account is an auth user plus a
+// user_roles row; if the role assignment fails, the orphaned auth user is
+// deleted rather than left dangling with no role.
+export async function createCoachAccount(input: { name: string; email: string; password: string }): Promise<{ error?: string }> {
+  const supabase = createSupabaseServiceClient()
+
+  const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    email: input.email,
+    password: input.password,
+    email_confirm: true,
+  })
+  if (authError || !authData.user) return { error: 'Failed to create login' }
+
+  const { error: roleError } = await supabase
+    .from('user_roles').insert({ user_id: authData.user.id, role: 'coach' })
+  if (roleError) {
+    await supabase.auth.admin.deleteUser(authData.user.id)
+    return { error: 'Failed to assign coach role' }
+  }
+
+  return {}
+}
+
+export async function getCoachAccounts(): Promise<{ userId: string; email: string }[]> {
+  const supabase = createSupabaseServiceClient()
+  const { data: roleRows } = await supabase.from('user_roles').select('user_id').eq('role', 'coach')
+  const results: { userId: string; email: string }[] = []
+  for (const row of roleRows ?? []) {
+    const { data } = await supabase.auth.admin.getUserById(row.user_id)
+    if (data.user?.email) results.push({ userId: row.user_id, email: data.user.email })
+  }
+  return results
+}
+
+export async function deleteCoachAccount(userId: string): Promise<{ error?: string }> {
+  const supabase = createSupabaseServiceClient()
+  const { error: roleError } = await supabase.from('user_roles').delete().eq('user_id', userId)
+  if (roleError) return { error: 'Failed to remove coach role' }
+  await supabase.auth.admin.deleteUser(userId)
+  return {}
 }
 
 export async function getTotalRevenue() {

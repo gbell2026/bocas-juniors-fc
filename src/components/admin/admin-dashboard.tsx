@@ -8,7 +8,8 @@ import { GetInvolvedSubmissions } from '@/components/admin/get-involved-submissi
 import { LeagueAdminSection } from '@/components/admin/league-admin-section'
 import { AnnouncementsAdmin } from '@/components/admin/announcements-admin'
 import { StaffAdmin } from '@/components/admin/staff-admin'
-import type { getAllPlayers, getPendingPayments, getPendingSubmissions, getGetInvolvedSubmissions } from '@/app/actions/admin'
+import { CoachAccounts } from '@/components/admin/coach-accounts'
+import type { getAllPlayers, getPendingPayments, getPendingSubmissions, getGetInvolvedSubmissions, getCoachAccounts } from '@/app/actions/admin'
 import type { getPendingLeagueClubs, getPendingLeagueTeams, getPendingLeaguePlayers, getLeagueDivisionsAdmin, getAllLeagueClubs, getAllLeagueTeams } from '@/app/actions/league-admin'
 import type { getApprovedTeams } from '@/app/actions/league'
 import type { getAnnouncements } from '@/app/actions/announcements'
@@ -41,6 +42,7 @@ type Props = {
   announcements: Awaited<ReturnType<typeof getAnnouncements>>
   staffMembers: Awaited<ReturnType<typeof getStaffMembers>>
   practices: Awaited<ReturnType<typeof getAllPractices>>
+  coachAccounts: Awaited<ReturnType<typeof getCoachAccounts>>
   userId: string
 }
 
@@ -48,7 +50,7 @@ export function AdminDashboard({
   totalRevenueCents, players, pendingPayments, pendingSubmissions, getInvolvedSubmissions,
   pendingLeagueClubs, pendingLeagueTeams, pendingLeaguePlayers, leagueDivisions, approvedLeagueTeams,
   allLeagueClubs, allLeagueTeams,
-  announcements, staffMembers, practices, userId,
+  announcements, staffMembers, practices, coachAccounts, userId,
 }: Props) {
   const [tab, setTab] = useState<Tab>('overview')
 
@@ -82,10 +84,13 @@ export function AdminDashboard({
       )}
 
       {tab === 'players' && (
-        <section>
-          <h2 className="font-heading text-lg uppercase tracking-wide text-brand-ink mb-3">Players ({players.length})</h2>
-          <PlayersTable players={players as any} />
-        </section>
+        <div className="space-y-8">
+          <section>
+            <h2 className="font-heading text-lg uppercase tracking-wide text-brand-ink mb-3">Players ({players.length})</h2>
+            <PlayersTable players={players as any} />
+          </section>
+          <CoachAccounts accounts={coachAccounts} />
+        </div>
       )}
 
       {tab === 'submissions' && (

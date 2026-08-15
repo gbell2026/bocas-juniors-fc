@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { useLocale } from '@/lib/i18n/locale-context'
+import { getUserRole } from '@/app/actions/auth'
 
 export default function LoginPage() {
   const { t } = useLocale()
@@ -28,7 +29,9 @@ export default function LoginPage() {
       setError(error.message === 'Invalid login credentials' ? t.login.invalidCredentials : t.login.error)
       return
     }
-    router.push('/profile')
+    const { data: { user: signedInUser } } = await supabase.auth.getUser()
+    const role = signedInUser ? await getUserRole(signedInUser.id) : null
+    router.push(role === 'coach' ? '/roster' : '/profile')
   }
 
   return (
