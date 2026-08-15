@@ -13,7 +13,7 @@
 alter table players add column age_groups text[] not null default '{}';
 ```
 
-No RLS changes needed — `players` is already read/written exclusively through `createSupabaseServiceClient()` server actions (RLS on `players` blocks direct client access; confirm this matches the existing table's policy before writing the migration, following the same pattern as every other player-management column).
+No RLS changes needed — but note this is *not* because RLS blocks direct client access the way `user_roles`' `using (false)` does. `players` actually has real client-facing policies (`parent_select_players`, `parent_update_players` in `001_initial_schema.sql`) letting a parent's own browser session read/update their own player row directly via the anon key, with no column restriction. In practice the app never exercises this — every `players` access in app code goes through `createSupabaseServiceClient()` — but this is a **pre-existing gap**, not one this feature closes: a parent could already self-write `status` or `payment_plan` by calling supabase-js directly instead of going through the UI, and `age_groups` joins that same exposure. Out of scope to fix here (see Out of Scope) — flagged so it isn't mistaken for a solved problem.
 
 **Types update:** After applying the migration, manually update `src/lib/supabase/types.ts` (do not regenerate — hand-written aliases at the bottom would be lost, per existing convention). Add `age_groups: string[]` to the `players` table's `Row`, and `age_groups?: string[]` to `Insert`/`Update`.
 
@@ -147,8 +147,10 @@ if (user && request.nextUrl.pathname.startsWith('/roster')) {
     return NextResponse.redirect(url)
   }
 }
-```//
-Update `matcher: ['/profile/:path*', '/admin/:path*', '/roster/:path*']`. The page-level check in `roster/page.tsx` stays too — defense in depth, matching how `/profile` and `/admin` both check at the page/middleware level already.
+```
+Update `matcher: ['/profile/:path*', '/admin/:path*', '/roster/:path*']`.
+
+Note this is a deliberate departure from existing precedent, not a continuation of it: today, `/admin/page.tsx` and `/profile/page.tsx` each only check `if (!user) redirect('/login')` at the page level — the role gate for `/admin` lives *solely* in `middleware.ts`, with no page-level role re-check. `/roster/page.tsx` doing its own role check in addition to the middleware guard is a new, stricter pattern for this codebase (defense in depth), chosen because `/roster` is a brand-new access boundary — not because it matches what `/admin` already does.
 
 ### Data fetch
 
@@ -225,7 +227,7 @@ export async function updatePlayerAgeGroups(playerId: string, ageGroups: string[
 }
 ```
 
-`getAllPlayers` (already in `admin.ts`) needs `age_groups` added to its `.select('*', ...)` — it already uses `select('*', ...)` so this is automatic; just add `ageGroups: p.age_groups` to its returned mapped object, and add `age_groups: string[]` to the `PlayerWithParent` type in `players-table.tsx`.
+`getAllPlayers` (already in `admin.ts`) needs `age_groups` added to its returned mapped object (`ageGroups: p.age_groups`) — the underlying `.select('*', ...)` already picks it up automatically once the migration lands. No type changes needed in `players-table.tsx`'s `PlayerWithParent` — it's `Player & {...}`, so `age_groups` is inherited the moment it's added to the `players` Row type in `types.ts`.
 
 ---
 
@@ -237,7 +239,7 @@ export async function updatePlayerAgeGroups(playerId: string, ageGroups: string[
 
 ## Login Redirect
 
-**File:** `src/app/login/page.tsx` — after a successful `signInWithPassword`, look up the role before deciding where to send the user:
+**File:** `src/app/login/page.tsx` — after a successful `signInWithPassword`, look up the role (import `getUserRole` from the new `src/app/actions/auth.ts`) before deciding where to send the user:
 
 ```ts
 const { data: { user: signedInUser } } = await supabase.auth.getUser()
@@ -249,7 +251,7 @@ Parents and admins keep going to `/profile` (an admin with no `parents` row just
 
 ## Nav
 
-**File:** `src/components/nav.tsx` — the existing `authLinks` block's "My Profile" link becomes role-aware. Fetch the role in the same `useEffect` that already fetches `user` (one extra `getUserRole` call once `user` resolves), and swap the link:
+**File:** `src/components/nav.tsx` — the existing `authLinks` block's "My Profile" link becomes role-aware. `nav.tsx` currently has two effects: one with a `[]` dep array that fetches `user`, and a separate `[user]`-keyed effect (currently driving the reg-fee-alert check) that fires once `user` resolves. Add the `getUserRole` call to that **second, `[user]`-keyed effect** — not the first one, where `user` would still be `null`. Import `getUserRole` from the new `src/app/actions/auth.ts`. Then swap the link:
 
 ```tsx
 <Link href={role === 'coach' ? '/roster' : '/profile'} ...>
@@ -266,7 +268,7 @@ New dictionary key `nav.roster` needed in `en.ts`/`es.ts` ("Roster" / "Plantilla
 Following this repo's convention (business logic gets unit tests; presentational component wiring generally doesn't):
 
 - `src/app/actions/__tests__/admin.test.ts` (new, or add to existing if one exists — verify first) — `createCoachAccount`: rolls back the auth user if the `user_roles` insert fails; `updatePlayerAgeGroups`: calls update with the given array.
-- `src/app/actions/__tests__/roster.test.ts` ← new — `getRosterForCoach`: excludes `inactive` players; maps `hasOutstanding` correctly from a mocked `getAmountDue` (mock `@/app/actions/payment`); includes players with empty `age_groups`.
+- `src/app/actions/__tests__/roster.test.ts` ← new — `getRosterForCoach`: excludes `inactive` players; maps `hasOutstanding` correctly from a mocked `getAmountDue`; includes players with empty `age_groups`. **Note:** every existing test in `src/app/actions/__tests__/` mocks only `@/lib/supabase/server`, never a sibling action module — this test deliberately deviates by also mocking `@/app/actions/payment` (`jest.mock('@/app/actions/payment')`), since driving `getAmountDue`'s real DB-mock chain end-to-end here would be disproportionate to what this test is actually verifying (the roster mapping logic, not payment-due computation, which already has its own tests). Flagged so this isn't mistaken for the established pattern.
 - No dedicated component tests for `RosterList`, `CoachAccounts`, or the `PlayersTable` checkbox addition, matching existing precedent (`ManageLeagueClubs`, `StaffAdmin`, etc. are untested).
 
 ---
