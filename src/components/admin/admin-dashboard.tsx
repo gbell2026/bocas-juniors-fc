@@ -5,12 +5,7 @@ import { PendingPayments } from '@/components/admin/pending-payments'
 import { MediaUploader } from '@/components/admin/media-uploader'
 import { PendingSubmissions } from '@/components/admin/pending-submissions'
 import { GetInvolvedSubmissions } from '@/components/admin/get-involved-submissions'
-import { LeaguePendingQueue } from '@/components/admin/league-pending-queue'
-import { LeagueDivisions } from '@/components/admin/league-divisions'
-import { LeagueFixturesAdmin } from '@/components/admin/league-fixtures-admin'
-import { ManageLeagueClubs } from '@/components/admin/manage-league-clubs'
-import { ManageLeagueTeams } from '@/components/admin/manage-league-teams'
-import { PracticesAdmin } from '@/components/admin/practices-admin'
+import { LeagueAdminSection } from '@/components/admin/league-admin-section'
 import { AnnouncementsAdmin } from '@/components/admin/announcements-admin'
 import { StaffAdmin } from '@/components/admin/staff-admin'
 import type { getAllPlayers, getPendingPayments, getPendingSubmissions, getGetInvolvedSubmissions } from '@/app/actions/admin'
@@ -101,14 +96,16 @@ export function AdminDashboard({
       )}
 
       {tab === 'league' && (
-        <div className="space-y-8">
-          <PracticesAdmin practices={practices} />
-          <LeaguePendingQueue clubs={pendingLeagueClubs} teams={pendingLeagueTeams} players={pendingLeaguePlayers} />
-          <LeagueDivisions divisions={leagueDivisions} />
-          <LeagueFixturesAdmin divisions={leagueDivisions} teams={approvedLeagueTeams} />
-          <ManageLeagueClubs clubs={allLeagueClubs} />
-          <ManageLeagueTeams teams={allLeagueTeams} divisions={leagueDivisions} />
-        </div>
+        <LeagueAdminSection
+          practices={practices}
+          pendingLeagueClubs={pendingLeagueClubs}
+          pendingLeagueTeams={pendingLeagueTeams}
+          pendingLeaguePlayers={pendingLeaguePlayers}
+          leagueDivisions={leagueDivisions}
+          approvedLeagueTeams={approvedLeagueTeams}
+          allLeagueClubs={allLeagueClubs}
+          allLeagueTeams={allLeagueTeams}
+        />
       )}
 
       {tab === 'content' && (
