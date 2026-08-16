@@ -4,6 +4,7 @@ import { registerParentAndPlayer } from '@/app/actions/register'
 import type { PaymentPlan } from '@/lib/supabase/types'
 import { useLocale } from '@/lib/i18n/locale-context'
 import { translateError } from '@/lib/i18n/error-messages'
+import { getSchedule, JOIN_MONTHS, type JoinMonth } from '@/lib/payment-schedule'
 
 type Props = { onSuccess: (playerId: string, parentId: string, parentName: string, playerName: string) => void }
 
@@ -11,6 +12,13 @@ export function RegistrationForm({ onSuccess }: Props) {
   const { locale, t } = useLocale()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [joinMonth, setJoinMonth] = useState<JoinMonth>('august')
+
+  const seasonFeeCents = getSchedule('full', false, joinMonth)
+    .filter(i => i.label !== 'registration')
+    .reduce((sum, i) => sum + i.amountCents, 0)
+  const monthlyBreakdown = getSchedule('monthly', false, joinMonth)
+    .filter((i): i is { label: 'august' | 'september' | 'october' | 'november'; amountCents: number } => i.label !== 'registration')
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -27,6 +35,7 @@ export function RegistrationForm({ onSuccess }: Props) {
       position: fd.get('position') as string,
       paymentPlan: fd.get('paymentPlan') as PaymentPlan,
       agreedToTerms: fd.get('agreedToTerms') === 'on',
+      joinMonth,
     })
     setLoading(false)
     if (result.error) { setError(translateError(locale, result.error)); return }
@@ -80,21 +89,39 @@ export function RegistrationForm({ onSuccess }: Props) {
 
       <fieldset className="space-y-3">
         <legend className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-2">{t.register.paymentPlanLegend}</legend>
+        <div>
+          <label htmlFor="joinMonth" className={labelClass}>{t.register.joinMonthLabel}</label>
+          <select
+            id="joinMonth"
+            name="joinMonth"
+            required
+            className="input w-full"
+            value={joinMonth}
+            onChange={(e) => setJoinMonth(e.target.value as JoinMonth)}
+          >
+            {JOIN_MONTHS.map((m) => (
+              <option key={m} value={m}>{t.payment.labels[m]}</option>
+            ))}
+          </select>
+        </div>
         <p className="text-sm text-brand-muted">
           {t.register.regFeeNotice} <span className="font-bold">{t.register.regFeeNoticeBold}</span> {t.register.regFeeNoticeSuffix}
         </p>
         <label className="flex items-start gap-2 cursor-pointer">
           <input type="radio" name="paymentPlan" value="full" required className="mt-1" />
           <span>
-            <span className="block font-bold">{t.register.planFullTitle}</span>
+            <span className="block font-bold">{t.register.planFullTitle(`$${seasonFeeCents / 100}`)}</span>
             <span className="block text-sm text-brand-muted">{t.register.planFullBody}</span>
           </span>
         </label>
         <label className="flex items-start gap-2 cursor-pointer">
           <input type="radio" name="paymentPlan" value="monthly" required className="mt-1" />
           <span>
-            <span className="block font-bold">{t.register.planMonthlyTitle}</span>
-            <span className="block text-sm text-brand-muted">{t.register.planMonthlyBody}</span>
+            <span className="block font-bold">{t.register.planMonthlyTitle(`$${seasonFeeCents / 100}`)}</span>
+            <span className="block text-sm text-brand-muted">
+              {t.register.planMonthlyBody}{' '}
+              {monthlyBreakdown.map((i) => `${t.payment.labels[i.label]} $${i.amountCents / 100}`).join(' · ')}
+            </span>
           </span>
         </label>
       </fieldset>
@@ -102,7 +129,7 @@ export function RegistrationForm({ onSuccess }: Props) {
       <label className="flex items-start gap-2 text-sm cursor-pointer">
         <input type="checkbox" name="agreedToTerms" required className="mt-1" />
         <span>
-          {t.register.termsText}
+          {t.register.termsText(`$${seasonFeeCents / 100}`)}
         </span>
       </label>
 

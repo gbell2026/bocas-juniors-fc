@@ -1,4 +1,4 @@
-import { getNextDue, isRegistrationFeePaid, getPlanTotalCents } from '../payment-schedule'
+import { getNextDue, isRegistrationFeePaid, getPlanTotalCents, getSchedule } from '../payment-schedule'
 
 describe('getNextDue', () => {
   it('returns the registration fee first for a fresh full-plan player', () => {
@@ -98,5 +98,54 @@ describe('sibling discount (discounted = true)', () => {
 
   it('defaults to full price when discounted is omitted', () => {
     expect(getNextDue('full', ['registration'])).toEqual({ label: 'full', amountCents: 21000, isFirstInstallment: false })
+  })
+})
+
+describe('joinMonth proration', () => {
+  it('defaults to august, matching pre-proration behavior exactly', () => {
+    expect(getSchedule('monthly')).toEqual(getSchedule('monthly', false, 'august'))
+    expect(getSchedule('full')).toEqual(getSchedule('full', false, 'august'))
+  })
+
+  it('monthly plan skips installments before the join month', () => {
+    expect(getSchedule('monthly', false, 'october')).toEqual([
+      { label: 'registration', amountCents: 3000 },
+      { label: 'october', amountCents: 6000 },
+      { label: 'november', amountCents: 6000 },
+    ])
+  })
+
+  it('monthly plan for a november joiner only owes registration + November', () => {
+    expect(getSchedule('monthly', false, 'november')).toEqual([
+      { label: 'registration', amountCents: 3000 },
+      { label: 'november', amountCents: 6000 },
+    ])
+  })
+
+  it('full plan becomes the sum of the remaining months, paid as one installment', () => {
+    // October + November = $60 + $60 = $120
+    expect(getSchedule('full', false, 'october')).toEqual([
+      { label: 'registration', amountCents: 3000 },
+      { label: 'full', amountCents: 12000 },
+    ])
+  })
+
+  it('full plan for a september joiner sums September + October + November', () => {
+    expect(getSchedule('full', false, 'september')).toEqual([
+      { label: 'registration', amountCents: 3000 },
+      { label: 'full', amountCents: 18000 },
+    ])
+  })
+
+  it('sibling discount still halves the prorated amount', () => {
+    expect(getSchedule('full', true, 'october')).toEqual([
+      { label: 'registration', amountCents: 3000 },
+      { label: 'full', amountCents: 6000 },
+    ])
+  })
+
+  it('getNextDue and getPlanTotalCents respect joinMonth too', () => {
+    expect(getNextDue('monthly', ['registration'], false, 'october')).toEqual({ label: 'october', amountCents: 6000, isFirstInstallment: false })
+    expect(getPlanTotalCents('monthly', false, 'october')).toBe(15000) // 3000 + 6000 + 6000
   })
 })

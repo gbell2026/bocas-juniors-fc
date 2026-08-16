@@ -1,7 +1,7 @@
 'use server'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 import type { PaymentMethod, PaymentPlan, InstallmentLabel } from '@/lib/supabase/types'
-import { getNextDue, getSchedule } from '@/lib/payment-schedule'
+import { getNextDue, getSchedule, type JoinMonth } from '@/lib/payment-schedule'
 
 export type RequestPaymentResult = { error?: string }
 
@@ -35,8 +35,9 @@ export async function getAmountDue(playerId: string) {
   const supabase = createSupabaseServiceClient()
 
   const { data: player } = await supabase
-    .from('players').select('payment_plan').eq('id', playerId).single()
+    .from('players').select('payment_plan, join_month').eq('id', playerId).single()
   const plan = (player?.payment_plan ?? 'full') as PaymentPlan
+  const joinMonth = (player?.join_month ?? 'august') as JoinMonth
 
   const { data: succeededPayments } = await supabase
     .from('payments').select('installment_label')
@@ -47,7 +48,7 @@ export async function getAmountDue(playerId: string) {
     .filter((label): label is InstallmentLabel => label !== null)
 
   const discounted = await isDiscountedSibling(playerId)
-  return getNextDue(plan, paidLabels, discounted)
+  return getNextDue(plan, paidLabels, discounted, joinMonth)
 }
 
 export type ScheduleItemStatus = 'paid' | 'pending' | 'outstanding'
@@ -63,8 +64,9 @@ export async function getPaymentSchedule(playerId: string): Promise<ScheduleItem
   const supabase = createSupabaseServiceClient()
 
   const { data: player } = await supabase
-    .from('players').select('payment_plan').eq('id', playerId).single()
+    .from('players').select('payment_plan, join_month').eq('id', playerId).single()
   const plan = (player?.payment_plan ?? 'full') as PaymentPlan
+  const joinMonth = (player?.join_month ?? 'august') as JoinMonth
 
   const { data: payments } = await supabase
     .from('payments').select('installment_label, status')
@@ -79,7 +81,7 @@ export async function getPaymentSchedule(playerId: string): Promise<ScheduleItem
   }
 
   const discounted = await isDiscountedSibling(playerId)
-  return getSchedule(plan, discounted).map(inst => ({
+  return getSchedule(plan, discounted, joinMonth).map(inst => ({
     ...inst,
     status: paidLabels.has(inst.label) ? 'paid' : pendingLabels.has(inst.label) ? 'pending' : 'outstanding',
     discounted: discounted && inst.label !== 'registration',

@@ -69,7 +69,7 @@ it('returns playerId on success', async () => {
   expect(result.parentId).toBe('parent-1')
   expect(mockSupabase.insert).toHaveBeenNthCalledWith(
     2,
-    expect.objectContaining({ payment_plan: 'full' })
+    expect.objectContaining({ payment_plan: 'full', join_month: 'august' })
   )
   expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({
     to: ['g.bell2010@googlemail.com'],
@@ -79,6 +79,31 @@ it('returns playerId on success', async () => {
     to: ['jane@test.com'],
     subject: expect.stringContaining('Jane'),
   }))
+})
+
+it('passes an explicit joinMonth through to the player insert', async () => {
+  mockSupabase.auth.admin.createUser.mockResolvedValue({
+    data: { user: { id: 'user-1' } }, error: null
+  })
+  mockSupabase.single
+    .mockResolvedValueOnce({ data: { id: 'parent-1' }, error: null })
+    .mockResolvedValueOnce({ data: { id: 'player-1' }, error: null })
+  mockSupabase.insert
+    .mockReturnValueOnce(mockSupabase)
+    .mockReturnValueOnce(mockSupabase)
+    .mockResolvedValueOnce({ error: null })
+  mockSupabase.select.mockReturnThis()
+  mockSupabase.from.mockReturnThis()
+
+  await registerParentAndPlayer({
+    parentName: 'Jane', email: 'jane@test.com', phone: '555-1234', password: 'pass123',
+    playerName: 'Junior', dateOfBirth: '2015-06-01', position: 'Forward',
+    paymentPlan: 'monthly', agreedToTerms: true, joinMonth: 'october',
+  })
+  expect(mockSupabase.insert).toHaveBeenNthCalledWith(
+    2,
+    expect.objectContaining({ join_month: 'october' })
+  )
 })
 
 it('returns an error if agreedToTerms is false, without creating anything', async () => {
@@ -101,6 +126,20 @@ describe('addChildToParent', () => {
     expect(mockSupabase.insert).not.toHaveBeenCalled()
   })
 
+  it('passes an explicit joinMonth through, e.g. a second child joining later than the first', async () => {
+    mockSession.auth.getUser.mockResolvedValueOnce({ data: { user: { id: 'user-1' } } })
+    mockSupabase.single
+      .mockResolvedValueOnce({ data: { id: 'parent-1', name: 'Jane', email: 'jane@test.com' }, error: null })
+      .mockResolvedValueOnce({ data: { id: 'player-2' }, error: null })
+
+    await addChildToParent({
+      playerName: 'Second Kid', dateOfBirth: '2017-01-01', position: 'Midfielder', paymentPlan: 'full', joinMonth: 'november',
+    })
+    expect(mockSupabase.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ join_month: 'november' })
+    )
+  })
+
   it('adds the child under the caller\'s own parent record, derived from their session', async () => {
     mockSession.auth.getUser.mockResolvedValueOnce({ data: { user: { id: 'user-1' } } })
     mockSupabase.single
@@ -113,7 +152,7 @@ describe('addChildToParent', () => {
     expect(result.error).toBeUndefined()
     expect(result.playerId).toBe('player-2')
     expect(mockSupabase.insert).toHaveBeenCalledWith(
-      expect.objectContaining({ parent_id: 'parent-1', name: 'Second Kid', payment_plan: 'full' })
+      expect.objectContaining({ parent_id: 'parent-1', name: 'Second Kid', payment_plan: 'full', join_month: 'august' })
     )
     expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({
       to: ['g.bell2010@googlemail.com'],

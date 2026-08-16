@@ -4,6 +4,7 @@ import { addChildToParent } from '@/app/actions/register'
 import type { PaymentPlan } from '@/lib/supabase/types'
 import { useLocale } from '@/lib/i18n/locale-context'
 import { translateError } from '@/lib/i18n/error-messages'
+import { getSchedule, JOIN_MONTHS, type JoinMonth } from '@/lib/payment-schedule'
 
 type Props = { onSuccess: (playerId: string) => void; onCancel: () => void }
 
@@ -11,6 +12,13 @@ export function AddChildForm({ onSuccess, onCancel }: Props) {
   const { locale, t } = useLocale()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [joinMonth, setJoinMonth] = useState<JoinMonth>('august')
+
+  const seasonFeeCents = getSchedule('full', true, joinMonth)
+    .filter(i => i.label !== 'registration')
+    .reduce((sum, i) => sum + i.amountCents, 0)
+  const monthlyBreakdown = getSchedule('monthly', true, joinMonth)
+    .filter((i): i is { label: 'august' | 'september' | 'october' | 'november'; amountCents: number } => i.label !== 'registration')
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -22,6 +30,7 @@ export function AddChildForm({ onSuccess, onCancel }: Props) {
       dateOfBirth: fd.get('dateOfBirth') as string,
       position: fd.get('position') as string,
       paymentPlan: fd.get('paymentPlan') as PaymentPlan,
+      joinMonth,
     })
     setLoading(false)
     if (result.error) { setError(translateError(locale, result.error)); return }
@@ -53,20 +62,39 @@ export function AddChildForm({ onSuccess, onCancel }: Props) {
         </select>
       </div>
 
+      <div>
+        <label htmlFor="addChildJoinMonth" className={labelClass}>{t.profile.addChild.joinMonthLabel}</label>
+        <select
+          id="addChildJoinMonth"
+          name="joinMonth"
+          required
+          className="input w-full"
+          value={joinMonth}
+          onChange={(e) => setJoinMonth(e.target.value as JoinMonth)}
+        >
+          {JOIN_MONTHS.map((m) => (
+            <option key={m} value={m}>{t.payment.labels[m]}</option>
+          ))}
+        </select>
+      </div>
+
       <fieldset className="space-y-2">
         <legend className={labelClass}>{t.profile.addChild.paymentPlanLegend}</legend>
         <label className="flex items-start gap-2 cursor-pointer text-sm">
           <input type="radio" name="paymentPlan" value="full" required className="mt-1" />
           <span>
-            <span className="block font-bold">{t.profile.addChild.planFullTitle}</span>
+            <span className="block font-bold">{t.profile.addChild.planFullTitle(`$${seasonFeeCents / 100}`)}</span>
             <span className="block text-brand-muted">{t.profile.addChild.planFullBody}</span>
           </span>
         </label>
         <label className="flex items-start gap-2 cursor-pointer text-sm">
           <input type="radio" name="paymentPlan" value="monthly" required className="mt-1" />
           <span>
-            <span className="block font-bold">{t.profile.addChild.planMonthlyTitle}</span>
-            <span className="block text-brand-muted">{t.profile.addChild.planMonthlyBody}</span>
+            <span className="block font-bold">{t.profile.addChild.planMonthlyTitle(`$${seasonFeeCents / 100}`)}</span>
+            <span className="block text-brand-muted">
+              {t.profile.addChild.planMonthlyBody}{' '}
+              {monthlyBreakdown.map((i) => `${t.payment.labels[i.label]} $${i.amountCents / 100}`).join(' · ')}
+            </span>
           </span>
         </label>
       </fieldset>

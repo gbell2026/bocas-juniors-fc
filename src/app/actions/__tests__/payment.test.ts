@@ -42,9 +42,9 @@ beforeEach(() => {
  * index 0 to simulate the discount applying. Defaults to a solo child
  * (never discounted).
  */
-function queueGetAmountDue(plan: string, succeededLabels: (string | null)[], siblingIds: string[] = ['player-1']) {
+function queueGetAmountDue(plan: string, succeededLabels: (string | null)[], siblingIds: string[] = ['player-1'], joinMonth?: string) {
   mockSupabase.single
-    .mockResolvedValueOnce({ data: { payment_plan: plan }, error: null }) // players.eq('id',...).single() -> plan
+    .mockResolvedValueOnce({ data: { payment_plan: plan, join_month: joinMonth }, error: null }) // players.eq('id',...).single() -> plan
     .mockResolvedValueOnce({ data: { parent_id: 'parent-1' }, error: null }) // isDiscountedSibling: players.eq('id',...).single() -> parent_id
   ;(mockSupabase.eq as jest.Mock)
     .mockImplementationOnce(() => mockSupabase) // players .eq('id', ...) [plan lookup]
@@ -64,9 +64,9 @@ function queueGetAmountDue(plan: string, succeededLabels: (string | null)[], sib
  * involved — players.id and the isDiscountedSibling ones — stay on the
  * default chainable mock).
  */
-function queueGetPaymentSchedule(plan: string, payments: { installment_label: string; status: string }[], siblingIds: string[] = ['player-1']) {
+function queueGetPaymentSchedule(plan: string, payments: { installment_label: string; status: string }[], siblingIds: string[] = ['player-1'], joinMonth?: string) {
   mockSupabase.single
-    .mockResolvedValueOnce({ data: { payment_plan: plan }, error: null }) // plan lookup
+    .mockResolvedValueOnce({ data: { payment_plan: plan, join_month: joinMonth }, error: null }) // plan lookup
     .mockResolvedValueOnce({ data: { parent_id: 'parent-1' }, error: null }) // isDiscountedSibling: parent_id
   mockSupabase.in.mockResolvedValueOnce({ data: payments, error: null }) // payments list
   mockSupabase.order.mockResolvedValueOnce({ data: siblingIds.map(id => ({ id })), error: null }) // siblings list
@@ -106,6 +106,16 @@ describe('getPaymentSchedule', () => {
       { label: 'full', amountCents: 10500, status: 'outstanding', discounted: true },
     ])
   })
+
+  it('excludes pre-join-month installments entirely from the schedule', async () => {
+    queueGetPaymentSchedule('monthly', [], ['player-1'], 'october')
+    const result = await getPaymentSchedule('player-1')
+    expect(result).toEqual([
+      { label: 'registration', amountCents: 3000, status: 'outstanding', discounted: false },
+      { label: 'october', amountCents: 6000, status: 'outstanding', discounted: false },
+      { label: 'november', amountCents: 6000, status: 'outstanding', discounted: false },
+    ])
+  })
 })
 
 describe('getAmountDue', () => {
@@ -131,6 +141,18 @@ describe('getAmountDue', () => {
     queueGetAmountDue('full', [], ['player-1', 'player-2'])
     const result = await getAmountDue('player-2')
     expect(result).toEqual({ label: 'registration', amountCents: 3000, isFirstInstallment: true })
+  })
+
+  it('prorates the full-plan season fee for a player who joined in October', async () => {
+    queueGetAmountDue('full', ['registration'], ['player-1'], 'october')
+    const result = await getAmountDue('player-1')
+    expect(result).toEqual({ label: 'full', amountCents: 12000, isFirstInstallment: false })
+  })
+
+  it('skips pre-join-month installments on the monthly plan', async () => {
+    queueGetAmountDue('monthly', ['registration'], ['player-1'], 'october')
+    const result = await getAmountDue('player-1')
+    expect(result).toEqual({ label: 'october', amountCents: 6000, isFirstInstallment: false })
   })
 })
 

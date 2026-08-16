@@ -464,6 +464,7 @@ export type Database = {
           created_at: string
           date_of_birth: string
           id: string
+          join_month: Database["public"]["Enums"]["join_month_type"]
           name: string
           parent_id: string
           payment_plan: Database["public"]["Enums"]["payment_plan_type"]
@@ -477,6 +478,7 @@ export type Database = {
           created_at?: string
           date_of_birth: string
           id?: string
+          join_month?: Database["public"]["Enums"]["join_month_type"]
           name: string
           parent_id: string
           payment_plan?: Database["public"]["Enums"]["payment_plan_type"]
@@ -490,6 +492,7 @@ export type Database = {
           created_at?: string
           date_of_birth?: string
           id?: string
+          join_month?: Database["public"]["Enums"]["join_month_type"]
           name?: string
           parent_id?: string
           payment_plan?: Database["public"]["Enums"]["payment_plan_type"]
@@ -634,6 +637,7 @@ export type Database = {
         | "october"
         | "november"
         | "registration"
+      join_month_type: "august" | "september" | "october" | "november"
       league_status_type: "pending" | "approved" | "rejected"
       media_type: "photo" | "video"
       payment_method_type: "paypal" | "monzo" | "revolut" | "cash"
@@ -779,6 +783,7 @@ export const Constants = {
         "november",
         "registration",
       ],
+      join_month_type: ["august", "september", "october", "november"],
       league_status_type: ["pending", "approved", "rejected"],
       media_type: ["photo", "video"],
       payment_method_type: ["paypal", "monzo", "revolut", "cash"],

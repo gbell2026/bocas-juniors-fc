@@ -1,11 +1,12 @@
 'use server'
 import { createSupabaseServerClient, createSupabaseServiceClient } from '@/lib/supabase/server'
 import type { PaymentPlan } from '@/lib/supabase/types'
+import type { JoinMonth } from '@/lib/payment-schedule'
 
 export type RegisterInput = {
   parentName: string; email: string; phone: string; password: string
   playerName: string; dateOfBirth: string; position: string
-  paymentPlan: PaymentPlan; agreedToTerms: boolean
+  paymentPlan: PaymentPlan; agreedToTerms: boolean; joinMonth?: JoinMonth
 }
 
 export type RegisterResult =
@@ -48,6 +49,7 @@ export async function registerParentAndPlayer(input: RegisterInput): Promise<Reg
       date_of_birth: input.dateOfBirth,
       position: input.position,
       payment_plan: input.paymentPlan,
+      join_month: input.joinMonth ?? 'august',
     })
     .select()
     .single()
@@ -107,7 +109,7 @@ async function sendParentConfirmationEmail(email: string, parentName: string, pl
 }
 
 export type AddChildInput = {
-  playerName: string; dateOfBirth: string; position: string; paymentPlan: PaymentPlan
+  playerName: string; dateOfBirth: string; position: string; paymentPlan: PaymentPlan; joinMonth?: JoinMonth
 }
 
 export type AddChildResult =
@@ -137,6 +139,7 @@ export async function addChildToParent(input: AddChildInput): Promise<AddChildRe
       date_of_birth: input.dateOfBirth,
       position: input.position,
       payment_plan: input.paymentPlan,
+      join_month: input.joinMonth ?? 'august',
     })
     .select()
     .single()
