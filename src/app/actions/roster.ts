@@ -11,11 +11,13 @@ export type RosterPlayer = {
   hasOutstanding: boolean
 }
 
-// Excludes 'inactive' players (left the club) — 'injured'/'away' still
-// show, since they're still rostered, just not currently playing.
+// Excludes 'inactive' (registered but not yet activated — see the
+// players table's default status) and 'cancelled' (admin-removed) players.
+// 'injured'/'away' still show, since they're still rostered, just not
+// currently playing.
 export async function getRosterForCoach(): Promise<RosterPlayer[]> {
   const supabase = createSupabaseServiceClient()
-  const { data } = await supabase.from('players').select('*').neq('status', 'inactive').order('name')
+  const { data } = await supabase.from('players').select('*').neq('status', 'inactive').neq('status', 'cancelled').order('name')
 
   const players = data ?? []
   const dueChecks = await Promise.all(players.map(p => getAmountDue(p.id)))

@@ -28,6 +28,12 @@ describe('getRosterForCoach', () => {
     expect(mockSupabase.neq).toHaveBeenCalledWith('status', 'inactive')
   })
 
+  it('excludes cancelled players via the query itself', async () => {
+    mockSupabase.order.mockResolvedValueOnce({ data: [], error: null })
+    await getRosterForCoach()
+    expect(mockSupabase.neq).toHaveBeenCalledWith('status', 'cancelled')
+  })
+
   it('maps hasOutstanding from getAmountDue: null means fully paid, non-null means outstanding', async () => {
     mockSupabase.order.mockResolvedValueOnce({
       data: [
