@@ -1,6 +1,8 @@
 'use server'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 import { computeStandings } from '@/lib/league/standings'
+import { buildFixtureCalendar, shortDivisionLabel } from '@/lib/league/fixture-calendar'
+import { HOME_CLUB_NAME } from '@/app/actions/schedule'
 
 export type RegisterLeagueTeamInput = {
   clubName: string
@@ -176,31 +178,44 @@ export async function getApprovedTeams() {
   }))
 }
 
-// Fixtures are fetched flat and joined to team names in application code
-// (rather than an embedded Supabase select) because league_fixtures has
-// TWO foreign keys into league_teams (home_team_id, away_team_id) — an
-// embedded select would need constraint-name disambiguation for each side,
-// which is more fragile than a plain JS Map lookup for a table this size.
-export async function getFixtures(divisionId: string) {
+/**
+ * Both divisions' fixtures combined into the Fixtures tab's calendar —
+ * unlike getStandings/the old getFixtures, this deliberately spans every
+ * division at once, since most clubs field a team in both age groups and
+ * the calendar co-locates their matchdays.
+ */
+export async function getFixtureCalendar() {
   const supabase = createSupabaseServiceClient()
 
-  const { data: fixtures } = await supabase
-    .from('league_fixtures').select('*').eq('division_id', divisionId).order('match_date')
-  const { data: teams } = await supabase
-    .from('league_teams').select('id, name').eq('division_id', divisionId)
-  const teamMap = new Map((teams ?? []).map(t => [t.id, t.name]))
+  const { data: divisions } = await supabase.from('league_divisions').select('*')
+  if (!divisions || divisions.length === 0) return []
 
-  return (fixtures ?? []).map(f => ({
-    id: f.id,
-    matchDate: f.match_date,
-    homeTeamId: f.home_team_id,
-    awayTeamId: f.away_team_id,
-    homeTeamName: teamMap.get(f.home_team_id) ?? 'Unknown',
-    awayTeamName: teamMap.get(f.away_team_id) ?? 'Unknown',
-    homeScore: f.home_score,
-    awayScore: f.away_score,
-    cancelled: f.cancelled,
-  }))
+  const seasonStart = [...divisions].sort((a, b) => a.season_start_date.localeCompare(b.season_start_date))[0].season_start_date
+  const seasonEnd = [...divisions].sort((a, b) => b.season_end_date.localeCompare(a.season_end_date))[0].season_end_date
+  const divisionNameById = new Map(divisions.map(d => [d.id, d.name]))
+
+  const { data: fixtures } = await supabase.from('league_fixtures').select('*').order('match_date')
+  const { data: teams } = await supabase.from('league_teams').select('id, name')
+  const teamById = new Map((teams ?? []).map(t => [t.id, t.name]))
+
+  const calendarMatches = (fixtures ?? []).map(f => {
+    const homeTeam = teamById.get(f.home_team_id) ?? 'Unknown'
+    const awayTeam = teamById.get(f.away_team_id) ?? 'Unknown'
+    return {
+      id: f.id,
+      matchDate: f.match_date,
+      division: shortDivisionLabel(divisionNameById.get(f.division_id) ?? ''),
+      kickoff: f.kickoff ? f.kickoff.slice(0, 5) : null,
+      homeTeam,
+      awayTeam,
+      homeScore: f.home_score,
+      awayScore: f.away_score,
+      cancelled: f.cancelled,
+      isHomeClubMatch: homeTeam === HOME_CLUB_NAME || awayTeam === HOME_CLUB_NAME,
+    }
+  })
+
+  return buildFixtureCalendar(seasonStart, seasonEnd, calendarMatches)
 }
 
 // Wraps the pure `computeStandings` (already unit-tested in isolation) with
