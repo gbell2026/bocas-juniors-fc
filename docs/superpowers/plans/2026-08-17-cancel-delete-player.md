@@ -114,10 +114,18 @@ describe('restorePlayer', () => {
 
 describe('deletePlayer', () => {
   it('deletes the player when they have no payment history', async () => {
+    // deletePlayer's real call chain is:
+    //   .from('payments').select('id').eq('player_id', ...).limit(1)   -- payments check; eq() stays chainable, limit() is TERMINAL
+    //   .from('players').delete().eq('id', ...)                        -- the actual delete; eq() is TERMINAL here
+    // eq() is called twice across this function, so its queue needs an
+    // explicit chainable entry for the first (non-terminal) call — a bare
+    // mockResolvedValueOnce would return a Promise instead of mockSupabase
+    // for the first call, and the following .limit(1) would throw "limit
+    // is not a function".
     mockSupabase.select.mockReturnValueOnce(mockSupabase) // payments .select('id') -> chainable
-    mockSupabase.eq
-      .mockResolvedValueOnce({ data: [], error: null }) // payments .eq('player_id', ...).limit(1) -> TERMINAL, no payments
-      .mockResolvedValueOnce({ error: null }) // players .delete().eq('id', ...) -> TERMINAL
+    mockSupabase.eq.mockReturnValueOnce(mockSupabase) // payments .eq('player_id', ...) -> chainable, NOT terminal
+    mockSupabase.limit.mockResolvedValueOnce({ data: [], error: null }) // payments .limit(1) -> TERMINAL, no payments
+    mockSupabase.eq.mockResolvedValueOnce({ error: null }) // players .delete().eq('id', ...) -> TERMINAL
 
     const result = await deletePlayer('player-1')
     expect(result.error).toBeUndefined()
@@ -126,7 +134,9 @@ describe('deletePlayer', () => {
 
   it('refuses to delete a player with any payment history, and does not call delete', async () => {
     mockSupabase.select.mockReturnValueOnce(mockSupabase) // payments .select('id') -> chainable
-    mockSupabase.eq.mockResolvedValueOnce({ data: [{ id: 'pay-1' }], error: null }) // payments .eq(...).limit(1) -> TERMINAL, one payment found
+    mockSupabase.eq.mockReturnValueOnce(mockSupabase) // payments .eq('player_id', ...) -> chainable, NOT terminal
+    mockSupabase.limit.mockResolvedValueOnce({ data: [{ id: 'pay-1' }], error: null }) // payments .limit(1) -> TERMINAL, one payment found
+    // delete() is never reached in this test, so no second eq() queuing is needed.
 
     const result = await deletePlayer('player-1')
     expect(result.error).toBe('Cannot delete a player with payment history — cancel instead.')
@@ -148,7 +158,7 @@ const mockSupabase = {
   limit: jest.fn(),
 }
 ```
-Note: `limit` has no default `mockReturnThis()` since it's always the terminal call in `deletePlayer`'s payments check (`.select('id').eq('player_id', playerId).limit(1)`) — but the test code above resolves the value on `eq`, not `limit`, because the real query chain is `select → eq → limit`, and `limit` is what actually gets awaited. Re-read this carefully when writing the implementation in Step 3: **the mock queuing above needs to match the real call chain exactly, including which function is the terminal one** — write the implementation first if it's easier to get the chain right, then align the test's mock queue to match it call-for-call (same rigor as every other Jest mock-queue test in this codebase's recent history — see the `getFixtureCalendar` test in `docs/superpowers/plans/2026-08-16-fixtures-calendar.md` for what happens when this isn't done carefully).
+Note: `limit` has no default `mockReturnThis()` since it's always the terminal call in `deletePlayer`'s payments check (`.select('id').eq('player_id', playerId).limit(1)`) — the mock queuing in the test code above already reflects this (see the inline comments there).
 
 - [ ] **Step 2: Run tests to verify they fail**
 
@@ -198,7 +208,7 @@ export async function deletePlayer(playerId: string): Promise<{ error?: string }
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `npx jest src/app/actions/__tests__/admin.test.ts`
-Expected: PASS. If the `deletePlayer` tests fail specifically on mock-chain shape, re-check the exact sequence of `.select()`/`.eq()`/`.limit()` calls the real implementation makes and adjust the test's mock queuing to match — do not simplify the implementation to make a wrong test pass.
+Expected: PASS, all tests including the two `deletePlayer` ones.
 
 - [ ] **Step 5: Typecheck**
 
