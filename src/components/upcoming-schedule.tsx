@@ -41,7 +41,7 @@ export function UpcomingSchedule({ schedule, locale }: { schedule: Schedule; loc
               <span className="text-brand-muted flex-1 min-w-0 truncate">
                 {entry.type === 'practice'
                   ? `${formatTime(entry.time, locale)}${entry.location ? ` · ${entry.location}` : ''}`
-                  : `${entry.isHome ? t.home.schedule.vs : t.home.schedule.at} ${entry.opponent}${!entry.cancelled && entry.homeScore !== null && entry.awayScore !== null ? ` — ${entry.homeScore}-${entry.awayScore}` : ''}`}
+                  : `${entry.kickoff ? `${formatTime(entry.kickoff, locale)} · ` : ''}${entry.isHome ? t.home.schedule.vs : t.home.schedule.at} ${entry.opponent}${!entry.cancelled && entry.homeScore !== null && entry.awayScore !== null ? ` — ${entry.homeScore}-${entry.awayScore}` : ''}`}
               </span>
               {entry.cancelled && (
                 <span className="text-[10px] font-bold uppercase tracking-wider text-red-600 flex-shrink-0">{t.home.schedule.cancelled}</span>

@@ -85,13 +85,13 @@ it('combines practices and matches, sorted together by date', async () => {
   // team-home is our team; the fixture is on an earlier date than the practice
   queueHomeClubWithFixtures(
     ['team-home'],
-    [{ id: 'fx1', match_date: '2026-08-15', home_team_id: 'team-home', away_team_id: 'team-away', home_score: null, away_score: null, cancelled: false }],
+    [{ id: 'fx1', match_date: '2026-08-15', kickoff: '10:00:00', home_team_id: 'team-home', away_team_id: 'team-away', home_score: null, away_score: null, cancelled: false }],
     [{ id: 'team-away', name: 'Rival FC' }]
   )
 
   const result = await getUpcomingSchedule()
   expect(result).toEqual([
-    { type: 'match', id: 'fx1', date: '2026-08-15', opponent: 'Rival FC', isHome: true, cancelled: false, homeScore: null, awayScore: null },
+    { type: 'match', id: 'fx1', date: '2026-08-15', opponent: 'Rival FC', isHome: true, cancelled: false, homeScore: null, awayScore: null, kickoff: '10:00' },
     { type: 'practice', id: 'p1', date: '2026-08-20', time: '17:00:00', location: 'Field A', notes: null, cancelled: false },
   ])
 })
@@ -100,13 +100,13 @@ it('resolves the opponent correctly when our team is the away side', async () =>
   queuePractices([])
   queueHomeClubWithFixtures(
     ['team-home'],
-    [{ id: 'fx1', match_date: '2026-08-15', home_team_id: 'team-away', away_team_id: 'team-home', home_score: 2, away_score: 1, cancelled: false }],
+    [{ id: 'fx1', match_date: '2026-08-15', kickoff: '15:00:00', home_team_id: 'team-away', away_team_id: 'team-home', home_score: 2, away_score: 1, cancelled: false }],
     [{ id: 'team-away', name: 'Rival FC' }]
   )
 
   const result = await getUpcomingSchedule()
   expect(result).toEqual([
-    { type: 'match', id: 'fx1', date: '2026-08-15', opponent: 'Rival FC', isHome: false, cancelled: false, homeScore: 2, awayScore: 1 },
+    { type: 'match', id: 'fx1', date: '2026-08-15', opponent: 'Rival FC', isHome: false, cancelled: false, homeScore: 2, awayScore: 1, kickoff: '15:00' },
   ])
 })
 
@@ -117,7 +117,7 @@ it('includes cancelled practices and matches rather than filtering them out', as
   }])
   queueHomeClubWithFixtures(
     ['team-home'],
-    [{ id: 'fx1', match_date: '2026-08-20', home_team_id: 'team-home', away_team_id: 'team-away', home_score: null, away_score: null, cancelled: true }],
+    [{ id: 'fx1', match_date: '2026-08-20', kickoff: '09:00:00', home_team_id: 'team-home', away_team_id: 'team-away', home_score: null, away_score: null, cancelled: true }],
     [{ id: 'team-away', name: 'Rival FC' }]
   )
 
@@ -132,11 +132,22 @@ it('respects the limit after combining and sorting', async () => {
   ])
   queueHomeClubWithFixtures(
     ['team-home'],
-    [{ id: 'fx1', match_date: '2026-08-17', home_team_id: 'team-home', away_team_id: 'team-away', home_score: null, away_score: null, cancelled: false }],
+    [{ id: 'fx1', match_date: '2026-08-17', kickoff: '09:00:00', home_team_id: 'team-home', away_team_id: 'team-away', home_score: null, away_score: null, cancelled: false }],
     [{ id: 'team-away', name: 'Rival FC' }]
   )
 
   const result = await getUpcomingSchedule(2)
   expect(result).toHaveLength(2)
   expect(result.map(r => r.id)).toEqual(['p1', 'fx1'])
+})
+
+it('returns a null kickoff when the fixture has none set', async () => {
+  queuePractices([])
+  queueHomeClubWithFixtures(
+    ['team-home'],
+    [{ id: 'fx1', match_date: '2026-08-15', kickoff: null, home_team_id: 'team-home', away_team_id: 'team-away', home_score: null, away_score: null, cancelled: false }],
+    [{ id: 'team-away', name: 'Rival FC' }]
+  )
+  const result = await getUpcomingSchedule()
+  expect(result[0]).toMatchObject({ kickoff: null })
 })

@@ -4,7 +4,7 @@ import { HOME_CLUB_NAME } from '@/lib/league/home-club'
 
 export type ScheduleEntry =
   | { type: 'practice'; id: string; date: string; time: string; location: string | null; notes: string | null; cancelled: boolean }
-  | { type: 'match'; id: string; date: string; opponent: string; isHome: boolean; cancelled: boolean; homeScore: number | null; awayScore: number | null }
+  | { type: 'match'; id: string; date: string; kickoff: string | null; opponent: string; isHome: boolean; cancelled: boolean; homeScore: number | null; awayScore: number | null }
 
 /**
  * Combines upcoming practices with this club's own League fixtures into one
@@ -69,6 +69,7 @@ async function getUpcomingHomeClubMatches(today: string): Promise<ScheduleEntry[
       type: 'match' as const,
       id: f.id,
       date: f.match_date,
+      kickoff: f.kickoff ? f.kickoff.slice(0, 5) : null,
       opponent: opponentNameById.get(opponentId) ?? 'TBD',
       isHome,
       cancelled: f.cancelled,
