@@ -1,4 +1,4 @@
-import { buildFixtureCalendar, shortDivisionLabel, type CalendarMatch } from '../fixture-calendar'
+import { buildFixtureCalendar, shortDivisionLabel, divisionPillClass, type CalendarMatch } from '../fixture-calendar'
 
 function match(overrides: Partial<CalendarMatch> = {}): CalendarMatch {
   return {
@@ -63,5 +63,13 @@ describe('shortDivisionLabel', () => {
   it('takes the leading token of the division name', () => {
     expect(shortDivisionLabel('U10 (as of Jan 2027)')).toBe('U10')
     expect(shortDivisionLabel('U14')).toBe('U14')
+  })
+})
+
+describe('divisionPillClass', () => {
+  it('gives U10 the primary color and every other division the ink color', () => {
+    expect(divisionPillClass('U10')).toBe('bg-brand-primary text-white')
+    expect(divisionPillClass('U14')).toBe('bg-brand-ink text-white')
+    expect(divisionPillClass('U12')).toBe('bg-brand-ink text-white')
   })
 })

@@ -23,6 +23,13 @@ export function shortDivisionLabel(divisionName: string): string {
   return divisionName.split(' ')[0]
 }
 
+// Same U10/everything-else split used for the calendar's division pills and
+// the homepage's League Schedule column — one shared mapping so both stay
+// visually consistent.
+export function divisionPillClass(division: string): string {
+  return division === 'U10' ? 'bg-brand-primary text-white' : 'bg-brand-ink text-white'
+}
+
 // Same "walk forward one week at a time in UTC" approach as
 // firstSundayOnOrAfter in round-robin.ts, kept local here since this file
 // has no dependency on the round-robin generator.

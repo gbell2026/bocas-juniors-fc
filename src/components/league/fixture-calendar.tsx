@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { getFixtureCalendar } from '@/app/actions/league'
 import { useLocale } from '@/lib/i18n/locale-context'
 import type { Locale } from '@/lib/i18n/locale'
+import { divisionPillClass } from '@/lib/league/fixture-calendar'
 
 type CalendarDay = Awaited<ReturnType<typeof getFixtureCalendar>>[number]
 
@@ -24,10 +25,6 @@ function defaultSelectedIndex(days: CalendarDay[]): number {
   const today = new Date().toISOString().slice(0, 10)
   const idx = days.findIndex(d => d.date >= today)
   return idx === -1 ? days.length - 1 : idx
-}
-
-function divisionPillClass(division: string) {
-  return division === 'U10' ? 'bg-brand-primary text-white' : 'bg-brand-ink text-white'
 }
 
 export function FixtureCalendar() {
