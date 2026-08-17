@@ -1,7 +1,9 @@
 jest.mock('@/lib/supabase/server', () => ({ createSupabaseServiceClient: jest.fn() }))
+jest.mock('@/app/actions/payment', () => ({ getAmountDue: jest.fn() }))
 
 import { createCoachAccount, getCoachAccounts, deleteCoachAccount, updatePlayerAgeGroups, cancelPlayer, restorePlayer, deletePlayer, getAllPlayers } from '../admin'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
+import { getAmountDue } from '@/app/actions/payment'
 
 const mockSupabase = {
   auth: { admin: { createUser: jest.fn(), deleteUser: jest.fn(), getUserById: jest.fn() } },
@@ -153,6 +155,36 @@ describe('getAllPlayers', () => {
     expect(result[0].lastPaidAt).toBe('2026-08-01')
     expect(result[0].regFeePaid).toBe(true)
     expect(result[0].hasPayments).toBe(true)
+  })
+
+  it('sets paymentStatus to paidUp when getAmountDue returns null', async () => {
+    mockSupabase.order.mockResolvedValueOnce({
+      data: [{ id: 'player-4', name: 'Dan', payment_plan: 'full', age_groups: [], payments: [] }],
+      error: null,
+    })
+    ;(getAmountDue as jest.Mock).mockResolvedValueOnce(null)
+    const result = await getAllPlayers()
+    expect(result[0].paymentStatus).toEqual({ kind: 'paidUp' })
+  })
+
+  it('sets paymentStatus to awaitingRegistration when the registration fee is next due', async () => {
+    mockSupabase.order.mockResolvedValueOnce({
+      data: [{ id: 'player-5', name: 'Eve', payment_plan: 'full', age_groups: [], payments: [] }],
+      error: null,
+    })
+    ;(getAmountDue as jest.Mock).mockResolvedValueOnce({ label: 'registration', amountCents: 3000, isFirstInstallment: true })
+    const result = await getAllPlayers()
+    expect(result[0].paymentStatus).toEqual({ kind: 'awaitingRegistration' })
+  })
+
+  it('sets paymentStatus to owes with the label and amount when a season installment is next due', async () => {
+    mockSupabase.order.mockResolvedValueOnce({
+      data: [{ id: 'player-6', name: 'Finn', payment_plan: 'monthly', age_groups: [], payments: [] }],
+      error: null,
+    })
+    ;(getAmountDue as jest.Mock).mockResolvedValueOnce({ label: 'september', amountCents: 6000, isFirstInstallment: false })
+    const result = await getAllPlayers()
+    expect(result[0].paymentStatus).toEqual({ kind: 'owes', label: 'september', amountCents: 6000 })
   })
 })
 

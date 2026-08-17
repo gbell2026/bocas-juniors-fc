@@ -2,7 +2,13 @@
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 import type { PlayerStatus, Media, GetInvolvedSubmission, PaymentPlan, InstallmentLabel } from '@/lib/supabase/types'
 import { isRegistrationFeePaid } from '@/lib/payment-schedule'
+import { getAmountDue } from '@/app/actions/payment'
 import { v2 as cloudinary } from 'cloudinary'
+
+export type PaymentStatusInfo =
+  | { kind: 'paidUp' }
+  | { kind: 'awaitingRegistration' }
+  | { kind: 'owes'; label: InstallmentLabel; amountCents: number }
 
 cloudinary.config({
   cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
@@ -50,18 +56,27 @@ export async function getAllPlayers() {
     .from('players')
     .select('*, parents(name, email), payments(paid_at, status, installment_label)')
     .order('name')
+  const players = data ?? []
+  const dueChecks = await Promise.all(players.map(p => getAmountDue(p.id)))
   // Attach last succeeded payment date and registration-fee-paid status to each player
-  return (data ?? []).map(p => {
+  return players.map((p, i) => {
     const succeeded = (p.payments as any[])?.filter((pay: any) => pay.status === 'succeeded') ?? []
     const paidLabels = succeeded
       .map((pay: any) => pay.installment_label)
       .filter((label: any): label is InstallmentLabel => label !== null)
+    const due = dueChecks[i]
+    const paymentStatus: PaymentStatusInfo = !due
+      ? { kind: 'paidUp' }
+      : due.isFirstInstallment
+        ? { kind: 'awaitingRegistration' }
+        : { kind: 'owes', label: due.label, amountCents: due.amountCents }
     return {
       ...p,
       lastPaidAt: succeeded.map((pay: any) => pay.paid_at).sort().at(-1) ?? null,
       regFeePaid: isRegistrationFeePaid(p.payment_plan, paidLabels),
       ageGroups: p.age_groups,
       hasPayments: ((p.payments as any[]) ?? []).length > 0,
+      paymentStatus,
     }
   })
 }
