@@ -151,6 +151,7 @@ describe('getAllPlayers', () => {
     })
     const result = await getAllPlayers()
     expect(result[0].lastPaidAt).toBe('2026-08-01')
+    expect(result[0].regFeePaid).toBe(true)
     expect(result[0].hasPayments).toBe(true)
   })
 })
