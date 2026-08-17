@@ -1,6 +1,6 @@
 jest.mock('@/lib/supabase/server', () => ({ createSupabaseServiceClient: jest.fn() }))
 
-import { createCoachAccount, getCoachAccounts, deleteCoachAccount, updatePlayerAgeGroups } from '../admin'
+import { createCoachAccount, getCoachAccounts, deleteCoachAccount, updatePlayerAgeGroups, cancelPlayer, restorePlayer, deletePlayer } from '../admin'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 
 const mockSupabase = {
@@ -11,6 +11,7 @@ const mockSupabase = {
   delete: jest.fn().mockReturnThis(),
   eq: jest.fn().mockReturnThis(),
   select: jest.fn().mockReturnThis(),
+  limit: jest.fn(),
 }
 
 beforeEach(() => {
@@ -93,5 +94,55 @@ describe('updatePlayerAgeGroups', () => {
     await updatePlayerAgeGroups('player-1', ['U10', 'U14'])
     expect(mockSupabase.update).toHaveBeenCalledWith({ age_groups: ['U10', 'U14'] })
     expect(mockSupabase.eq).toHaveBeenCalledWith('id', 'player-1')
+  })
+})
+
+describe('cancelPlayer', () => {
+  it('sets status to cancelled and clears return_date', async () => {
+    mockSupabase.eq.mockResolvedValueOnce({ error: null })
+    await cancelPlayer('player-1')
+    expect(mockSupabase.update).toHaveBeenCalledWith({ status: 'cancelled', return_date: null })
+    expect(mockSupabase.eq).toHaveBeenCalledWith('id', 'player-1')
+  })
+})
+
+describe('restorePlayer', () => {
+  it('sets status back to active', async () => {
+    mockSupabase.eq.mockResolvedValueOnce({ error: null })
+    await restorePlayer('player-1')
+    expect(mockSupabase.update).toHaveBeenCalledWith({ status: 'active' })
+    expect(mockSupabase.eq).toHaveBeenCalledWith('id', 'player-1')
+  })
+})
+
+describe('deletePlayer', () => {
+  it('deletes the player when they have no payment history', async () => {
+    // deletePlayer's real call chain is:
+    //   .from('payments').select('id').eq('player_id', ...).limit(1)   -- payments check; eq() stays chainable, limit() is TERMINAL
+    //   .from('players').delete().eq('id', ...)                        -- the actual delete; eq() is TERMINAL here
+    // eq() is called twice across this function, so its queue needs an
+    // explicit chainable entry for the first (non-terminal) call — a bare
+    // mockResolvedValueOnce would return a Promise instead of mockSupabase
+    // for the first call, and the following .limit(1) would throw "limit
+    // is not a function".
+    mockSupabase.select.mockReturnValueOnce(mockSupabase) // payments .select('id') -> chainable
+    mockSupabase.eq.mockReturnValueOnce(mockSupabase) // payments .eq('player_id', ...) -> chainable, NOT terminal
+    mockSupabase.limit.mockResolvedValueOnce({ data: [], error: null }) // payments .limit(1) -> TERMINAL, no payments
+    mockSupabase.eq.mockResolvedValueOnce({ error: null }) // players .delete().eq('id', ...) -> TERMINAL
+
+    const result = await deletePlayer('player-1')
+    expect(result.error).toBeUndefined()
+    expect(mockSupabase.delete).toHaveBeenCalled()
+  })
+
+  it('refuses to delete a player with any payment history, and does not call delete', async () => {
+    mockSupabase.select.mockReturnValueOnce(mockSupabase) // payments .select('id') -> chainable
+    mockSupabase.eq.mockReturnValueOnce(mockSupabase) // payments .eq('player_id', ...) -> chainable, NOT terminal
+    mockSupabase.limit.mockResolvedValueOnce({ data: [{ id: 'pay-1' }], error: null }) // payments .limit(1) -> TERMINAL, one payment found
+    // delete() is never reached in this test, so no second eq() queuing is needed.
+
+    const result = await deletePlayer('player-1')
+    expect(result.error).toBe('Cannot delete a player with payment history — cancel instead.')
+    expect(mockSupabase.delete).not.toHaveBeenCalled()
   })
 })

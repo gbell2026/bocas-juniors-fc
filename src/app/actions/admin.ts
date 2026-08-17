@@ -75,6 +75,40 @@ export async function updatePlayerAgeGroups(playerId: string, ageGroups: string[
   await supabase.from('players').update({ age_groups: ageGroups }).eq('id', playerId)
 }
 
+// Reversible — sets the player aside without touching their payment
+// history. Does not preserve a prior injured/away status or return_date;
+// restorePlayer always lands them back on 'active'. This is a deliberate
+// simplification (see spec) — if a restored player still needs
+// injured/away re-applied, admin does that afterward via the status
+// dropdown.
+export async function cancelPlayer(playerId: string) {
+  const supabase = createSupabaseServiceClient()
+  await supabase.from('players').update({ status: 'cancelled', return_date: null }).eq('id', playerId)
+}
+
+export async function restorePlayer(playerId: string) {
+  const supabase = createSupabaseServiceClient()
+  await supabase.from('players').update({ status: 'active' }).eq('id', playerId)
+}
+
+// Permanently removes a player row — only when they have zero payment
+// records (of ANY status: pending, succeeded, or failed). payments.player_id
+// is `on delete cascade`, so deleting a player with payment history would
+// silently destroy their financial records; this check exists specifically
+// to make that impossible, and is re-validated here even though the UI
+// already hides the Delete button once payments exist — never trust the
+// client alone for the one irreversible path in this feature.
+export async function deletePlayer(playerId: string): Promise<{ error?: string }> {
+  const supabase = createSupabaseServiceClient()
+  const { data: payments } = await supabase.from('payments').select('id').eq('player_id', playerId).limit(1)
+  if (payments && payments.length > 0) {
+    return { error: 'Cannot delete a player with payment history — cancel instead.' }
+  }
+  const { error } = await supabase.from('players').delete().eq('id', playerId)
+  if (error) return { error: 'Failed to delete player' }
+  return {}
+}
+
 // Admin: create a login for a coach. Mirrors registerParentAndPlayer's
 // create-then-rollback pattern — a coach account is an auth user plus a
 // user_roles row; if the role assignment fails, the orphaned auth user is
