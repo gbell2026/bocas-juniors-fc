@@ -1,29 +1,42 @@
 'use server'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
-import { HOME_CLUB_NAME } from '@/lib/league/home-club'
+import { shortDivisionLabel } from '@/lib/league/fixture-calendar'
 
-export type ScheduleEntry =
-  | { type: 'practice'; id: string; date: string; time: string; location: string | null; notes: string | null; cancelled: boolean }
-  | { type: 'match'; id: string; date: string; kickoff: string | null; opponent: string; isHome: boolean; cancelled: boolean; homeScore: number | null; awayScore: number | null }
+export type PracticeScheduleEntry = {
+  id: string; date: string; time: string; location: string | null; notes: string | null; cancelled: boolean
+}
+
+export type LeagueMatchScheduleEntry = {
+  id: string; date: string; kickoff: string | null; division: string
+  homeTeam: string; awayTeam: string; cancelled: boolean
+  homeScore: number | null; awayScore: number | null
+}
+
+export type HomeSchedule = { practices: PracticeScheduleEntry[]; matches: LeagueMatchScheduleEntry[] }
+
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(dateStr)
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().slice(0, 10)
+}
 
 /**
- * Combines upcoming practices with this club's own League fixtures into one
- * sorted "what's next" feed for the homepage — practices come straight from
- * the `practices` table, matches come from `league_fixtures` for any team
- * belonging to the home club. Cancelled items are included (not filtered
- * out), so a parent sees "Tuesday's practice is cancelled" rather than it
- * silently disappearing.
+ * Two independent, differently-windowed feeds for the homepage: practices
+ * (next 14 days) and every league match across every club/division (next 7
+ * days) — unlike the old getUpcomingSchedule, this deliberately does NOT
+ * filter matches down to just this club's own games, since the homepage
+ * now shows the full league schedule.
  */
-export async function getUpcomingSchedule(limit = 5): Promise<ScheduleEntry[]> {
+export async function getHomeSchedule(): Promise<HomeSchedule> {
   const supabase = createSupabaseServiceClient()
   const today = new Date().toISOString().slice(0, 10)
 
   const { data: practiceRows } = await supabase
-    .from('practices').select('*').gte('practice_date', today)
+    .from('practices').select('*')
+    .gte('practice_date', today).lt('practice_date', addDays(today, 14))
     .order('practice_date', { ascending: true }).order('practice_time', { ascending: true })
 
-  const practices: ScheduleEntry[] = (practiceRows ?? []).map(p => ({
-    type: 'practice' as const,
+  const practices: PracticeScheduleEntry[] = (practiceRows ?? []).map(p => ({
     id: p.id,
     date: p.practice_date,
     time: p.practice_time,
@@ -32,49 +45,36 @@ export async function getUpcomingSchedule(limit = 5): Promise<ScheduleEntry[]> {
     cancelled: p.cancelled,
   }))
 
-  const matches = await getUpcomingHomeClubMatches(today)
+  const matches = await getUpcomingLeagueMatches(today, addDays(today, 7))
 
-  return [...practices, ...matches]
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(0, limit)
+  return { practices, matches }
 }
 
-async function getUpcomingHomeClubMatches(today: string): Promise<ScheduleEntry[]> {
+async function getUpcomingLeagueMatches(today: string, until: string): Promise<LeagueMatchScheduleEntry[]> {
   const supabase = createSupabaseServiceClient()
 
-  const { data: homeClub } = await supabase.from('league_clubs').select('id').eq('name', HOME_CLUB_NAME).single()
-  if (!homeClub) return []
-
-  const { data: homeTeams } = await supabase.from('league_teams').select('id').eq('club_id', homeClub.id)
-  const homeTeamIds = new Set((homeTeams ?? []).map(t => t.id))
-  if (homeTeamIds.size === 0) return []
-
   const { data: fixtureRows } = await supabase
-    .from('league_fixtures').select('*').gte('match_date', today).order('match_date', { ascending: true })
-  const relevantFixtures = (fixtureRows ?? []).filter(f => homeTeamIds.has(f.home_team_id) || homeTeamIds.has(f.away_team_id))
-  if (relevantFixtures.length === 0) return []
+    .from('league_fixtures').select('*')
+    .gte('match_date', today).lt('match_date', until)
+    .order('match_date', { ascending: true }).order('kickoff', { ascending: true })
+  if (!fixtureRows || fixtureRows.length === 0) return []
 
-  const opponentTeamIds = Array.from(new Set(
-    relevantFixtures.flatMap(f => [f.home_team_id, f.away_team_id]).filter(id => !homeTeamIds.has(id))
-  ))
-  const { data: opponentTeams } = opponentTeamIds.length > 0
-    ? await supabase.from('league_teams').select('id, name').in('id', opponentTeamIds)
-    : { data: [] as { id: string; name: string }[] }
-  const opponentNameById = new Map((opponentTeams ?? []).map(t => [t.id, t.name]))
+  const { data: divisions } = await supabase.from('league_divisions').select('id, name')
+  const divisionNameById = new Map((divisions ?? []).map(d => [d.id, d.name]))
 
-  return relevantFixtures.map(f => {
-    const isHome = homeTeamIds.has(f.home_team_id)
-    const opponentId = isHome ? f.away_team_id : f.home_team_id
-    return {
-      type: 'match' as const,
-      id: f.id,
-      date: f.match_date,
-      kickoff: f.kickoff ? f.kickoff.slice(0, 5) : null,
-      opponent: opponentNameById.get(opponentId) ?? 'TBD',
-      isHome,
-      cancelled: f.cancelled,
-      homeScore: f.home_score,
-      awayScore: f.away_score,
-    }
-  })
+  const teamIds = Array.from(new Set(fixtureRows.flatMap(f => [f.home_team_id, f.away_team_id])))
+  const { data: teams } = await supabase.from('league_teams').select('id, name').in('id', teamIds)
+  const teamNameById = new Map((teams ?? []).map(t => [t.id, t.name]))
+
+  return fixtureRows.map(f => ({
+    id: f.id,
+    date: f.match_date,
+    kickoff: f.kickoff ? f.kickoff.slice(0, 5) : null,
+    division: shortDivisionLabel(divisionNameById.get(f.division_id) ?? ''),
+    homeTeam: teamNameById.get(f.home_team_id) ?? 'Unknown',
+    awayTeam: teamNameById.get(f.away_team_id) ?? 'Unknown',
+    cancelled: f.cancelled,
+    homeScore: f.home_score,
+    awayScore: f.away_score,
+  }))
 }

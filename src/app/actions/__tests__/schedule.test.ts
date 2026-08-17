@@ -1,16 +1,15 @@
 jest.mock('@/lib/supabase/server', () => ({ createSupabaseServiceClient: jest.fn() }))
 
-import { getUpcomingSchedule } from '../schedule'
+import { getHomeSchedule } from '../schedule'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 
 const mockSupabase = {
   from: jest.fn().mockReturnThis(),
   select: jest.fn().mockReturnThis(),
-  eq: jest.fn().mockReturnThis(),
   gte: jest.fn().mockReturnThis(),
+  lt: jest.fn().mockReturnThis(),
   order: jest.fn().mockReturnThis(),
   in: jest.fn(),
-  single: jest.fn(),
 }
 
 beforeEach(() => {
@@ -19,95 +18,104 @@ beforeEach(() => {
 })
 
 /**
- * getUpcomingSchedule's calls, in exact order, per mock function (each
- * mock function has its own independent FIFO queue):
+ * getHomeSchedule's calls, in exact order, per mock function (each mock
+ * function has its own independent FIFO queue — see the "mock queue
+ * ordering" note below for why every call must be explicitly queued):
  *
- *   gte():   [chainable: practices]      [chainable: fixtures]        -- both always chainable (default), no queueing needed
- *   order(): [chainable: practices #1]   [TERMINAL: practices #2]     [TERMINAL: fixtures]
- *   eq():    [chainable: league_clubs.name -> .single()]  [TERMINAL: league_teams.club_id -> homeTeams]
- *   single(): [TERMINAL: league_clubs lookup]
- *   in():    [TERMINAL: opponent team names]  -- only called if there are relevant fixtures
+ *   select(): [1: practices, chainable->gte]  [2: fixtures, chainable->gte]
+ *             [3: divisions, TERMINAL]        [4: teams, chainable->in]
+ *   gte():    always chainable (practices, fixtures) — default mockReturnThis covers both, no queueing needed
+ *   lt():     always chainable (practices, fixtures) — default mockReturnThis covers both, no queueing needed
+ *   order():  [1: practices practice_date, chainable] [2: practices practice_time, TERMINAL]
+ *             [3: fixtures match_date, chainable]     [4: fixtures kickoff, TERMINAL]
+ *   in():     [1: teams, TERMINAL] — only called if there's at least one fixture in the window
+ *
+ * If there are zero fixtures in the window, getUpcomingLeagueMatches returns
+ * early right after fixtures' order() call — select() calls 3/4 and in()
+ * never happen, so tests for that case must NOT queue values for them (an
+ * unconsumed queued value is harmless, but queuing too FEW for a call that
+ * DOES happen is the actual bug to avoid — see queueMatches below).
  */
+
 function queuePractices(rows: any[]) {
+  mockSupabase.select.mockReturnValueOnce(mockSupabase) // 1: practices select('*') -> chainable
   mockSupabase.order
-    .mockReturnValueOnce(mockSupabase) // practices .order('practice_date', ...)
-    .mockResolvedValueOnce({ data: rows, error: null }) // practices .order('practice_time', ...) TERMINAL
+    .mockReturnValueOnce(mockSupabase) // 1: practices order('practice_date') -> chainable
+    .mockResolvedValueOnce({ data: rows, error: null }) // 2: practices order('practice_time') -> TERMINAL
 }
 
-function queueNoHomeClub() {
-  mockSupabase.single.mockResolvedValueOnce({ data: null, error: null }) // league_clubs lookup -> not found
+function queueNoMatches() {
+  mockSupabase.select.mockReturnValueOnce(mockSupabase) // 2: fixtures select('*') -> chainable
+  mockSupabase.order
+    .mockReturnValueOnce(mockSupabase) // 3: fixtures order('match_date') -> chainable
+    .mockResolvedValueOnce({ data: [], error: null }) // 4: fixtures order('kickoff') -> TERMINAL, empty -> early return
 }
 
-function queueHomeClubWithNoTeams(clubId = 'club-1') {
-  mockSupabase.single.mockResolvedValueOnce({ data: { id: clubId }, error: null })
-  ;(mockSupabase.eq as jest.Mock)
-    .mockImplementationOnce(() => mockSupabase) // league_clubs .eq('name', ...) -> chainable to .single()
-    .mockImplementationOnce(() => Promise.resolve({ data: [], error: null })) // league_teams .eq('club_id', ...) TERMINAL, no teams
+function queueMatches(fixtureRows: any[], divisions: { id: string; name: string }[], teams: { id: string; name: string }[]) {
+  mockSupabase.select.mockReturnValueOnce(mockSupabase) // 2: fixtures select('*') -> chainable
+  mockSupabase.order
+    .mockReturnValueOnce(mockSupabase) // 3: fixtures order('match_date') -> chainable
+    .mockResolvedValueOnce({ data: fixtureRows, error: null }) // 4: fixtures order('kickoff') -> TERMINAL
+  mockSupabase.select.mockResolvedValueOnce({ data: divisions, error: null }) // 3: divisions select('id, name') -> TERMINAL
+  mockSupabase.select.mockReturnValueOnce(mockSupabase) // 4: teams select('id, name') -> chainable, then .in()
+  mockSupabase.in.mockResolvedValueOnce({ data: teams, error: null }) // teams .in() -> TERMINAL
 }
 
-function queueHomeClubWithFixtures(homeTeamIds: string[], fixtureRows: any[], opponentTeams: { id: string; name: string }[]) {
-  mockSupabase.single.mockResolvedValueOnce({ data: { id: 'club-1' }, error: null })
-  ;(mockSupabase.eq as jest.Mock)
-    .mockImplementationOnce(() => mockSupabase) // league_clubs .eq('name', ...) -> chainable
-    .mockImplementationOnce(() => Promise.resolve({ data: homeTeamIds.map(id => ({ id })), error: null })) // league_teams .eq('club_id', ...) TERMINAL
-  mockSupabase.order.mockResolvedValueOnce({ data: fixtureRows, error: null }) // league_fixtures .order(...) TERMINAL
-  if (opponentTeams.length > 0) {
-    mockSupabase.in.mockResolvedValueOnce({ data: opponentTeams, error: null })
-  }
-}
-
-it('returns an empty list when there are no practices and no home club found', async () => {
+it('returns empty practices and matches when nothing is scheduled', async () => {
   queuePractices([])
-  queueNoHomeClub()
+  queueNoMatches()
 
-  const result = await getUpcomingSchedule()
-  expect(result).toEqual([])
+  const result = await getHomeSchedule()
+  expect(result).toEqual({ practices: [], matches: [] })
 })
 
-it('returns practices when the home club has no registered teams', async () => {
+it('maps practices within the window', async () => {
   queuePractices([{
     id: 'p1', practice_date: '2026-08-18', practice_time: '17:00:00',
     location: 'Field A', notes: null, cancelled: false,
   }])
-  queueHomeClubWithNoTeams()
+  queueNoMatches()
 
-  const result = await getUpcomingSchedule()
-  expect(result).toEqual([
-    { type: 'practice', id: 'p1', date: '2026-08-18', time: '17:00:00', location: 'Field A', notes: null, cancelled: false },
+  const result = await getHomeSchedule()
+  expect(result.practices).toEqual([
+    { id: 'p1', date: '2026-08-18', time: '17:00:00', location: 'Field A', notes: null, cancelled: false },
   ])
 })
 
-it('combines practices and matches, sorted together by date', async () => {
-  queuePractices([{
-    id: 'p1', practice_date: '2026-08-20', practice_time: '17:00:00',
-    location: 'Field A', notes: null, cancelled: false,
-  }])
-  // team-home is our team; the fixture is on an earlier date than the practice
-  queueHomeClubWithFixtures(
-    ['team-home'],
-    [{ id: 'fx1', match_date: '2026-08-15', kickoff: '10:00:00', home_team_id: 'team-home', away_team_id: 'team-away', home_score: null, away_score: null, cancelled: false }],
-    [{ id: 'team-away', name: 'Rival FC' }]
-  )
-
-  const result = await getUpcomingSchedule()
-  expect(result).toEqual([
-    { type: 'match', id: 'fx1', date: '2026-08-15', opponent: 'Rival FC', isHome: true, cancelled: false, homeScore: null, awayScore: null, kickoff: '10:00' },
-    { type: 'practice', id: 'p1', date: '2026-08-20', time: '17:00:00', location: 'Field A', notes: null, cancelled: false },
-  ])
-})
-
-it('resolves the opponent correctly when our team is the away side', async () => {
+it('includes matches from clubs other than the home club, unlike the old home-club-only feed', async () => {
   queuePractices([])
-  queueHomeClubWithFixtures(
-    ['team-home'],
-    [{ id: 'fx1', match_date: '2026-08-15', kickoff: '15:00:00', home_team_id: 'team-away', away_team_id: 'team-home', home_score: 2, away_score: 1, cancelled: false }],
-    [{ id: 'team-away', name: 'Rival FC' }]
+  queueMatches(
+    [{
+      id: 'fx1', match_date: '2026-08-20', kickoff: '10:00:00',
+      division_id: 'div-u10', home_team_id: 'team-a', away_team_id: 'team-b',
+      home_score: null, away_score: null, cancelled: false,
+    }],
+    [{ id: 'div-u10', name: 'U10 (as of Jan 2027)' }],
+    [{ id: 'team-a', name: 'Caranero FC' }, { id: 'team-b', name: 'Real Barriada' }]
   )
 
-  const result = await getUpcomingSchedule()
-  expect(result).toEqual([
-    { type: 'match', id: 'fx1', date: '2026-08-15', opponent: 'Rival FC', isHome: false, cancelled: false, homeScore: 2, awayScore: 1, kickoff: '15:00' },
-  ])
+  const result = await getHomeSchedule()
+  expect(result.matches).toEqual([{
+    id: 'fx1', date: '2026-08-20', kickoff: '10:00', division: 'U10',
+    homeTeam: 'Caranero FC', awayTeam: 'Real Barriada',
+    cancelled: false, homeScore: null, awayScore: null,
+  }])
+})
+
+it('returns a null kickoff when the fixture has none set', async () => {
+  queuePractices([])
+  queueMatches(
+    [{
+      id: 'fx1', match_date: '2026-08-20', kickoff: null,
+      division_id: 'div-u10', home_team_id: 'team-a', away_team_id: 'team-b',
+      home_score: null, away_score: null, cancelled: false,
+    }],
+    [{ id: 'div-u10', name: 'U10' }],
+    [{ id: 'team-a', name: 'Caranero FC' }, { id: 'team-b', name: 'Real Barriada' }]
+  )
+
+  const result = await getHomeSchedule()
+  expect(result.matches[0]).toMatchObject({ kickoff: null })
 })
 
 it('includes cancelled practices and matches rather than filtering them out', async () => {
@@ -115,39 +123,33 @@ it('includes cancelled practices and matches rather than filtering them out', as
     id: 'p1', practice_date: '2026-08-18', practice_time: '17:00:00',
     location: null, notes: 'Rained out', cancelled: true,
   }])
-  queueHomeClubWithFixtures(
-    ['team-home'],
-    [{ id: 'fx1', match_date: '2026-08-20', kickoff: '09:00:00', home_team_id: 'team-home', away_team_id: 'team-away', home_score: null, away_score: null, cancelled: true }],
-    [{ id: 'team-away', name: 'Rival FC' }]
+  queueMatches(
+    [{
+      id: 'fx1', match_date: '2026-08-20', kickoff: '10:00:00',
+      division_id: 'div-u10', home_team_id: 'team-a', away_team_id: 'team-b',
+      home_score: null, away_score: null, cancelled: true,
+    }],
+    [{ id: 'div-u10', name: 'U10' }],
+    [{ id: 'team-a', name: 'Caranero FC' }, { id: 'team-b', name: 'Real Barriada' }]
   )
 
-  const result = await getUpcomingSchedule()
-  expect(result.every(r => r.cancelled)).toBe(true)
+  const result = await getHomeSchedule()
+  expect(result.practices[0].cancelled).toBe(true)
+  expect(result.matches[0].cancelled).toBe(true)
 })
 
-it('respects the limit after combining and sorting', async () => {
-  queuePractices([
-    { id: 'p1', practice_date: '2026-08-16', practice_time: '17:00:00', location: null, notes: null, cancelled: false },
-    { id: 'p2', practice_date: '2026-08-18', practice_time: '17:00:00', location: null, notes: null, cancelled: false },
-  ])
-  queueHomeClubWithFixtures(
-    ['team-home'],
-    [{ id: 'fx1', match_date: '2026-08-17', kickoff: '09:00:00', home_team_id: 'team-home', away_team_id: 'team-away', home_score: null, away_score: null, cancelled: false }],
-    [{ id: 'team-away', name: 'Rival FC' }]
-  )
-
-  const result = await getUpcomingSchedule(2)
-  expect(result).toHaveLength(2)
-  expect(result.map(r => r.id)).toEqual(['p1', 'fx1'])
-})
-
-it('returns a null kickoff when the fixture has none set', async () => {
+it('queries practices with a 14-day window and fixtures with a 7-day window', async () => {
   queuePractices([])
-  queueHomeClubWithFixtures(
-    ['team-home'],
-    [{ id: 'fx1', match_date: '2026-08-15', kickoff: null, home_team_id: 'team-home', away_team_id: 'team-away', home_score: null, away_score: null, cancelled: false }],
-    [{ id: 'team-away', name: 'Rival FC' }]
-  )
-  const result = await getUpcomingSchedule()
-  expect(result[0]).toMatchObject({ kickoff: null })
+  queueNoMatches()
+
+  await getHomeSchedule()
+
+  const today = new Date().toISOString().slice(0, 10)
+  const in14 = new Date(); in14.setUTCDate(in14.getUTCDate() + 14)
+  const in7 = new Date(); in7.setUTCDate(in7.getUTCDate() + 7)
+
+  expect(mockSupabase.gte).toHaveBeenNthCalledWith(1, 'practice_date', today)
+  expect(mockSupabase.lt).toHaveBeenNthCalledWith(1, 'practice_date', in14.toISOString().slice(0, 10))
+  expect(mockSupabase.gte).toHaveBeenNthCalledWith(2, 'match_date', today)
+  expect(mockSupabase.lt).toHaveBeenNthCalledWith(2, 'match_date', in7.toISOString().slice(0, 10))
 })
