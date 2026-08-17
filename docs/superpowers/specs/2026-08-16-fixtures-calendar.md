@@ -30,17 +30,19 @@ alter table league_fixtures add column kickoff time;
 
 Nullable — existing fixtures (and any future fixture added without a specified time, e.g. via the admin "Add Fixture Manually" form if left blank) remain valid. All 50 imported fixtures will have a kickoff set.
 
-New team: club **"Loma Espina"** (status `approved`) with a single U14 team of the same name — same one-club-one-team modeling already used for "Atletico Bastimentos FC".
+New team: club **"Loma Espina"** (status `approved`) with a single U14 team of the same name — same one-club-one-team modeling already used for "Atletico Bastimentos FC". Created by the same one-off script described below (insert the club row, then the team row, before touching fixtures) — not a manual admin-UI step.
 
 ## Import
 
-A temporary script (same throwaway pattern used for prior schedule generation this session — run once via `ts-node` against the service-role client, then deleted, never committed) that:
-1. Reads the provided CSV
-2. Substitutes "Loma Espina" for every occurrence of "Pino Espina"
-3. Resolves `(division, team name)` to `team_id` via a lookup against `league_teams`
-4. Inserts all 50 rows into `league_fixtures` with `division_id`, `home_team_id`, `away_team_id`, `match_date`, `kickoff`
+A temporary script (same throwaway pattern used for prior schedule generation this session — run once via `ts-node` against the service-role client, then deleted, never committed). Input file: `~/Downloads/league_fixtures_2026.csv` (columns `division,match_date,kickoff,home_team,away_team`; two byte-identical copies exist in Downloads from the browser's duplicate-download naming — either works, but the script should reference the canonical `league_fixtures_2026.csv`, not the `(1)` copy).
 
-Runs only after the current (empty) `league_fixtures` table is confirmed empty, and after the kickoff column migration and the Loma Espina team both exist.
+1. Insert the "Loma Espina" club + U14 team (see above)
+2. Reads the CSV
+3. Substitutes "Loma Espina" for every occurrence of "Pino Espina"
+4. Resolves `(division, team name)` to `team_id` via a lookup against `league_teams`
+5. Inserts all 50 rows into `league_fixtures` with `division_id`, `home_team_id`, `away_team_id`, `match_date`, `kickoff`
+
+Runs only after the current (empty) `league_fixtures` table is confirmed empty, and after the kickoff column migration is applied.
 
 ## `fixture-calendar` — pure function
 
@@ -49,8 +51,9 @@ New file `src/lib/league/fixture-calendar.ts`, unit-tested in isolation (mirrors
 ```ts
 type CalendarMatch = {
   id: string
-  division: string       // division name, e.g. "U10"
-  kickoff: string | null // "HH:MM" or null if unset
+  matchDate: string       // "YYYY-MM-DD" — matches the `matchDate` naming already used by getFixtures/getFixturesForAdmin
+  division: string        // division name, e.g. "U10"
+  kickoff: string | null  // "HH:MM" or null if unset
   homeTeam: string
   awayTeam: string
   homeScore: number | null
@@ -66,22 +69,24 @@ type CalendarDay =
 function buildFixtureCalendar(
   seasonStart: string,
   seasonEnd: string,
-  fixtures: CalendarMatch[] & { date: string }[] // fixtures tagged with their match_date
+  fixtures: CalendarMatch[]
 ): CalendarDay[]
 ```
 
 Behaviour:
 - Enumerates every Sunday from `seasonStart` to `seasonEnd` inclusive, in order.
-- A Sunday with no fixtures is a rest day (`rest: true`).
+- A Sunday with no fixtures (matched via `matchDate`) is a rest day (`rest: true`).
 - A playing Sunday's `matches` are sorted by `kickoff` (nulls last).
-- `firstDivision` is the division of the earliest-kickoff match that day (derived, not stored — matches the "recompute rather than trust" note from the handoff doc).
+- `firstDivision` is the division of the earliest-kickoff match that day (derived, not stored — matches the "recompute rather than trust" note from the handoff doc). If every match that day has a null `kickoff` (only possible for a future manually-added fixture, since all 50 imported rows have kickoff set), falls back to the order matches were passed in.
 - `seasonStart`/`seasonEnd` come from the union of both divisions' `league_divisions` date range (currently identical for U10 and U14, but the function takes explicit bounds rather than assuming that).
 
 Test cases: rest-week detection between playing Sundays, `firstDivision` derivation when divisions alternate, kickoff sort order including a null-kickoff fixture, and the Tangerine Toucans star flag on both a home and an away match.
 
 ## Action wrapper
 
-New `getFixtureCalendar()` in `src/app/actions/league.ts`: loads both divisions' date ranges, loads all fixtures across both divisions joined to team names, tags each with `isHomeClubMatch` (same `'Tangerine Toucans'` name-match already used as `HOME_CLUB_NAME` in `schedule.ts`), and calls `buildFixtureCalendar`.
+New `getFixtureCalendar()` in `src/app/actions/league.ts`: loads both divisions' date ranges, loads all fixtures across both divisions joined to team names, tags each with `isHomeClubMatch` (same `'Tangerine Toucans'` name-match already used as `HOME_CLUB_NAME` in `schedule.ts`), and calls `buildFixtureCalendar`. `kickoff` comes back from Postgres as `HH:MM:SS`; normalize it the same way `upcoming-schedule.tsx`'s `formatTime` already does (split on `:`, take the first two parts) rather than introducing a second time-parsing approach.
+
+`getFixtures()` (the old per-division fetch used only by `FixturesList`) is deleted along with `FixturesList` itself, since nothing else calls it.
 
 ## `FixtureCalendar` component
 
@@ -102,4 +107,4 @@ Replaces `<FixturesList divisionId={divisionId} />` on the Fixtures tab. Since i
 - TDD for `fixture-calendar.ts` (pure function, see cases above)
 - `getFixtureCalendar` covered at the action level the same way `getFixtures`/`getStandings` already are
 - i18n: new `t.league.calendar.*` keys added to both `en.ts` and `es.ts` in the same commit, keeping `satisfies typeof en` sync intact
-- Existing `FixturesList`/its test are deleted along with the component, since nothing else references it
+- `FixturesList` has no existing test file, so its removal (see Action wrapper) needs no corresponding test deletion
