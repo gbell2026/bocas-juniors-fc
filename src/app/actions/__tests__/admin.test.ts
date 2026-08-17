@@ -133,6 +133,8 @@ describe('deletePlayer', () => {
     const result = await deletePlayer('player-1')
     expect(result.error).toBeUndefined()
     expect(mockSupabase.delete).toHaveBeenCalled()
+    expect(mockSupabase.select).toHaveBeenCalledWith('id')
+    expect(mockSupabase.eq).toHaveBeenNthCalledWith(2, 'id', 'player-1')
   })
 
   it('refuses to delete a player with any payment history, and does not call delete', async () => {
@@ -144,5 +146,15 @@ describe('deletePlayer', () => {
     const result = await deletePlayer('player-1')
     expect(result.error).toBe('Cannot delete a player with payment history — cancel instead.')
     expect(mockSupabase.delete).not.toHaveBeenCalled()
+  })
+
+  it('returns a friendly error when the delete itself fails', async () => {
+    mockSupabase.select.mockReturnValueOnce(mockSupabase) // payments .select('id') -> chainable
+    mockSupabase.eq.mockReturnValueOnce(mockSupabase) // payments .eq('player_id', ...) -> chainable, NOT terminal
+    mockSupabase.limit.mockResolvedValueOnce({ data: [], error: null }) // payments .limit(1) -> TERMINAL, no payments
+    mockSupabase.eq.mockResolvedValueOnce({ error: { message: 'db error' } }) // players .delete().eq('id', ...) -> TERMINAL, fails
+
+    const result = await deletePlayer('player-1')
+    expect(result.error).toBe('Failed to delete player')
   })
 })
