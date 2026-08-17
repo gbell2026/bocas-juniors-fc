@@ -48,6 +48,8 @@ export async function getHomeSchedule(): Promise<HomeSchedule>
 
 **Small shared refactor:** `divisionPillClass` (U10 → `bg-brand-primary`, else `bg-brand-ink`) currently lives as a private helper inside `src/components/league/fixture-calendar.tsx`. Since the new homepage component needs the identical mapping, export it from `src/lib/league/fixture-calendar.ts` (alongside the already-exported `shortDivisionLabel`) and have both `fixture-calendar.tsx` and the new homepage component import it from there, rather than duplicating the two-line function.
 
+`src/app/page.tsx` updates its call from `getUpcomingSchedule()` to `getHomeSchedule()` and passes the resulting `HomeSchedule` object into `UpcomingSchedule` — its `force-dynamic`/`revalidate = 0` exports need no change, since the reason for them (avoiding a stale cached schedule) applies identically to the new action.
+
 ## Component
 
 `src/components/upcoming-schedule.tsx` (`UpcomingSchedule`) changes from a single flat list to a two-column layout:
