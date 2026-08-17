@@ -15,6 +15,7 @@ type PlayerWithParent = Player & {
 export function PlayersTable({ players }: { players: PlayerWithParent[] }) {
   const [updating, setUpdating] = useState<string | null>(null)
   const [edits, setEdits] = useState<Record<string, { status: string; returnDate: string; paymentPlan: PaymentPlan; ageGroups: string[] }>>({})
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   function getEdit(p: PlayerWithParent) {
     return edits[p.id] ?? { status: p.status, returnDate: p.return_date ?? '', paymentPlan: p.payment_plan, ageGroups: p.age_groups }
@@ -61,15 +62,18 @@ export function PlayersTable({ players }: { players: PlayerWithParent[] }) {
 
   async function handleDelete(p: PlayerWithParent) {
     if (!window.confirm('Permanently delete this player? This cannot be undone.')) return
+    setErrorMessage(null)
     setUpdating(p.id)
     const result = await deletePlayer(p.id)
     setUpdating(null)
-    if (result.error) { window.alert(result.error); return }
+    if (result.error) { setErrorMessage(result.error); return }
     window.location.reload()
   }
 
   return (
-    <div className="overflow-x-auto">
+    <>
+      {errorMessage && <p className="text-brand-primary text-sm mb-2">{errorMessage}</p>}
+      <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead className="bg-brand-creamAlt">
           <tr>
@@ -187,6 +191,7 @@ export function PlayersTable({ players }: { players: PlayerWithParent[] }) {
           })}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
   )
 }
