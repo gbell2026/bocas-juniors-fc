@@ -61,6 +61,7 @@ export async function getAllPlayers() {
       lastPaidAt: succeeded.map((pay: any) => pay.paid_at).sort().at(-1) ?? null,
       regFeePaid: isRegistrationFeePaid(p.payment_plan, paidLabels),
       ageGroups: p.age_groups,
+      hasPayments: ((p.payments as any[]) ?? []).length > 0,
     }
   })
 }

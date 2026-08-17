@@ -1,6 +1,6 @@
 jest.mock('@/lib/supabase/server', () => ({ createSupabaseServiceClient: jest.fn() }))
 
-import { createCoachAccount, getCoachAccounts, deleteCoachAccount, updatePlayerAgeGroups, cancelPlayer, restorePlayer, deletePlayer } from '../admin'
+import { createCoachAccount, getCoachAccounts, deleteCoachAccount, updatePlayerAgeGroups, cancelPlayer, restorePlayer, deletePlayer, getAllPlayers } from '../admin'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 
 const mockSupabase = {
@@ -12,6 +12,7 @@ const mockSupabase = {
   eq: jest.fn().mockReturnThis(),
   select: jest.fn().mockReturnThis(),
   limit: jest.fn(),
+  order: jest.fn(),
 }
 
 beforeEach(() => {
@@ -112,6 +113,45 @@ describe('restorePlayer', () => {
     await restorePlayer('player-1')
     expect(mockSupabase.update).toHaveBeenCalledWith({ status: 'active' })
     expect(mockSupabase.eq).toHaveBeenCalledWith('id', 'player-1')
+  })
+})
+
+describe('getAllPlayers', () => {
+  it('sets hasPayments true when the player has any payment row, regardless of status', async () => {
+    mockSupabase.order.mockResolvedValueOnce({
+      data: [{
+        id: 'player-1', name: 'Alice', payment_plan: 'full', age_groups: ['U10'],
+        payments: [{ paid_at: null, status: 'pending', installment_label: 'registration' }],
+      }],
+      error: null,
+    })
+    const result = await getAllPlayers()
+    expect(result[0].hasPayments).toBe(true)
+  })
+
+  it('sets hasPayments false when the player has no payment rows', async () => {
+    mockSupabase.order.mockResolvedValueOnce({
+      data: [{ id: 'player-2', name: 'Bob', payment_plan: 'full', age_groups: [], payments: [] }],
+      error: null,
+    })
+    const result = await getAllPlayers()
+    expect(result[0].hasPayments).toBe(false)
+  })
+
+  it('still computes lastPaidAt from only succeeded payments', async () => {
+    mockSupabase.order.mockResolvedValueOnce({
+      data: [{
+        id: 'player-3', name: 'Cara', payment_plan: 'full', age_groups: [],
+        payments: [
+          { paid_at: '2026-08-01', status: 'succeeded', installment_label: 'registration' },
+          { paid_at: '2026-09-01', status: 'pending', installment_label: 'full' },
+        ],
+      }],
+      error: null,
+    })
+    const result = await getAllPlayers()
+    expect(result[0].lastPaidAt).toBe('2026-08-01')
+    expect(result[0].hasPayments).toBe(true)
   })
 })
 
