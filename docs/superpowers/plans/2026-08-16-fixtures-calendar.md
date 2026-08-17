@@ -364,20 +364,30 @@ describe('getFixtureCalendar', () => {
   })
 
   it('tags a fixture as isHomeClubMatch when Tangerine Toucans play, and shortens the division label', async () => {
+    // getFixtureCalendar calls .select() three times, in this order:
+    //   1. league_divisions .select('*')                -- TERMINAL (awaited directly)
+    //   2. league_fixtures  .select('*').order(...)      -- select() is chainable here, order() is TERMINAL
+    //   3. league_teams     .select('id, name')           -- TERMINAL
+    // mockResolvedValueOnce queues are consumed strictly by call order, not by
+    // which logical branch they belong to — the fixtures call's select() MUST
+    // get an explicit mockReturnValueOnce(mockSupabase) spacer, or its slot
+    // gets consumed by the teams call's queued value and .order() throws
+    // "is not a function" on whatever select() actually returned.
     mockSupabase.select
-      .mockResolvedValueOnce({ // league_divisions
+      .mockResolvedValueOnce({ // 1. league_divisions -- TERMINAL
         data: [{ id: 'div-1', name: 'U10 (as of Jan 2027)', season_start_date: '2026-09-06', season_end_date: '2026-09-06' }],
         error: null,
       })
-    mockSupabase.order.mockResolvedValueOnce({ // league_fixtures
+      .mockReturnValueOnce(mockSupabase) // 2. league_fixtures .select() -> chained to .order()
+      .mockResolvedValueOnce({ // 3. league_teams -- TERMINAL
+        data: [{ id: 'team-1', name: 'Tangerine Toucans' }, { id: 'team-2', name: 'Rival FC' }],
+        error: null,
+      })
+    mockSupabase.order.mockResolvedValueOnce({ // league_fixtures .order('match_date') -- TERMINAL
       data: [{
         id: 'fx-1', division_id: 'div-1', match_date: '2026-09-06', kickoff: '09:00:00',
         home_team_id: 'team-1', away_team_id: 'team-2', home_score: null, away_score: null, cancelled: false,
       }],
-      error: null,
-    })
-    mockSupabase.select.mockResolvedValueOnce({ // league_teams
-      data: [{ id: 'team-1', name: 'Tangerine Toucans' }, { id: 'team-2', name: 'Rival FC' }],
       error: null,
     })
 
@@ -399,7 +409,7 @@ Add `getFixtureCalendar` to the existing import line at the top of the test file
 - [ ] **Step 3: Run tests to verify they pass**
 
 Run: `npx jest src/app/actions/__tests__/league.test.ts`
-Expected: PASS (existing tests still pass, 2 new tests pass). Note: `mockSupabase.select` is called 3 times across the two branches of the second test (divisions, then teams) — check the mock queue order matches the actual call order in `getFixtureCalendar` (divisions → fixtures via `order` → teams via `select`), adjusting `mockResolvedValueOnce` ordering if the initial run shows a mismatch (see the "mock queue ordering" pitfall noted in this session's `payment.test.ts` work — every call in the chain must have an explicit queued value).
+Expected: PASS (existing tests still pass, 2 new tests pass)
 
 - [ ] **Step 4: Typecheck**
 
@@ -593,11 +603,13 @@ export function FixtureCalendar() {
 }
 ```
 
-- [ ] **Step 2: Delete the old component**
+- [ ] **Step 2: Delete the old component and its now-orphaned i18n keys**
 
 ```bash
 rm src/components/league/fixtures-list.tsx
 ```
+
+`FixturesList` was the only consumer of `t.league.fixtures.{loading,empty,cancelled,vs}` in both `src/lib/i18n/en.ts` and `src/lib/i18n/es.ts` — remove that `fixtures: { ... }` block from the `league` namespace in both files now that nothing references it, rather than leaving dead translation keys behind.
 
 - [ ] **Step 3: Typecheck**
 
@@ -712,7 +724,7 @@ describe('addFixture', () => {
 })
 ```
 
-Add `addFixture` to the existing import line at the top of the test file if not already imported (it is — check line 6's destructured import list; `addFixture` should already be there since it's an existing export, just previously untested).
+The test file's current import block does **not** include `addFixture` (it imports `updateFixture, recordFixtureScore, setFixtureCancelled` and others from `../league-admin`, but not `addFixture` — it's an existing export that's simply never been tested). Add `addFixture` to that destructured import list, or the new `describe('addFixture', ...)` block will fail with a reference error rather than the intended assertion failure.
 
 - [ ] **Step 2: Run tests to verify they fail**
 
@@ -804,11 +816,20 @@ Add a time input next to the existing date input in the per-fixture row:
                 />
 ```
 
-Add `kickoff: ''` to the `newFixture` state initializer:
+`newFixture` state is reset to a literal object in **three** places in this file — all three need `kickoff: ''` added, or the third one will fail Step 6's typecheck (TypeScript will flag the object literal as missing the now-required `kickoff` property):
+
+1. The state initializer:
 ```ts
   const [newFixture, setNewFixture] = useState({ homeTeamId: '', awayTeamId: '', matchDate: '', kickoff: '' })
 ```
-and reset it the same way in the division-switch `useEffect`.
+2. The division-switch `useEffect`'s reset (currently `setNewFixture({ homeTeamId: '', awayTeamId: '', matchDate: '' })`):
+```ts
+    setNewFixture({ homeTeamId: '', awayTeamId: '', matchDate: '', kickoff: '' })
+```
+3. `handleAddFixture`'s post-success reset (currently `setNewFixture({ homeTeamId: '', awayTeamId: '', matchDate: '' })` right after the successful `addFixture` call):
+```ts
+      setNewFixture({ homeTeamId: '', awayTeamId: '', matchDate: '', kickoff: '' })
+```
 
 Add a time input to the "Add Fixture Manually" form, and pass it through in `handleAddFixture`'s call to `addFixture({ divisionId, ...newFixture })` (already spreads `newFixture`, so passing `kickoff: ''` through as `undefined` when empty needs a small guard — send `kickoff: newFixture.kickoff || undefined` explicitly rather than spreading the empty string):
 ```tsx
@@ -979,37 +1000,62 @@ It was emptied earlier this session (40 rows deleted) and nothing has re-added r
 ```bash
 curl -s "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/league_fixtures?select=id" -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))"
 ```
-Expected: `0`
+Expected: `0`. **If the count is not 0, STOP — do not run the import script.** Surface the discrepancy to the user before doing anything else; importing on top of existing rows would silently duplicate fixtures.
 
 - [ ] **Step 2: Write the import script**
 
-The script must:
-1. Insert the "Loma Espina" club (`league_clubs`, `status: 'approved'`) and a U14 team of the same name (`league_teams`, `status: 'approved'`, `division_id` = the real U14 division id).
-2. Read `~/Downloads/league_fixtures_2026.csv`.
-3. Substitute every occurrence of `"Pino Espina"` with `"Loma Espina"`.
-4. Look up each row's `(division, home_team, away_team)` against `league_teams` (joined by `division_id`) to resolve team names to ids — division codes `"U10"`/`"U14"` in the CSV map to the two `league_divisions` rows already fetched earlier this session (confirm ids are still current before hardcoding — division ids don't change once created, so this is safe, but re-verify rather than trusting a stale value).
-5. Insert all 50 rows into `league_fixtures` with `division_id`, `home_team_id`, `away_team_id`, `match_date`, `kickoff` (parsed straight from the CSV's `kickoff` column, e.g. `"09:00"`).
+The script must be safe to re-run (idempotent) so a partial failure can simply be retried rather than requiring manual cleanup:
+
+1. Look up the U10 and U14 `league_divisions` rows **by name at runtime** (do not hardcode the UUIDs looked up earlier this session — they're believed current, but a runtime lookup removes the staleness risk entirely and is simpler than hardcode-plus-verify).
+2. **Lookup-or-create** the "Loma Espina" club and U14 team: `select` `league_clubs` by `name = 'Loma Espina'` first; only `insert` if not found. Same lookup-or-create for the `league_teams` row (`name = 'Loma Espina'`, `division_id` = the U14 division id from step 1). This makes re-running the script after a partial failure safe — it won't create a duplicate club/team.
+3. Read `~/Downloads/league_fixtures_2026.csv`.
+4. Substitute every occurrence of `"Pino Espina"` with `"Loma Espina"`.
+5. Look up each row's `(division, home_team, away_team)` against `league_teams` (joined by the division id resolved in step 1) to resolve team names to ids. If any row fails to resolve a team name, **throw immediately and abort before inserting anything** — don't insert a fixture with a null/guessed team id.
+6. Before inserting, re-check `league_fixtures` count is still 0 (guards against a race, and against accidentally running the script twice in the same session).
+7. Insert all 50 rows into `league_fixtures` with `division_id`, `home_team_id`, `away_team_id`, `match_date`, `kickoff` (parsed straight from the CSV's `kickoff` column, e.g. `"09:00"`).
 
 Use the service-role client via `createSupabaseServiceClient()`, same as every other one-off script this session. Log a summary count at the end (e.g. "Inserted 50 fixtures, 20 U10 / 30 U14") to sanity-check against the expected split before moving on.
 
+**If the script fails partway through** (e.g. crashes after inserting some but not all of the 50 fixtures): don't just re-run it blindly. First check what's actually in the DB —
+```bash
+curl -s "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/league_fixtures?select=id" -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))"
+```
+If it's non-zero and less than 50, delete those partial rows before retrying (same delete-all approach used earlier this session to empty the table), so Step 1's "must be 0" precondition holds on the retry. The Loma Espina club/team lookup-or-create means those don't need cleanup even on a partial failure.
+
 - [ ] **Step 3: Run the script**
 
+**STOP — this step writes to the production database. Confirm with the user before running it.**
+
 Run: `npx ts-node <script path>`
-Expected: reports inserting the Loma Espina club/team, then 50 fixtures (20 U10, 30 U14), no errors
+Expected: reports inserting the Loma Espina club/team (or finding them already present, on a retry), then 50 fixtures (20 U10, 30 U14), no errors
 
 - [ ] **Step 4: Verify in production**
 
 ```bash
-curl -s "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/league_fixtures?select=id,division_id,match_date,kickoff" -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" | python3 -c "
+curl -s "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/league_fixtures?select=id,division_id,match_date,kickoff,home_team_id,away_team_id" -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" | python3 -c "
 import json, sys
 from collections import Counter
 rows = json.load(sys.stdin)
 print('total', len(rows))
 print(Counter(r['division_id'] for r in rows))
 print('any missing kickoff:', any(r['kickoff'] is None for r in rows))
+print('any missing team id:', any(r['home_team_id'] is None or r['away_team_id'] is None for r in rows))
+print('any self-match:', any(r['home_team_id'] == r['away_team_id'] for r in rows))
 "
 ```
-Expected: `total 50`, a 20/30 split across the two division ids, `any missing kickoff: False`
+Expected: `total 50`, a 20/30 split across the two division ids, `any missing kickoff: False`, `any missing team id: False`, `any self-match: False`
+
+Then spot-check 3-5 specific rows against the source CSV by joining through team names (not just ids), including at least one fixture involving Loma Espina, to catch a swapped home/away pair or a misresolved team that the aggregate counts above wouldn't reveal:
+```bash
+curl -s "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/league_fixtures?select=match_date,kickoff,home:home_team_id(name),away:away_team_id(name)&limit=5" -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" | python3 -m json.tool
+```
+Compare the printed rows against the corresponding lines in `league_fixtures_2026.csv` by eye (remembering "Pino Espina" in the CSV should now read "Loma Espina").
+
+Finally, confirm the substitution was complete — no fixture should still resolve to a team literally named "Pino Espina":
+```bash
+curl -s "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/league_teams?select=id&name=eq.Pino%20Espina" -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY"
+```
+Expected: `[]`
 
 - [ ] **Step 5: Delete the script**
 
