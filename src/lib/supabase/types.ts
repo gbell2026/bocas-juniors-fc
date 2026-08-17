@@ -646,7 +646,7 @@ export type Database = {
       payment_method_type: "paypal" | "monzo" | "revolut" | "cash"
       payment_plan_type: "full" | "monthly"
       payment_status_type: "succeeded" | "pending" | "failed"
-      player_status: "active" | "inactive" | "injured" | "away"
+      player_status: "active" | "inactive" | "injured" | "away" | "cancelled"
       user_role_type: "parent" | "coach" | "admin" | "player"
     }
     CompositeTypes: {
@@ -792,7 +792,7 @@ export const Constants = {
       payment_method_type: ["paypal", "monzo", "revolut", "cash"],
       payment_plan_type: ["full", "monthly"],
       payment_status_type: ["succeeded", "pending", "failed"],
-      player_status: ["active", "inactive", "injured", "away"],
+      player_status: ["active", "inactive", "injured", "away", "cancelled"],
       user_role_type: ["parent", "coach", "admin", "player"],
     },
   },

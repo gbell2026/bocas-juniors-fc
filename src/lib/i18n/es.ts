@@ -269,7 +269,7 @@ export const es = {
       dob: 'Fecha de Nacimiento',
       status: 'Estado',
       returns: (date: string) => `(regresa el ${date})`,
-      statuses: { active: 'Activo', inactive: 'Inactivo', injured: 'Lesionado', away: 'Ausente' },
+      statuses: { active: 'Activo', inactive: 'Inactivo', injured: 'Lesionado', away: 'Ausente', cancelled: 'Cancelado' },
     },
     addChild: {
       button: '+ Añadir un Hijo/a',
