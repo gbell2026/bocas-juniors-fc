@@ -120,12 +120,6 @@ export const es = {
     divisionLabel: 'División',
     noDivisions: 'Aún no hay divisiones.',
     topScorerComingSoon: '¡La tabla de goleadores llegará pronto!',
-    fixtures: {
-      loading: 'Cargando calendario…',
-      empty: 'Aún no hay partidos programados.',
-      cancelled: 'Cancelado',
-      vs: 'vs',
-    },
     standings: {
       loading: 'Cargando tabla…',
       empty: 'Aún no hay equipos inscritos en esta división.',

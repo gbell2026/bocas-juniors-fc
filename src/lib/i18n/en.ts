@@ -118,12 +118,6 @@ export const en = {
     divisionLabel: 'Division',
     noDivisions: 'No divisions yet.',
     topScorerComingSoon: 'Top Scorer leaderboard is coming soon!',
-    fixtures: {
-      loading: 'Loading fixtures…',
-      empty: 'No fixtures scheduled yet.',
-      cancelled: 'Cancelled',
-      vs: 'vs',
-    },
     standings: {
       loading: 'Loading table…',
       empty: 'No teams registered in this division yet.',
