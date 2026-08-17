@@ -16,9 +16,9 @@ The League's Fixtures tab (`FixturesList`) currently shows a flat, per-division 
 - New pure `fixture-calendar` lib function + action wrapper, replacing per-division `getFixtures` for the Fixtures tab
 - New `FixtureCalendar` component (date-strip + day-panel) replacing `FixturesList` on the Fixtures tab
 - Kickoff time input added to the admin fixture editor, for parity with the existing date editor
+- Homepage "Upcoming Schedule" widget gains kickoff time display for match entries
 
 **Explicitly out of scope:**
-- Homepage "Upcoming Schedule" widget — does not gain kickoff time display in this pass
 - A general-purpose CSV import feature — the import is a one-off script, not a UI
 - Colour/dark-mode theming beyond what the site already has (the site has no dark mode; confirmed by reading `tailwind.config.ts`, superseding a stale memory that claimed otherwise)
 
@@ -98,6 +98,10 @@ Replaces `<FixturesList divisionId={divisionId} />` on the Fixtures tab. Since i
 - **Colours**: division pills reuse the site's existing pill convention (`bg-brand-primary` / `bg-brand-ink`, white text) already used for practice/match pills in `UpcomingSchedule` — no new brand colours introduced.
 - All new UI copy (tag labels, rest-week text, legend) added to both `en.ts` and `es.ts` under `t.league.calendar.*`.
 
+## Homepage "Upcoming Schedule" widget
+
+`ScheduleEntry`'s `match` variant (`src/app/actions/schedule.ts`) gains `kickoff: string | null`, populated from `league_fixtures.kickoff` in `getUpcomingHomeClubMatches` using the same `HH:MM:SS` → `HH:MM` normalization as the action wrapper above. `UpcomingSchedule` (`src/components/upcoming-schedule.tsx`) displays it for match entries the same way it already displays `entry.time` for practice entries via `formatTime` — kickoff appears next to the opponent, matching the existing practice row's `time · location` pattern (e.g. `10:00 · vs Real Barriada`). Cancelled/no-kickoff matches (i.e. any match added manually without a time) simply omit the time, same as a practice would if `time` were ever empty.
+
 ## Admin fixture editor
 
 `league-fixtures-admin.tsx` gains a `kickoff` time input next to the existing `matchDate` date input, wired through `updateFixture`/`addFixture` (both actions gain an optional `kickoff` field).
@@ -106,5 +110,6 @@ Replaces `<FixturesList divisionId={divisionId} />` on the Fixtures tab. Since i
 
 - TDD for `fixture-calendar.ts` (pure function, see cases above)
 - `getFixtureCalendar` covered at the action level the same way `getFixtures`/`getStandings` already are
+- `getUpcomingSchedule`'s existing test coverage (`schedule.test.ts`) extended for the new `kickoff` field on match entries
 - i18n: new `t.league.calendar.*` keys added to both `en.ts` and `es.ts` in the same commit, keeping `satisfies typeof en` sync intact
 - `FixturesList` has no existing test file, so its removal (see Action wrapper) needs no corresponding test deletion
