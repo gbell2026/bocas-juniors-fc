@@ -3,7 +3,7 @@ jest.mock('@/lib/supabase/server', () => ({ createSupabaseServiceClient: jest.fn
 import {
   generateSchedule, generateAlignedSchedule, approveLeaguePlayer, createDivision, updateDivision,
   approveLeagueClub, rejectLeagueClub, approveLeagueTeam, rejectLeagueTeam, rejectLeaguePlayer,
-  updateFixture, recordFixtureScore, setFixtureCancelled,
+  updateFixture, addFixture, recordFixtureScore, setFixtureCancelled,
   updateLeagueClub, updateLeagueTeam,
 } from '../league-admin'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
@@ -249,6 +249,27 @@ describe('updateFixture', () => {
 
     const result = await updateFixture('fx-1', { matchDate: '2026-08-15' })
     expect(result.error).toBeUndefined()
+  })
+
+  it('includes kickoff in the patch when provided', async () => {
+    mockSupabase.update.mockReturnValueOnce(mockSupabase)
+    mockSupabase.eq.mockResolvedValueOnce({ error: null })
+
+    await updateFixture('fx-1', { kickoff: '10:00' })
+    expect(mockSupabase.update).toHaveBeenCalledWith(expect.objectContaining({ kickoff: '10:00' }))
+  })
+})
+
+describe('addFixture', () => {
+  it('inserts the provided kickoff, or null when omitted', async () => {
+    mockSupabase.insert.mockResolvedValueOnce({ error: null })
+
+    await addFixture({ divisionId: 'div-1', homeTeamId: 'team-1', awayTeamId: 'team-2', matchDate: '2026-09-06', kickoff: '09:00' })
+    expect(mockSupabase.insert).toHaveBeenCalledWith(expect.objectContaining({ kickoff: '09:00' }))
+
+    mockSupabase.insert.mockResolvedValueOnce({ error: null })
+    await addFixture({ divisionId: 'div-1', homeTeamId: 'team-1', awayTeamId: 'team-2', matchDate: '2026-09-06' })
+    expect(mockSupabase.insert).toHaveBeenCalledWith(expect.objectContaining({ kickoff: null }))
   })
 })
 

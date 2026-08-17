@@ -347,10 +347,11 @@ export async function getFixturesForAdmin(divisionId: string) {
     homeScore: f.home_score,
     awayScore: f.away_score,
     cancelled: f.cancelled,
+    kickoff: f.kickoff ? f.kickoff.slice(0, 5) : null,
   }))
 }
 
-export type UpdateFixtureInput = { matchDate?: string; homeTeamId?: string; awayTeamId?: string }
+export type UpdateFixtureInput = { matchDate?: string; homeTeamId?: string; awayTeamId?: string; kickoff?: string }
 
 export async function updateFixture(id: string, input: UpdateFixtureInput): Promise<{ error?: string }> {
   const supabase = createSupabaseServiceClient()
@@ -358,6 +359,7 @@ export async function updateFixture(id: string, input: UpdateFixtureInput): Prom
   if (input.matchDate) patch.match_date = input.matchDate
   if (input.homeTeamId) patch.home_team_id = input.homeTeamId
   if (input.awayTeamId) patch.away_team_id = input.awayTeamId
+  if (input.kickoff) patch.kickoff = input.kickoff
   const { error } = await supabase.from('league_fixtures').update(patch).eq('id', id)
   if (error) {
     if (error.code === '23514') return { error: 'A team cannot play itself — pick two different teams.' }
@@ -367,7 +369,7 @@ export async function updateFixture(id: string, input: UpdateFixtureInput): Prom
 }
 
 export async function addFixture(input: {
-  divisionId: string; homeTeamId: string; awayTeamId: string; matchDate: string
+  divisionId: string; homeTeamId: string; awayTeamId: string; matchDate: string; kickoff?: string
 }): Promise<{ error?: string }> {
   const supabase = createSupabaseServiceClient()
   const { error } = await supabase.from('league_fixtures').insert({
@@ -375,6 +377,7 @@ export async function addFixture(input: {
     home_team_id: input.homeTeamId,
     away_team_id: input.awayTeamId,
     match_date: input.matchDate,
+    kickoff: input.kickoff ?? null,
   })
   if (error) {
     if (error.code === '23514') return { error: 'A team cannot play itself — pick two different teams.' }

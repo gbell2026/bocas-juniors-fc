@@ -13,7 +13,7 @@ export function LeagueFixturesAdmin({ divisions, teams }: { divisions: Division[
   const [saving, setSaving] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [scoreDrafts, setScoreDrafts] = useState<Record<string, { home: string; away: string }>>({})
-  const [newFixture, setNewFixture] = useState({ homeTeamId: '', awayTeamId: '', matchDate: '' })
+  const [newFixture, setNewFixture] = useState({ homeTeamId: '', awayTeamId: '', matchDate: '', kickoff: '' })
 
   async function refresh() {
     if (!divisionId) return
@@ -29,7 +29,7 @@ export function LeagueFixturesAdmin({ divisions, teams }: { divisions: Division[
     // the previously-picked teams belong to the old division and won't appear
     // as options in the new one, so stale state would otherwise sit there
     // satisfying `required` with a team that isn't actually selectable anymore.
-    setNewFixture({ homeTeamId: '', awayTeamId: '', matchDate: '' })
+    setNewFixture({ homeTeamId: '', awayTeamId: '', matchDate: '', kickoff: '' })
   }, [divisionId])
 
   const divisionTeams = teams.filter(t => t.divisionId === divisionId)
@@ -59,6 +59,20 @@ export function LeagueFixturesAdmin({ divisions, teams }: { divisions: Division[
     setSaving(fixtureId)
     try {
       const result = await updateFixture(fixtureId, { matchDate })
+      if (result.error) { setErrorMessage(result.error); return }
+      await refresh()
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  async function handleKickoffChange(fixtureId: string, kickoff: string) {
+    setErrorMessage(null)
+    setSaving(fixtureId)
+    try {
+      const result = await updateFixture(fixtureId, { kickoff })
       if (result.error) { setErrorMessage(result.error); return }
       await refresh()
     } catch {
@@ -113,9 +127,9 @@ export function LeagueFixturesAdmin({ divisions, teams }: { divisions: Division[
     }
 
     try {
-      const result = await addFixture({ divisionId, ...newFixture })
+      const result = await addFixture({ divisionId, ...newFixture, kickoff: newFixture.kickoff || undefined })
       if (result.error) { setErrorMessage(result.error); return }
-      setNewFixture({ homeTeamId: '', awayTeamId: '', matchDate: '' })
+      setNewFixture({ homeTeamId: '', awayTeamId: '', matchDate: '', kickoff: '' })
       await refresh()
     } catch {
       setErrorMessage('Something went wrong. Please try again.')
@@ -156,6 +170,13 @@ export function LeagueFixturesAdmin({ divisions, teams }: { divisions: Division[
                   className="input text-xs"
                   defaultValue={f.matchDate}
                   onBlur={e => e.target.value !== f.matchDate && handleDateChange(f.id, e.target.value)}
+                />
+                <input
+                  key={`${f.id}-${f.kickoff}`}
+                  type="time"
+                  className="input text-xs"
+                  defaultValue={f.kickoff ?? ''}
+                  onBlur={e => e.target.value !== (f.kickoff ?? '') && handleKickoffChange(f.id, e.target.value)}
                 />
                 <select
                   className="input text-xs flex-1"
@@ -226,6 +247,11 @@ export function LeagueFixturesAdmin({ divisions, teams }: { divisions: Division[
             type="date" required className="input flex-1"
             value={newFixture.matchDate}
             onChange={e => setNewFixture(prev => ({ ...prev, matchDate: e.target.value }))}
+          />
+          <input
+            type="time" className="input flex-1"
+            value={newFixture.kickoff}
+            onChange={e => setNewFixture(prev => ({ ...prev, kickoff: e.target.value }))}
           />
         </div>
         <button type="submit" className="btn-primary text-sm w-full">Add Fixture</button>
