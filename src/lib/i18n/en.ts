@@ -135,6 +135,15 @@ export const en = {
       goalDifference: 'GD',
       points: 'Pts',
     },
+    calendar: {
+      loading: 'Loading fixtures…',
+      empty: 'No fixtures scheduled yet.',
+      restWeek: 'Rest week',
+      restWeekNote: 'No fixtures this weekend — Saturday stays free for weather rearrangements.',
+      firstDivision: (division: string) => `${division} first`,
+      toucansLegend: '★ marks Tangerine Toucans matches',
+      cancelled: 'Cancelled',
+    },
     registerForm: {
       modeNewClub: 'Register New Club',
       modeAddTeam: 'Add a Team',
