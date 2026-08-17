@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { PageHeader } from '@/components/page-header'
-import { FixturesList } from '@/components/league/fixtures-list'
+import { FixtureCalendar } from '@/components/league/fixture-calendar'
 import { StandingsTable } from '@/components/league/standings-table'
 import { RegisterTeamForm } from '@/components/league/register-team-form'
 import { getDivisions } from '@/app/actions/league'
@@ -50,7 +50,7 @@ export default function LeaguePage() {
       </div>
 
       <div className="py-8 px-4 max-w-3xl mx-auto">
-        {(tab === 'fixtures' || tab === 'table') && divisions.length > 0 && (
+        {tab === 'table' && divisions.length > 0 && (
           <div className="mb-6">
             <label htmlFor="divisionSelect" className="block text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-1">
               {t.league.divisionLabel}
@@ -66,9 +66,7 @@ export default function LeaguePage() {
           </div>
         )}
 
-        {tab === 'fixtures' && (
-          divisionId ? <FixturesList divisionId={divisionId} /> : <p className="text-brand-muted py-8 text-center">{t.league.noDivisions}</p>
-        )}
+        {tab === 'fixtures' && <FixtureCalendar />}
         {tab === 'table' && (
           divisionId ? <StandingsTable divisionId={divisionId} /> : <p className="text-brand-muted py-8 text-center">{t.league.noDivisions}</p>
         )}
