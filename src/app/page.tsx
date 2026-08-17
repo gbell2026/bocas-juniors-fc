@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { getUpcomingSchedule } from '@/app/actions/schedule'
+import { getHomeSchedule } from '@/app/actions/schedule'
 import { UpcomingSchedule } from '@/components/upcoming-schedule'
 import { getLocale } from '@/lib/i18n/get-locale'
 import { en } from '@/lib/i18n/en'
@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export default async function HomePage() {
-  const schedule = await getUpcomingSchedule()
+  const schedule = await getHomeSchedule()
   const locale = await getLocale()
   const t = locale === 'es' ? es : en
 
