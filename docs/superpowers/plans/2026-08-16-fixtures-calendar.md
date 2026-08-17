@@ -423,6 +423,8 @@ git add src/app/actions/league.ts src/app/actions/__tests__/league.test.ts
 git commit -m "feat: add getFixtureCalendar action, remove unused getFixtures"
 ```
 
+> **Correction found during execution (code quality review of Task 5):** Task 4's `export const HOME_CLUB_NAME = 'Tangerine Toucans'` in `src/app/actions/schedule.ts` (a `'use server'` file) plus Task 5's `import { HOME_CLUB_NAME } from '@/app/actions/schedule'` together broke `next build` — Next.js's Server Actions compiler only allows async function exports from a `'use server'` file; a plain `const` export is a hard build error that `tsc --noEmit`/`jest` don't catch. Fixed by moving `HOME_CLUB_NAME` to a new plain module `src/lib/league/home-club.ts`, with both `schedule.ts` and `league.ts` importing it from there instead. If re-executing this plan from scratch, define `HOME_CLUB_NAME` in `src/lib/league/home-club.ts` from the start (Task 4) rather than exporting it from `schedule.ts`.
+
 ---
 
 ## Chunk 2: UI — calendar component, admin editor, homepage widget, i18n
