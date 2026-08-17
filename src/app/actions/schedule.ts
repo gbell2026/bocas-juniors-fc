@@ -8,7 +8,7 @@ export type ScheduleEntry =
 // This site is run by a single club (Tangerine Toucans) — matching on that
 // exact club name identifies which League fixtures are "our" matches versus
 // fixtures between two other clubs' teams.
-const HOME_CLUB_NAME = 'Tangerine Toucans'
+export const HOME_CLUB_NAME = 'Tangerine Toucans'
 
 /**
  * Combines upcoming practices with this club's own League fixtures into one
