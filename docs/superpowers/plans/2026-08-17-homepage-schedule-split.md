@@ -66,13 +66,13 @@ export function divisionPillClass(division: string): string {
 
 In `src/components/league/fixture-calendar.tsx`:
 - Delete the local `function divisionPillClass(division: string) { ... }` (lines 29-31).
-- Add `divisionPillClass` to the existing `import { getFixtureCalendar } from '@/app/actions/league'` — no wait, that's the wrong module. Add a new import line: `import { divisionPillClass } from '@/lib/league/fixture-calendar'`.
+- Add a new import line: `import { divisionPillClass } from '@/lib/league/fixture-calendar'`.
 - Nothing else in this file changes — it already calls `divisionPillClass(m.division)` exactly as before, just now imported instead of locally defined.
 
 - [ ] **Step 5: Run tests to verify they pass**
 
 Run: `npx jest src/lib/league/__tests__/fixture-calendar.test.ts`
-Expected: PASS, 7 tests (6 existing + 1 new)
+Expected: PASS, 6 tests (5 existing + 1 new)
 
 - [ ] **Step 6: Typecheck**
 
