@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { updatePlayerStatus, updatePlayerPaymentPlan, updatePlayerAgeGroups } from '@/app/actions/admin'
+import { updatePlayerStatus, updatePlayerPaymentPlan, updatePlayerAgeGroups, cancelPlayer, restorePlayer, deletePlayer } from '@/app/actions/admin'
 import { adminMarkCashPaid } from '@/app/actions/payment'
 import { AGE_GROUPS } from '@/lib/age-groups'
 import type { Player, PaymentPlan } from '@/lib/supabase/types'
@@ -9,6 +9,7 @@ type PlayerWithParent = Player & {
   parents: { name: string; email: string }
   lastPaidAt: string | null
   regFeePaid: boolean
+  hasPayments: boolean
 }
 
 export function PlayersTable({ players }: { players: PlayerWithParent[] }) {
@@ -44,6 +45,29 @@ export function PlayersTable({ players }: { players: PlayerWithParent[] }) {
     window.location.reload()
   }
 
+  async function handleCancel(p: PlayerWithParent) {
+    setUpdating(p.id)
+    await cancelPlayer(p.id)
+    setUpdating(null)
+    window.location.reload()
+  }
+
+  async function handleRestore(p: PlayerWithParent) {
+    setUpdating(p.id)
+    await restorePlayer(p.id)
+    setUpdating(null)
+    window.location.reload()
+  }
+
+  async function handleDelete(p: PlayerWithParent) {
+    if (!window.confirm('Permanently delete this player? This cannot be undone.')) return
+    setUpdating(p.id)
+    const result = await deletePlayer(p.id)
+    setUpdating(null)
+    if (result.error) { window.alert(result.error); return }
+    window.location.reload()
+  }
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -59,7 +83,7 @@ export function PlayersTable({ players }: { players: PlayerWithParent[] }) {
             const edit = getEdit(p)
             const needsReturnDate = edit.status === 'injured' || edit.status === 'away'
             return (
-              <tr key={p.id} className="border-t align-top">
+              <tr key={p.id} className={`border-t align-top ${p.status === 'cancelled' ? 'opacity-60' : ''}`}>
                 <td className="p-3 font-medium">{p.name}</td>
                 <td className="p-3">{p.position}</td>
                 <td className="p-3">
@@ -124,16 +148,39 @@ export function PlayersTable({ players }: { players: PlayerWithParent[] }) {
                 </td>
                 <td className="p-3">{p.lastPaidAt ? new Date(p.lastPaidAt).toLocaleDateString() : '—'}</td>
                 <td className="p-3 space-y-1">
-                  <button
-                    onClick={() => handleStatusSave(p)}
-                    disabled={updating === p.id}
-                    className="btn-primary text-xs block w-full"
-                  >Save Changes</button>
-                  <button
-                    onClick={() => handleMarkCashPaid(p)}
-                    disabled={updating === p.id}
-                    className="btn-secondary text-xs block w-full"
-                  >Mark Cash Paid</button>
+                  {p.status === 'cancelled' ? (
+                    <button
+                      onClick={() => handleRestore(p)}
+                      disabled={updating === p.id}
+                      className="btn-primary text-xs block w-full"
+                    >Restore</button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => handleStatusSave(p)}
+                        disabled={updating === p.id}
+                        className="btn-primary text-xs block w-full"
+                      >Save Changes</button>
+                      <button
+                        onClick={() => handleMarkCashPaid(p)}
+                        disabled={updating === p.id}
+                        className="btn-secondary text-xs block w-full"
+                      >Mark Cash Paid</button>
+                      {p.hasPayments ? (
+                        <button
+                          onClick={() => handleCancel(p)}
+                          disabled={updating === p.id}
+                          className="text-xs px-3 py-1.5 border border-brand-primary text-brand-primary rounded font-bold uppercase tracking-wider hover:bg-brand-primary hover:text-white transition disabled:opacity-50 w-full"
+                        >Cancel</button>
+                      ) : (
+                        <button
+                          onClick={() => handleDelete(p)}
+                          disabled={updating === p.id}
+                          className="text-xs px-3 py-1.5 border border-red-600 text-red-600 rounded font-bold uppercase tracking-wider hover:bg-red-600 hover:text-white transition disabled:opacity-50 w-full"
+                        >Delete</button>
+                      )}
+                    </>
+                  )}
                 </td>
               </tr>
             )
