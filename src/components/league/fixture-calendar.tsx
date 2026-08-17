@@ -53,6 +53,7 @@ export function FixtureCalendar() {
           <button
             key={d.date}
             onClick={() => setSelected(i)}
+            aria-pressed={i === selected}
             className={`min-w-[66px] flex-1 border rounded p-2 text-center text-xs transition ${
               i === selected ? 'border-brand-primary bg-brand-tint' : 'border-brand-line'
             }`}
