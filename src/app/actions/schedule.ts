@@ -1,14 +1,10 @@
 'use server'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
+import { HOME_CLUB_NAME } from '@/lib/league/home-club'
 
 export type ScheduleEntry =
   | { type: 'practice'; id: string; date: string; time: string; location: string | null; notes: string | null; cancelled: boolean }
   | { type: 'match'; id: string; date: string; opponent: string; isHome: boolean; cancelled: boolean; homeScore: number | null; awayScore: number | null }
-
-// This site is run by a single club (Tangerine Toucans) — matching on that
-// exact club name identifies which League fixtures are "our" matches versus
-// fixtures between two other clubs' teams.
-export const HOME_CLUB_NAME = 'Tangerine Toucans'
 
 /**
  * Combines upcoming practices with this club's own League fixtures into one

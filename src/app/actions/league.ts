@@ -2,7 +2,7 @@
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 import { computeStandings } from '@/lib/league/standings'
 import { buildFixtureCalendar, shortDivisionLabel } from '@/lib/league/fixture-calendar'
-import { HOME_CLUB_NAME } from '@/app/actions/schedule'
+import { HOME_CLUB_NAME } from '@/lib/league/home-club'
 
 export type RegisterLeagueTeamInput = {
   clubName: string
