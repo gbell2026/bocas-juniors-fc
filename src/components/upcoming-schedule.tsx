@@ -31,7 +31,7 @@ export function UpcomingSchedule({ schedule, locale }: { schedule: HomeSchedule;
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div>
             <h3 className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-2">
               {t.home.schedule.practiceScheduleTitle}
@@ -85,7 +85,7 @@ export function UpcomingSchedule({ schedule, locale }: { schedule: HomeSchedule;
                     {m.cancelled ? (
                       <span className="text-[10px] font-bold uppercase tracking-wider text-red-600 flex-shrink-0">{t.home.schedule.cancelled}</span>
                     ) : m.homeScore !== null && m.awayScore !== null ? (
-                      <span className="font-bold text-brand-ink flex-shrink-0">{m.homeScore}-{m.awayScore}</span>
+                      <span className="font-bold text-brand-ink flex-shrink-0">{m.homeScore}–{m.awayScore}</span>
                     ) : null}
                   </div>
                 ))}
