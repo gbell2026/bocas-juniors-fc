@@ -24,7 +24,9 @@ Columns, in order: **Player | Parent | Status | Reg. Fee | Payment Status | (exp
 
 - The `Status` column shown here is the player's status pill (active/inactive/injured/away/cancelled) as **read-only display text**, not the editable `<select>` — editing status is an expanded-row action, same as today's "Save Changes" flow.
 - Reg. Fee keeps its current "Paid"/"Outstanding" display exactly as-is.
-- Clicking anywhere on the row (outside of interactive elements once expanded) toggles expand/collapse. Expansion state is local component state (`Set<string>` of expanded player ids, or a `Record<string, boolean>` — implementer's choice, no persistence needed across page reloads).
+- **Only the expand-toggle cell is clickable for expand/collapse** — a `<button>` (e.g. a chevron, ▸/▾) in its own cell, with its own `onClick={() => toggle(p.id)}`. The rest of the collapsed row (Player/Parent/Status/Reg. Fee/Payment Status text) is NOT click-to-expand; those cells have no click handler at all. This is deliberate: it avoids nesting a clickable toggle inside a row-level click handler, which would double-fire on the toggle itself via event bubbling and net out to a no-op on the one element a user would expect to definitely respond. The expanded block's own controls (checkboxes, selects, buttons) are unaffected either way, since nothing outside the toggle button has a click handler to conflict with them.
+- Expansion state is local component state (`Set<string>` of expanded player ids, or a `Record<string, boolean>` — implementer's choice, no persistence needed across page reloads).
+- The `<th>` for the toggle column has no text label (empty `<th>`); "Payment Status" gets its own `<th>Payment Status</th>` like every other column.
 - The whole row keeps its existing `opacity-60` treatment when `status === 'cancelled'`, both collapsed and expanded.
 
 ## Expanded row
@@ -54,6 +56,8 @@ type PaymentStatusInfo =
   | { kind: 'owes'; label: InstallmentLabel; amountCents: number }
 ```
 computed via `getAmountDue(p.id)` (imported from `@/app/actions/payment`) for every player, in parallel via `Promise.all`, mirroring `getRosterForCoach()`'s existing pattern exactly.
+
+The local `PlayerWithParent` type alias in `src/components/admin/players-table.tsx` (which mirrors `getAllPlayers()`'s return shape for the component's props) needs the same `paymentStatus: PaymentStatusInfo` field added, alongside its existing `hasPayments: boolean`.
 
 ## Testing
 
