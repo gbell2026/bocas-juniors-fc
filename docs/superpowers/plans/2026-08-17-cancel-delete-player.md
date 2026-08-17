@@ -76,6 +76,8 @@ git add src/lib/supabase/types.ts
 git commit -m "feat: add cancelled to player_status type"
 ```
 
+> **Correction found during execution:** Step 2's typecheck is NOT clean with only `types.ts` changed. Widening `PlayerStatus` to include `'cancelled'` makes `src/components/profile/player-info.tsx:20` (`t.profile.playerInfo.statuses[player.status]`) fail with TS7053 — `'cancelled'` isn't a key on the `statuses` object literal in `en.ts`/`es.ts` yet. Task 2 must also include Task 7's i18n edits (`cancelled: 'Cancelled'` / `cancelled: 'Cancelado'` in `t.profile.playerInfo.statuses`, both files) to actually typecheck clean, confirmed by reverting just the i18n half of the fix and re-running `tsc` (the exact TS7053 error reproduces). If re-executing this plan from scratch, fold Task 7's edits into Task 2 and drop Task 7 as a separate step. As executed, Task 2's commit (`33d022e`) already includes both `en.ts`/`es.ts` changes exactly as Task 7 specifies them — when you reach Task 7 below, verify its content is already satisfied rather than re-doing it.
+
 ---
 
 ### Task 3: `cancelPlayer`, `restorePlayer`, `deletePlayer` actions (TDD)
@@ -557,6 +559,8 @@ git commit -m "feat: exclude cancelled players from the coach roster"
 ---
 
 ### Task 7: i18n — `cancelled` player status label
+
+> **Likely already done.** Task 2's correction note explains that this exact edit had to be pulled forward into Task 2 (commit `33d022e`) to keep that task's typecheck clean. Before doing anything here, check whether `t.profile.playerInfo.statuses` in both `en.ts` and `es.ts` already has a `cancelled` key matching Step 1/2 below — if so, this task is already satisfied; just confirm and move on rather than re-editing.
 
 **Files:**
 - Modify: `src/lib/i18n/en.ts`
