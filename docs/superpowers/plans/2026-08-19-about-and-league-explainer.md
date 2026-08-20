@@ -58,14 +58,36 @@ Replace with (adding `about` as a new sibling of `schedule`, still inside `home`
 
 - [ ] **Step 2: Add `league.about` to `en.ts`**
 
-Find:
+The `league` block's `topScorerComingSoon` is followed by an existing `standings: { ... }` block (not directly by `calendar: {`) — find:
 ```ts
     topScorerComingSoon: 'Top Scorer leaderboard is coming soon!',
+    standings: {
+      loading: 'Loading table…',
+      empty: 'No teams registered in this division yet.',
+      team: 'Team',
+      played: 'P',
+      won: 'W',
+      drawn: 'D',
+      lost: 'L',
+      goalDifference: 'GD',
+      points: 'Pts',
+    },
     calendar: {
 ```
-Replace with (inserting `about` as a new sibling before `calendar`):
+Replace with (inserting `about` as a new sibling, after `standings` and before `calendar`):
 ```ts
     topScorerComingSoon: 'Top Scorer leaderboard is coming soon!',
+    standings: {
+      loading: 'Loading table…',
+      empty: 'No teams registered in this division yet.',
+      team: 'Team',
+      played: 'P',
+      won: 'W',
+      drawn: 'D',
+      lost: 'L',
+      goalDifference: 'GD',
+      points: 'Pts',
+    },
     about: {
       title: 'How the League Works',
       intro: "Tangerine Toucans' U10 and U14 teams compete in a Bocas del Toro youth football league alongside other local clubs.",
@@ -116,8 +138,36 @@ Replace with:
   },
 ```
 
-Find the equivalent `league` block in `es.ts` (search for `topScorerComingSoon` and the `calendar:` block right after it — same structure as `en.ts`) and insert the matching `about` block in the same position:
+Find the equivalent block in `es.ts` (same structure as `en.ts` — `topScorerComingSoon` followed by a `standings: { ... }` block, then `calendar:`):
 ```ts
+    topScorerComingSoon: '¡La tabla de goleadores llegará pronto!',
+    standings: {
+      loading: 'Cargando tabla…',
+      empty: 'Aún no hay equipos inscritos en esta división.',
+      team: 'Equipo',
+      played: 'PJ',
+      won: 'G',
+      drawn: 'E',
+      lost: 'P',
+      goalDifference: 'DG',
+      points: 'Pts',
+    },
+    calendar: {
+```
+Replace with (inserting `about` after `standings`, before `calendar`, matching the `en.ts` insertion point exactly):
+```ts
+    topScorerComingSoon: '¡La tabla de goleadores llegará pronto!',
+    standings: {
+      loading: 'Cargando tabla…',
+      empty: 'Aún no hay equipos inscritos en esta división.',
+      team: 'Equipo',
+      played: 'PJ',
+      won: 'G',
+      drawn: 'E',
+      lost: 'P',
+      goalDifference: 'DG',
+      points: 'Pts',
+    },
     about: {
       title: 'Cómo Funciona la Liga',
       intro: 'Los equipos U10 y U14 de Tangerine Toucans compiten en una liga de fútbol juvenil de Bocas del Toro junto a otros clubes locales.',
@@ -129,6 +179,7 @@ Find the equivalent `league` block in `es.ts` (search for `topScorerComingSoon` 
       registerBold: 'Inscribir Equipo',
       registerSuffix: '.',
     },
+    calendar: {
 ```
 
 - [ ] **Step 4: Typecheck (verifies `es` still satisfies `typeof en`)**
