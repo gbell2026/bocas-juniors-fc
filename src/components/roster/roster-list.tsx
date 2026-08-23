@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { adminMarkCashPaid } from '@/app/actions/payment'
+import { adminMarkCashPaid, getAmountDue } from '@/app/actions/payment'
 import { AGE_GROUPS } from '@/lib/age-groups'
 import type { RosterPlayer } from '@/app/actions/roster'
 
@@ -12,7 +12,8 @@ export function RosterList({ players: initial }: { players: RosterPlayer[] }) {
     setUpdating(player.id)
     try {
       await adminMarkCashPaid({ playerId: player.id, parentId: player.parentId, adminNotes: 'Cash paid directly — marked from roster' })
-      setPlayers(prev => prev.map(p => p.id === player.id ? { ...p, hasOutstanding: false } : p))
+      const due = await getAmountDue(player.id)
+      setPlayers(prev => prev.map(p => p.id === player.id ? { ...p, hasOutstanding: due !== null } : p))
     } finally {
       setUpdating(null)
     }
