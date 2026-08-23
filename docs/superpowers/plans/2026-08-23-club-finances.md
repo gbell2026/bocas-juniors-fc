@@ -834,8 +834,8 @@ describe('getFinancePnL', () => {
     // 6. finance_entries: .eq('season_id', seasonId) [terminal]
     // Every non-terminal call in this chain is explicitly queued with mockReturnValueOnce(mockSupabase) below —
     // relying on a default return value here would let an EARLIER queued resolved-value entry get
-    // front-consumed by an unrelated call, exactly the mock-ordering bug documented in this file's
-    // deletePlayer tests. Queue order below must match the real call order above exactly.
+    // front-consumed by an unrelated call, exactly the mock-ordering bug documented in
+    // admin.test.ts's deletePlayer tests. Queue order below must match the real call order above exactly.
 
     mockSupabase.eq.mockReturnValueOnce(mockSupabase) // 1a: season .eq('id', seasonId)
     mockSupabase.single.mockResolvedValueOnce({ data: season, error: null }) // 1b: season .single()
