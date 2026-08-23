@@ -1069,6 +1069,11 @@ type Props = {
   categories: FinanceCategory[]
 }
 
+// Falls back to the season with the latest start date when none contains
+// today — `getFinanceSeasons` orders by start_date descending, so
+// seasons[0] is that season. Not literally "most recently created" (this
+// list doesn't carry a created_at to the client), but the closest available
+// proxy and the only ordering already established by Chunk 1.
 function defaultSeasonId(seasons: FinanceSeason[]): string {
   const today = new Date().toISOString().slice(0, 10)
   const current = seasons.find(s => s.startDate <= today && today <= s.endDate)
@@ -1102,6 +1107,8 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
       if (result.error) { setErrorMessage(result.error); return }
       setLabel(''); setStartDate(''); setEndDate('')
       window.location.reload()
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
     } finally {
       setCreating(false)
     }
@@ -1117,6 +1124,8 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
       if (result.error) { setErrorMessage(result.error); return }
       setSeasons(prev => prev.map(s => s.id === id ? { ...s, ...edit } : s))
       setEditingId(null)
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
     } finally {
       setSaving(null)
     }
@@ -1244,8 +1253,9 @@ git commit -m "feat: add season picker and management to Finances tab"
 
 In `src/components/admin/finances-admin.tsx`, add imports:
 
+Add `useEffect` to the existing `import { useState } from 'react'` line from Task 8, making it `import { useState, useEffect } from 'react'`, and add:
+
 ```ts
-import { useEffect } from 'react'
 import { getFinancePnL, setFinanceBudget } from '@/app/actions/finances'
 import type { FinancePnLRow } from '@/app/actions/finances'
 ```
@@ -1274,6 +1284,8 @@ Add state and a fetch effect inside `FinancesAdmin`, near the top with the other
       await setFinanceBudget({ seasonId, categoryId, targetAmountCents: cents })
       setPnl(prev => prev.map(r => r.id === categoryId ? { ...r, budgetCents: cents } : r))
       setBudgetEdits(prev => { const next = { ...prev }; delete next[categoryId]; return next })
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
     } finally {
       setSavingBudget(null)
     }
@@ -1350,24 +1362,42 @@ Replace the `{selectedSeason && <p className="text-brand-muted text-sm">Categori
                   </tr>
                 )
               })}
-              <tr className="border-t-2 font-bold">
-                <td className="p-3">Total Income</td>
-                <td className="p-3">{formatCents(totalIncomeBudget)}</td>
-                <td className="p-3">{formatCents(totalIncomeActual)}</td>
-                <td className="p-3">{formatCents(totalIncomeActual - totalIncomeBudget)}</td>
-              </tr>
-              <tr className="font-bold">
-                <td className="p-3">Total Expenses</td>
-                <td className="p-3">{formatCents(totalExpenseBudget)}</td>
-                <td className="p-3">{formatCents(totalExpenseActual)}</td>
-                <td className="p-3">{formatCents(totalExpenseActual - totalExpenseBudget)}</td>
-              </tr>
-              <tr className="border-t-2 font-bold">
-                <td className="p-3">Net</td>
-                <td className="p-3">{formatCents(totalIncomeBudget - totalExpenseBudget)}</td>
-                <td className="p-3">{formatCents(totalIncomeActual - totalExpenseActual)}</td>
-                <td className="p-3">{formatCents((totalIncomeActual - totalExpenseActual) - (totalIncomeBudget - totalExpenseBudget))}</td>
-              </tr>
+              {(() => {
+                // Same club's-favor sign convention as the per-row variance() helper:
+                // higher-than-budget income is good, higher-than-budget expense is bad
+                // (so expense variance flips sign), and Net (income minus expense) is
+                // already combined, so it doesn't need flipping — a higher realized net
+                // than budgeted is good exactly as-is. Every totals row uses the same
+                // green/red + "+" prefix styling as the per-category rows above, rather
+                // than showing an unsigned, uncolored number.
+                const totalIncomeVariance = totalIncomeActual - totalIncomeBudget
+                const totalExpenseVariance = totalExpenseBudget - totalExpenseActual
+                const netVariance = (totalIncomeActual - totalExpenseActual) - (totalIncomeBudget - totalExpenseBudget)
+                const varianceClass = (v: number) => `p-3 font-bold ${v >= 0 ? 'text-green-600' : 'text-brand-primary'}`
+                const varianceText = (v: number) => `${v >= 0 ? '+' : ''}${formatCents(v)}`
+                return (
+                  <>
+                    <tr className="border-t-2 font-bold">
+                      <td className="p-3">Total Income</td>
+                      <td className="p-3">{formatCents(totalIncomeBudget)}</td>
+                      <td className="p-3">{formatCents(totalIncomeActual)}</td>
+                      <td className={varianceClass(totalIncomeVariance)}>{varianceText(totalIncomeVariance)}</td>
+                    </tr>
+                    <tr className="font-bold">
+                      <td className="p-3">Total Expenses</td>
+                      <td className="p-3">{formatCents(totalExpenseBudget)}</td>
+                      <td className="p-3">{formatCents(totalExpenseActual)}</td>
+                      <td className={varianceClass(totalExpenseVariance)}>{varianceText(totalExpenseVariance)}</td>
+                    </tr>
+                    <tr className="border-t-2 font-bold">
+                      <td className="p-3">Net</td>
+                      <td className="p-3">{formatCents(totalIncomeBudget - totalExpenseBudget)}</td>
+                      <td className="p-3">{formatCents(totalIncomeActual - totalExpenseActual)}</td>
+                      <td className={varianceClass(netVariance)}>{varianceText(netVariance)}</td>
+                    </tr>
+                  </>
+                )
+              })()}
             </tbody>
           </table>
         )
@@ -1427,6 +1457,8 @@ Add handlers:
       if (result.error) { setErrorMessage(result.error); return }
       setNewCategoryName('')
       window.location.reload()
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
     } finally {
       setCreatingCategory(false)
     }
@@ -1440,6 +1472,8 @@ Add handlers:
       if (result.error) { setErrorMessage(result.error); return }
       setCategoryList(prev => prev.map(c => c.id === id ? { ...c, name: categoryNameEdit } : c))
       setEditingCategoryId(null)
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
     } finally {
       setCategoryBusy(null)
     }
@@ -1452,6 +1486,8 @@ Add handlers:
       const result = await deleteFinanceCategory(id)
       if (result.error) { setErrorMessage(result.error); return }
       setCategoryList(prev => prev.filter(c => c.id !== id))
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
     } finally {
       setCategoryBusy(null)
     }
@@ -1588,6 +1624,8 @@ Handlers:
       const [refreshedEntries, refreshedPnl] = await Promise.all([getFinanceEntries(seasonId), getFinancePnL(seasonId)])
       setEntries(refreshedEntries)
       setPnl(refreshedPnl)
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
     } finally {
       setCreatingEntry(false)
     }
@@ -1596,16 +1634,22 @@ Handlers:
   async function handleSaveEntryEdit(id: string) {
     const edit = entryEdits[id]
     if (!edit) return
+    const amountCents = Math.round(parseFloat(edit.amount) * 100)
+    if (Number.isNaN(amountCents)) {
+      setErrorMessage('Enter a valid amount')
+      return
+    }
     setErrorMessage(null)
     setEntryBusy(id)
     try {
-      const amountCents = Math.round(parseFloat(edit.amount) * 100)
       const result = await updateFinanceEntry(id, { amountCents, entryDate: edit.date, note: edit.note || undefined })
       if (result.error) { setErrorMessage(result.error); return }
       const [refreshedEntries, refreshedPnl] = await Promise.all([getFinanceEntries(seasonId), getFinancePnL(seasonId)])
       setEntries(refreshedEntries)
       setPnl(refreshedPnl)
       setEditingEntryId(null)
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
     } finally {
       setEntryBusy(null)
     }
@@ -1620,6 +1664,8 @@ Handlers:
       const [refreshedEntries, refreshedPnl] = await Promise.all([getFinanceEntries(seasonId), getFinancePnL(seasonId)])
       setEntries(refreshedEntries)
       setPnl(refreshedPnl)
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
     } finally {
       setEntryBusy(null)
     }
