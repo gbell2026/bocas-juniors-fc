@@ -69,6 +69,15 @@ export default async function HomePage() {
 
       <UpcomingSchedule schedule={schedule} locale={locale} />
 
+      {/* About */}
+      <section className="py-14 px-4 bg-brand-creamAlt border-t border-brand-line">
+        <div className="max-w-2xl mx-auto text-center">
+          <h2 className="font-heading text-brand-ink text-3xl uppercase tracking-wider mb-5">{t.home.about.title}</h2>
+          <p className="text-brand-muted mb-4">{t.home.about.body1}</p>
+          <p className="text-brand-muted">{t.home.about.body2}</p>
+        </div>
+      </section>
+
       {/* Get Involved CTA */}
       <section className="py-14 px-4 bg-brand-ink border-t border-brand-charcoal text-center">
         <h2 className="font-heading text-white text-4xl uppercase tracking-wider mb-3">{t.home.getInvolved}</h2>
