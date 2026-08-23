@@ -141,7 +141,7 @@ export const es = {
       title: 'Cómo Funciona la Liga',
       intro: 'Los equipos U10 y U14 de Tangerine Toucans compiten en una liga de fútbol juvenil de Bocas del Toro junto a otros clubes locales.',
       format: (start: string, end: string) => `La temporada regular es un todos contra todos a doble vuelta, en la que cada equipo se enfrenta a los demás dos veces, de local y visitante, del ${start} al ${end}.`,
-      matchDay: 'Los partidos se juegan los domingos en Airport Field, y los sábados quedan libres para reprogramar por mal tiempo.',
+      matchDay: 'Los partidos se juegan los domingos en Campo del Aeropuerto, y los sábados quedan libres para reprogramar por mal tiempo.',
       standings: 'La tabla de posiciones se decide por puntos: 3 por victoria, 1 por empate, 0 por derrota.',
       bracketPhase: 'Después de un descanso, los mejores equipos regresan en enero de 2027 para una fase de eliminación por llaves con siembra, donde cada enfrentamiento se juega de local y visitante y el ganador se decide por el marcador global de ambos partidos.',
       registerPrefix: 'Los clubes interesados en inscribir un equipo pueden hacerlo en la pestaña',
