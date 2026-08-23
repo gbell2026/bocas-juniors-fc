@@ -42,6 +42,11 @@ export const en = {
       noMatches: 'No matches in the next week.',
       cancelled: 'Cancelled',
     },
+    about: {
+      title: 'About Tangerine Toucans FC',
+      body1: "Tangerine Toucans FC is a youth football club based in Bocas del Toro, Panama, built around one idea: every kid deserves a team. We coach U10 and U14 players, compete in the local youth league, and give this community a place to play, travel, and grow together on and off the pitch.",
+      body2: 'This site is where it all comes together. Register your child for the season, check the practice and match schedule, follow league standings, and see the moments from game day in the gallery.',
+    },
   },
   contact: {
     title: 'Contact Us',
@@ -129,6 +134,17 @@ export const en = {
       lost: 'L',
       goalDifference: 'GD',
       points: 'Pts',
+    },
+    about: {
+      title: 'How the League Works',
+      intro: "Tangerine Toucans' U10 and U14 teams compete in a Bocas del Toro youth football league alongside other local clubs.",
+      format: (start: string, end: string) => `The regular season is a double round-robin, with every team facing every other team twice, home and away, running ${start} through ${end}.`,
+      matchDay: 'Matches are played on Sundays at Airport Field, with Saturdays kept free for weather rearrangements.',
+      standings: 'Standings are decided by points: 3 for a win, 1 for a draw, 0 for a loss.',
+      bracketPhase: 'After a break, the top teams return in January 2027 for a seeded bracket phase, with each matchup played home and away and the winner decided on aggregate score across both legs.',
+      registerPrefix: 'Clubs interested in fielding a team can register via the',
+      registerBold: 'Register Team',
+      registerSuffix: 'tab.',
     },
     calendar: {
       loading: 'Loading fixtures…',

@@ -44,6 +44,11 @@ export const es = {
       noMatches: 'No hay partidos en la próxima semana.',
       cancelled: 'Cancelado',
     },
+    about: {
+      title: 'Sobre Tangerine Toucans FC',
+      body1: 'Tangerine Toucans FC es un club de fútbol juvenil con base en Bocas del Toro, Panamá, construido sobre una idea: todo niño merece un equipo. Entrenamos a jugadores de las categorías U10 y U14, competimos en la liga juvenil local, y le damos a esta comunidad un lugar para jugar, viajar y crecer juntos, dentro y fuera de la cancha.',
+      body2: 'En este sitio es donde todo se junta. Inscribe a tu hijo/a para la temporada, consulta el calendario de entrenamientos y partidos, sigue la tabla de posiciones de la liga, y mira los momentos del día de partido en la galería.',
+    },
   },
   contact: {
     title: 'Contáctanos',
@@ -131,6 +136,17 @@ export const es = {
       lost: 'P',
       goalDifference: 'DG',
       points: 'Pts',
+    },
+    about: {
+      title: 'Cómo Funciona la Liga',
+      intro: 'Los equipos U10 y U14 de Tangerine Toucans compiten en una liga de fútbol juvenil de Bocas del Toro junto a otros clubes locales.',
+      format: (start: string, end: string) => `La temporada regular es un todos contra todos a doble vuelta, en la que cada equipo se enfrenta a los demás dos veces, de local y visitante, del ${start} al ${end}.`,
+      matchDay: 'Los partidos se juegan los domingos en Airport Field, y los sábados quedan libres para reprogramar por mal tiempo.',
+      standings: 'La tabla de posiciones se decide por puntos: 3 por victoria, 1 por empate, 0 por derrota.',
+      bracketPhase: 'Después de un descanso, los mejores equipos regresan en enero de 2027 para una fase de eliminación por llaves con siembra, donde cada enfrentamiento se juega de local y visitante y el ganador se decide por el marcador global de ambos partidos.',
+      registerPrefix: 'Los clubes interesados en inscribir un equipo pueden hacerlo en la pestaña',
+      registerBold: 'Inscribir Equipo',
+      registerSuffix: '.',
     },
     calendar: {
       loading: 'Cargando calendario…',
