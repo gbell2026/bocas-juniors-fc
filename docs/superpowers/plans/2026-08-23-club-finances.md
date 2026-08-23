@@ -418,10 +418,15 @@ import {
 ```ts
 describe('getFinanceCategories', () => {
   it('returns categories', async () => {
+    // getFinanceCategories calls .order('kind').order('name') — two calls in one
+    // chain. The first must return mockSupabase (chainable); only the second
+    // resolves. Queuing just one mockResolvedValueOnce here would be consumed
+    // by the FIRST call instead, breaking the chain — queue both explicitly.
+    mockSupabase.order.mockReturnValueOnce(mockSupabase) // .order('kind')
     mockSupabase.order.mockResolvedValueOnce({
       data: [{ id: 'c1', name: 'Wages', kind: 'expense', auto_source: null }],
       error: null,
-    })
+    }) // .order('name')
     const result = await getFinanceCategories()
     expect(result).toEqual([{ id: 'c1', name: 'Wages', kind: 'expense', autoSource: null }])
   })
@@ -438,8 +443,13 @@ describe('createFinanceCategory', () => {
 
 describe('renameFinanceCategory', () => {
   it('renames a manual category', async () => {
+    // renameFinanceCategory calls .eq('id', id) twice: once (chainable) before
+    // the auto_source .single() lookup, then again (terminal) for the update.
+    // Queuing only one mockResolvedValueOnce would be consumed by the FIRST
+    // (chainable) call, breaking .single() — queue the chainable return first.
+    mockSupabase.eq.mockReturnValueOnce(mockSupabase) // auto_source check .eq('id', id)
     mockSupabase.single.mockResolvedValueOnce({ data: { auto_source: null }, error: null })
-    mockSupabase.eq.mockResolvedValueOnce({ error: null })
+    mockSupabase.eq.mockResolvedValueOnce({ error: null }) // update .eq('id', id)
     const result = await renameFinanceCategory('c1', 'New Name')
     expect(result.error).toBeUndefined()
     expect(mockSupabase.update).toHaveBeenCalledWith({ name: 'New Name' })
@@ -462,8 +472,13 @@ describe('deleteFinanceCategory', () => {
   })
 
   it('refuses to delete a category with logged entries', async () => {
+    // The implementation queries entries and budgets unconditionally (not
+    // short-circuited) before checking either result, so both .limit(1) calls
+    // always happen — queue a value for both, even though only the first
+    // (entries) is what this test is actually asserting on.
     mockSupabase.single.mockResolvedValueOnce({ data: { auto_source: null }, error: null })
-    mockSupabase.limit.mockResolvedValueOnce({ data: [{ id: 'e1' }], error: null })
+    mockSupabase.limit.mockResolvedValueOnce({ data: [{ id: 'e1' }], error: null }) // entries: has one
+    mockSupabase.limit.mockResolvedValueOnce({ data: [], error: null }) // budgets: none
     const result = await deleteFinanceCategory('c1')
     expect(result.error).toBe('This category has logged entries or a budget — remove those first')
     expect(mockSupabase.delete).not.toHaveBeenCalled()
@@ -479,10 +494,19 @@ describe('deleteFinanceCategory', () => {
   })
 
   it('deletes a manual category with no entries or budgets', async () => {
+    // .eq() is called 4 times in this path: auto_source check (chainable,
+    // before .single()), the entries check (chainable, before .limit()), the
+    // budgets check (chainable, before .limit()), and finally the delete
+    // itself (terminal). Only the last should resolve — the first three must
+    // be queued to return mockSupabase, or the terminal value gets
+    // front-consumed by the very first call and breaks .single().
+    mockSupabase.eq.mockReturnValueOnce(mockSupabase) // auto_source check .eq('id', id)
     mockSupabase.single.mockResolvedValueOnce({ data: { auto_source: null }, error: null })
+    mockSupabase.eq.mockReturnValueOnce(mockSupabase) // entries check .eq('category_id', id)
     mockSupabase.limit.mockResolvedValueOnce({ data: [], error: null }) // no entries
+    mockSupabase.eq.mockReturnValueOnce(mockSupabase) // budgets check .eq('category_id', id)
     mockSupabase.limit.mockResolvedValueOnce({ data: [], error: null }) // no budget
-    mockSupabase.eq.mockResolvedValueOnce({ error: null }) // the delete itself
+    mockSupabase.eq.mockResolvedValueOnce({ error: null }) // the delete itself .eq('id', id)
     const result = await deleteFinanceCategory('c1')
     expect(result.error).toBeUndefined()
     expect(mockSupabase.delete).toHaveBeenCalled()
@@ -788,7 +812,7 @@ This is the one action the Finances tab's main view actually calls. It combines:
 
 - [ ] **Step 1: Write the failing tests**
 
-Update the import line to add `getFinancePnL`. Add:
+Update the import line to add `getFinancePnL`. Add `in: jest.fn(), gte: jest.fn(), lt: jest.fn()` to the `mockSupabase` object at the top of the file (`in`/`gte` are chainable within a single call site, so no `mockReturnThis()` default is needed — every test that uses them queues each call explicitly, the same way `eq` and `order` already are below).
 
 ```ts
 describe('getFinancePnL', () => {
@@ -801,14 +825,37 @@ describe('getFinancePnL', () => {
   const season = { id: 's1', start_date: '2026-08-01', end_date: '2026-11-30' }
 
   it('computes actuals from payments for auto-source categories and from entries for manual categories, against each category\'s budget', async () => {
-    mockSupabase.single.mockResolvedValueOnce({ data: season, error: null }) // season lookup
-    mockSupabase.order.mockResolvedValueOnce({ data: categories, error: null }) // categories
-    mockSupabase.eq.mockResolvedValueOnce({ data: [{ category_id: 'wages', target_amount_cents: 100000 }], error: null }) // budgets
-    // Two payments queries (registration, subscription), then one entries query, in that order:
-    mockSupabase.lt
-      .mockResolvedValueOnce({ data: [{ amount: 3000 }, { amount: 3000 }], error: null }) // registration payments
-      .mockResolvedValueOnce({ data: [{ amount: 21000 }], error: null }) // subscription payments
-    mockSupabase.eq.mockResolvedValueOnce({ data: [{ category_id: 'wages', amount_cents: 45000 }], error: null }) // finance_entries for the season
+    // getFinancePnL's real call sequence, traced against this mock's chaining:
+    // 1. finance_seasons: .eq('id', seasonId) [chainable] -> .single() [terminal]
+    // 2. finance_categories: .order('kind') [chainable] -> .order('name') [terminal]
+    // 3. finance_budgets: .eq('season_id', seasonId) [terminal]
+    // 4. payments (registration): .eq('status', 'succeeded') [chainable] -> .in(...) [chainable] -> .gte(...) [chainable] -> .lt(...) [terminal]
+    // 5. payments (subscription): same shape as 4
+    // 6. finance_entries: .eq('season_id', seasonId) [terminal]
+    // Every non-terminal call in this chain is explicitly queued with mockReturnValueOnce(mockSupabase) below —
+    // relying on a default return value here would let an EARLIER queued resolved-value entry get
+    // front-consumed by an unrelated call, exactly the mock-ordering bug documented in this file's
+    // deletePlayer tests. Queue order below must match the real call order above exactly.
+
+    mockSupabase.eq.mockReturnValueOnce(mockSupabase) // 1a: season .eq('id', seasonId)
+    mockSupabase.single.mockResolvedValueOnce({ data: season, error: null }) // 1b: season .single()
+
+    mockSupabase.order.mockReturnValueOnce(mockSupabase) // 2a: categories .order('kind')
+    mockSupabase.order.mockResolvedValueOnce({ data: categories, error: null }) // 2b: categories .order('name')
+
+    mockSupabase.eq.mockResolvedValueOnce({ data: [{ category_id: 'wages', target_amount_cents: 100000 }], error: null }) // 3: budgets .eq('season_id', seasonId)
+
+    mockSupabase.eq.mockReturnValueOnce(mockSupabase) // 4a: registration payments .eq('status', 'succeeded')
+    mockSupabase.in.mockReturnValueOnce(mockSupabase) // 4b: registration payments .in(...)
+    mockSupabase.gte.mockReturnValueOnce(mockSupabase) // 4c: registration payments .gte(...)
+    mockSupabase.lt.mockResolvedValueOnce({ data: [{ amount: 3000 }, { amount: 3000 }], error: null }) // 4d: registration payments .lt(...)
+
+    mockSupabase.eq.mockReturnValueOnce(mockSupabase) // 5a: subscription payments .eq('status', 'succeeded')
+    mockSupabase.in.mockReturnValueOnce(mockSupabase) // 5b: subscription payments .in(...)
+    mockSupabase.gte.mockReturnValueOnce(mockSupabase) // 5c: subscription payments .gte(...)
+    mockSupabase.lt.mockResolvedValueOnce({ data: [{ amount: 21000 }], error: null }) // 5d: subscription payments .lt(...)
+
+    mockSupabase.eq.mockResolvedValueOnce({ data: [{ category_id: 'wages', amount_cents: 45000 }], error: null }) // 6: finance_entries .eq('season_id', seasonId)
 
     const result = await getFinancePnL('s1')
 
@@ -822,9 +869,7 @@ describe('getFinancePnL', () => {
 })
 ```
 
-This test's mock-call ordering is intentionally explicit (a comment on each `mockResolvedValueOnce` states which real call it answers) — write `getFinancePnL` to make these calls in this exact order: season lookup, categories, budgets, registration-payments, subscription-payments, entries. If you reorder the implementation, update the test's mock queue order to match, and re-verify RED before GREEN.
-
-Add `lt: jest.fn()` to `mockSupabase` at the top of the file, chained the same way as `order`/`limit` (i.e. it must be reachable after `.gte()`, so also add `gte: jest.fn().mockReturnThis()`).
+Write `getFinancePnL` (Step 3 below) to make its real Supabase calls in exactly this order: season lookup, categories, budgets, registration-payments, subscription-payments, entries. If you change the implementation's call order for any reason, you must update this test's mock queue to match the new order and re-verify RED before GREEN — a mismatch here fails with a confusing `TypeError` deep in the mock chain, not a clean assertion failure.
 
 - [ ] **Step 2: Run tests to verify they fail**
 
@@ -870,14 +915,14 @@ export async function getFinancePnL(seasonId: string): Promise<FinancePnLRow[]> 
     return (data ?? []).reduce((sum, p) => sum + p.amount, 0)
   }
 
+  const registrationTotal = await paymentsTotal(['registration'])
+  const subscriptionTotal = await paymentsTotal(['full', 'august', 'september', 'october', 'november'])
+
   const { data: entriesData } = await supabase.from('finance_entries').select('category_id, amount_cents').eq('season_id', seasonId)
   const entryTotals: Record<string, number> = {}
   for (const e of entriesData ?? []) {
     entryTotals[e.category_id] = (entryTotals[e.category_id] ?? 0) + e.amount_cents
   }
-
-  const registrationTotal = await paymentsTotal(['registration'])
-  const subscriptionTotal = await paymentsTotal(['full', 'august', 'september', 'october', 'november'])
 
   return categories.map(c => ({
     id: c.id,
@@ -892,7 +937,7 @@ export async function getFinancePnL(seasonId: string): Promise<FinancePnLRow[]> 
 }
 ```
 
-Note: the implementation calls `paymentsTotal` for registration before subscription, matching the test's mock queue order (`.lt` resolves registration first, then subscription).
+The entries fetch now runs after both `paymentsTotal` calls, matching the test's queue order exactly (registration → subscription → entries).
 
 - [ ] **Step 4: Run tests to verify they pass**
 
