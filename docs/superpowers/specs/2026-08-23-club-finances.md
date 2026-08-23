@@ -93,9 +93,13 @@ insert into finance_categories (name, kind, auto_source) values
 
 ## Auto-computed categories
 
-For a category with `auto_source = 'registration'`, its actual for a season is the sum of `payments.amount` where `status = 'succeeded'`, `installment_label = 'registration'`, and `paid_at` falls within `[season.start_date, season.end_date]`. For `auto_source = 'subscription'`, same query but `installment_label in ('full', 'august', 'september', 'october', 'november')` — every label that represents the season fee, whether paid as one lump sum or per month.
+For a category with `auto_source = 'registration'`, its actual for a season is the sum of `payments.amount` where `status = 'succeeded'`, `installment_label = 'registration'`, and `paid_at` falls within the season's range. For `auto_source = 'subscription'`, same query but `installment_label in ('full', 'august', 'september', 'october', 'november')` — every label that represents the season fee, whether paid as one lump sum or per month.
+
+`payments.paid_at` is `timestamptz`; `finance_seasons.start_date`/`end_date` are `date`. The range check compares `paid_at::date` against `[start_date, end_date]` inclusive, in UTC (`paid_at` is already stored in UTC, so no additional timezone conversion is needed — this only matters because a naive `timestamptz >= date` comparison implicitly casts the date to UTC midnight, which is what we want here).
 
 These two categories have no `finance_entries` rows and aren't editable through the manual-entry form — the UI shows their actual as read-only, computed live each time the Finances tab loads. A budget target can still be set for them, same as any other category.
+
+**Known limitation:** payment rows created before migration `010_add_registration_installment.sql` were backfilled with `installment_label = 'full'` regardless of whether they represented a combined registration+season payment (see that migration's comments). Under this scheme, all such historical rows are counted entirely under Subscriptions, never Registration Fees — so a season's Registration Fees actual may be understated for any date range that includes pre-migration-010 payments. Acceptable for this build; not worth a data migration to fix retroactively.
 
 ## Server actions
 
@@ -105,8 +109,8 @@ New file `src/app/actions/finances.ts`, following this codebase's existing `'use
 - `createFinanceSeason({ label, startDate, endDate })` / `updateFinanceSeason(id, { label, startDate, endDate })`
 - `getFinanceCategories()` — list all categories
 - `createFinanceCategory({ name, kind })` — always `auto_source: null`; only the two seeded auto-categories ever have one
-- `renameFinanceCategory(id, name)`
-- `deleteFinanceCategory(id)` — returns `{ error }` if the category has any `finance_entries` or a `finance_budgets` row, mirroring the `deletePlayer` guard-with-friendly-error pattern already established in `src/app/actions/admin.ts`
+- `renameFinanceCategory(id, name)` — returns `{ error }` if the category's `auto_source` is not null; Registration Fees and Subscriptions are never renamable, enforced here rather than only by which buttons the UI renders
+- `deleteFinanceCategory(id)` — returns `{ error }` if `auto_source` is not null (checked first, before the entries/budget check below — an auto-source category can otherwise have zero `finance_entries` by definition, so that check alone wouldn't stop its deletion), or if the category has any `finance_entries` or a `finance_budgets` row, mirroring the `deletePlayer` guard-with-friendly-error pattern already established in `src/app/actions/admin.ts`
 - `getFinanceEntries(seasonId)` — manual entries for a season, joined with category name
 - `createFinanceEntry({ seasonId, categoryId, amountCents, entryDate, note })` — rejects if the target category is an auto-source category
 - `updateFinanceEntry(id, { amountCents, entryDate, note })` / `deleteFinanceEntry(id)`
@@ -116,7 +120,7 @@ New file `src/app/actions/finances.ts`, following this codebase's existing `'use
 
 ## UI
 
-New tab in `admin-dashboard.tsx`'s `TABS` array: `{ key: 'finances', label: 'Finances' }`. New component `src/components/admin/finances-admin.tsx`.
+New tab in `admin-dashboard.tsx`: add `'finances'` to the `Tab` type alias and `{ key: 'finances', label: 'Finances' }` to the `TABS` array. New component `src/components/admin/finances-admin.tsx`.
 
 **Season picker**: a `<select>` of existing seasons, defaulting to whichever season's date range contains today, falling back to the most recently created one if none match (or an empty state prompting "Create a season to get started" if there are none yet). A collapsible "Manage Seasons" area below it, reusing the League Divisions create/edit form shape (label + two date inputs, inline edit-in-place per existing season) — this is the same shape as `league-divisions.tsx`, just relabeled.
 
