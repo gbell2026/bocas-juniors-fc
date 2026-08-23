@@ -5,6 +5,7 @@ import type { PaymentStatusInfo } from '@/app/actions/admin'
 import { adminMarkCashPaid } from '@/app/actions/payment'
 import { AGE_GROUPS } from '@/lib/age-groups'
 import type { Player, PaymentPlan } from '@/lib/supabase/types'
+import type { MonthlyStatus } from '@/lib/payment-schedule'
 
 type PlayerWithParent = Player & {
   parents: { name: string; email: string }
@@ -12,10 +13,40 @@ type PlayerWithParent = Player & {
   regFeePaid: boolean
   hasPayments: boolean
   paymentStatus: PaymentStatusInfo
+  monthlyStatus: MonthlyStatus[]
 }
 
 const installmentLabelText: Record<string, string> = {
   full: 'Season Fee', august: 'August', september: 'September', october: 'October', november: 'November',
+}
+
+const monthAbbrev: Record<string, string> = {
+  august: 'Aug', september: 'Sep', october: 'Oct', november: 'Nov',
+}
+
+function MonthlyStatusRow({ monthlyStatus }: { monthlyStatus: MonthlyStatus[] }) {
+  return (
+    <div className="flex gap-2">
+      {monthlyStatus.map(({ month, status }) => {
+        const style =
+          status === 'paid' ? 'bg-green-600 text-white border-green-600'
+          : status === 'pending' ? 'bg-amber-100 text-amber-700 border-amber-400'
+          : status === 'notApplicable' ? 'bg-transparent text-brand-mutedWarm border-brand-line'
+          : 'bg-transparent text-brand-muted border-brand-line'
+        const symbol = status === 'paid' ? '✓' : status === 'pending' ? '●' : status === 'notApplicable' ? '–' : ''
+        return (
+          <div
+            key={month}
+            title={`${monthAbbrev[month]}: ${status === 'notApplicable' ? 'Not applicable' : status}`}
+            className={`flex flex-col items-center justify-center w-10 h-10 rounded border text-xs font-bold ${style}`}
+          >
+            <span>{symbol}</span>
+            <span className="text-[9px] font-normal uppercase">{monthAbbrev[month]}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 function paymentStatusText(status: PaymentStatusInfo): string {
@@ -211,6 +242,10 @@ export function PlayersTable({ players }: { players: PlayerWithParent[] }) {
                               />
                             ) : (p.return_date ?? '—')}
                           </div>
+                        </div>
+                        <div className="mb-3">
+                          <p className="text-xs font-bold uppercase tracking-wider text-brand-mutedWarm mb-1">Payment by Month</p>
+                          <MonthlyStatusRow monthlyStatus={p.monthlyStatus} />
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {p.status === 'cancelled' ? (

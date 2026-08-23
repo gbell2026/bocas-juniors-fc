@@ -1,4 +1,4 @@
-import { getNextDue, isRegistrationFeePaid, getPlanTotalCents, getSchedule } from '../payment-schedule'
+import { getNextDue, isRegistrationFeePaid, getPlanTotalCents, getSchedule, getMonthlyStatus } from '../payment-schedule'
 
 describe('getNextDue', () => {
   it('returns the registration fee first for a fresh full-plan player', () => {
@@ -147,5 +147,52 @@ describe('joinMonth proration', () => {
   it('getNextDue and getPlanTotalCents respect joinMonth too', () => {
     expect(getNextDue('monthly', ['registration'], false, 'october')).toEqual({ label: 'october', amountCents: 6000, isFirstInstallment: false })
     expect(getPlanTotalCents('monthly', false, 'october')).toBe(15000) // 3000 + 6000 + 6000
+  })
+})
+
+describe('getMonthlyStatus', () => {
+  it('monthly plan: each month reflects its own paid/pending/outstanding status', () => {
+    expect(getMonthlyStatus('monthly', ['registration', 'august'], ['september'], 'august')).toEqual([
+      { month: 'august', status: 'paid' },
+      { month: 'september', status: 'pending' },
+      { month: 'october', status: 'outstanding' },
+      { month: 'november', status: 'outstanding' },
+    ])
+  })
+
+  it('monthly plan: months before the join month are notApplicable', () => {
+    expect(getMonthlyStatus('monthly', ['registration', 'october'], [], 'october')).toEqual([
+      { month: 'august', status: 'notApplicable' },
+      { month: 'september', status: 'notApplicable' },
+      { month: 'october', status: 'paid' },
+      { month: 'november', status: 'outstanding' },
+    ])
+  })
+
+  it('full plan: the lump-sum status applies to every applicable month at once when paid', () => {
+    expect(getMonthlyStatus('full', ['registration', 'full'], [], 'august')).toEqual([
+      { month: 'august', status: 'paid' },
+      { month: 'september', status: 'paid' },
+      { month: 'october', status: 'paid' },
+      { month: 'november', status: 'paid' },
+    ])
+  })
+
+  it('full plan: the lump-sum status applies to every applicable month at once when pending', () => {
+    expect(getMonthlyStatus('full', ['registration'], ['full'], 'august')).toEqual([
+      { month: 'august', status: 'pending' },
+      { month: 'september', status: 'pending' },
+      { month: 'october', status: 'pending' },
+      { month: 'november', status: 'pending' },
+    ])
+  })
+
+  it('full plan: outstanding lump sum leaves every applicable month outstanding, and pre-join months notApplicable', () => {
+    expect(getMonthlyStatus('full', ['registration'], [], 'october')).toEqual([
+      { month: 'august', status: 'notApplicable' },
+      { month: 'september', status: 'notApplicable' },
+      { month: 'october', status: 'outstanding' },
+      { month: 'november', status: 'outstanding' },
+    ])
   })
 })

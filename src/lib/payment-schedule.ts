@@ -85,3 +85,32 @@ export function isRegistrationFeePaid(plan: PaymentPlan, paidLabels: Installment
 export function getPlanTotalCents(plan: PaymentPlan, discounted = false, joinMonth: JoinMonth = 'august'): number {
   return getSchedule(plan, discounted, joinMonth).reduce((sum, inst) => sum + inst.amountCents, 0)
 }
+
+export type MonthStatus = 'paid' | 'pending' | 'outstanding' | 'notApplicable'
+export type MonthlyStatus = { month: JoinMonth; status: MonthStatus }
+
+/**
+ * Per-month view of the season fee, for a "which months has this player
+ * paid" display. On the monthly plan, each month has its own label and is
+ * checked independently. On the full plan, the season fee is one lump-sum
+ * installment (label 'full') — its single status applies to every month
+ * from the join month onward at once, since paying it covers the whole
+ * remaining season in one go. Months before the join month are
+ * 'notApplicable': the player never owed for them.
+ */
+export function getMonthlyStatus(
+  plan: PaymentPlan,
+  paidLabels: InstallmentLabel[],
+  pendingLabels: InstallmentLabel[],
+  joinMonth: JoinMonth = 'august'
+): MonthlyStatus[] {
+  const joinIndex = MONTH_ORDER.indexOf(joinMonth)
+  const statusOf = (label: InstallmentLabel): MonthStatus =>
+    paidLabels.includes(label) ? 'paid' : pendingLabels.includes(label) ? 'pending' : 'outstanding'
+  const seasonStatus = plan === 'full' ? statusOf('full') : null
+
+  return MONTH_ORDER.map((month, i) => ({
+    month,
+    status: i < joinIndex ? 'notApplicable' : seasonStatus ?? statusOf(month as InstallmentLabel),
+  }))
+}

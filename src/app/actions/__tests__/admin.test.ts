@@ -186,6 +186,49 @@ describe('getAllPlayers', () => {
     const result = await getAllPlayers()
     expect(result[0].paymentStatus).toEqual({ kind: 'owes', label: 'september', amountCents: 6000 })
   })
+
+  it('computes monthlyStatus from paid and pending installment labels', async () => {
+    mockSupabase.order.mockResolvedValueOnce({
+      data: [{
+        id: 'player-7', name: 'Gina', payment_plan: 'monthly', age_groups: [], join_month: 'august',
+        payments: [
+          { paid_at: '2026-08-01', status: 'succeeded', installment_label: 'registration' },
+          { paid_at: '2026-08-01', status: 'succeeded', installment_label: 'august' },
+          { paid_at: null, status: 'pending', installment_label: 'september' },
+        ],
+      }],
+      error: null,
+    })
+    ;(getAmountDue as jest.Mock).mockResolvedValueOnce({ label: 'september', amountCents: 6000, isFirstInstallment: false })
+    const result = await getAllPlayers()
+    expect(result[0].monthlyStatus).toEqual([
+      { month: 'august', status: 'paid' },
+      { month: 'september', status: 'pending' },
+      { month: 'october', status: 'outstanding' },
+      { month: 'november', status: 'outstanding' },
+    ])
+  })
+
+  it('computes monthlyStatus for a full-plan player, applying the lump-sum status to every applicable month', async () => {
+    mockSupabase.order.mockResolvedValueOnce({
+      data: [{
+        id: 'player-8', name: 'Hank', payment_plan: 'full', age_groups: [], join_month: 'october',
+        payments: [
+          { paid_at: '2026-10-01', status: 'succeeded', installment_label: 'registration' },
+          { paid_at: '2026-10-01', status: 'succeeded', installment_label: 'full' },
+        ],
+      }],
+      error: null,
+    })
+    ;(getAmountDue as jest.Mock).mockResolvedValueOnce(null)
+    const result = await getAllPlayers()
+    expect(result[0].monthlyStatus).toEqual([
+      { month: 'august', status: 'notApplicable' },
+      { month: 'september', status: 'notApplicable' },
+      { month: 'october', status: 'paid' },
+      { month: 'november', status: 'paid' },
+    ])
+  })
 })
 
 describe('deletePlayer', () => {

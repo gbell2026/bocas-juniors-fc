@@ -1,7 +1,7 @@
 'use server'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 import type { PlayerStatus, Media, GetInvolvedSubmission, PaymentPlan, InstallmentLabel } from '@/lib/supabase/types'
-import { isRegistrationFeePaid } from '@/lib/payment-schedule'
+import { isRegistrationFeePaid, getMonthlyStatus, type JoinMonth } from '@/lib/payment-schedule'
 import { getAmountDue } from '@/app/actions/payment'
 import { v2 as cloudinary } from 'cloudinary'
 
@@ -61,7 +61,11 @@ export async function getAllPlayers() {
   // Attach last succeeded payment date and registration-fee-paid status to each player
   return players.map((p, i) => {
     const succeeded = (p.payments as any[])?.filter((pay: any) => pay.status === 'succeeded') ?? []
+    const pending = (p.payments as any[])?.filter((pay: any) => pay.status === 'pending') ?? []
     const paidLabels = succeeded
+      .map((pay: any) => pay.installment_label)
+      .filter((label: any): label is InstallmentLabel => label !== null)
+    const pendingLabels = pending
       .map((pay: any) => pay.installment_label)
       .filter((label: any): label is InstallmentLabel => label !== null)
     const due = dueChecks[i]
@@ -77,6 +81,7 @@ export async function getAllPlayers() {
       ageGroups: p.age_groups,
       hasPayments: ((p.payments as any[]) ?? []).length > 0,
       paymentStatus,
+      monthlyStatus: getMonthlyStatus(p.payment_plan, paidLabels, pendingLabels, (p.join_month ?? 'august') as JoinMonth),
     }
   })
 }
