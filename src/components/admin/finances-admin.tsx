@@ -1,7 +1,9 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createFinanceSeason, updateFinanceSeason } from '@/app/actions/finances'
 import type { FinanceSeason, FinanceCategory } from '@/app/actions/finances'
+import { getFinancePnL, setFinanceBudget } from '@/app/actions/finances'
+import type { FinancePnLRow } from '@/app/actions/finances'
 
 type Props = {
   seasons: FinanceSeason[]
@@ -31,6 +33,44 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
   const [edits, setEdits] = useState<Record<string, { label: string; startDate: string; endDate: string }>>({})
   const [saving, setSaving] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [pnl, setPnl] = useState<FinancePnLRow[]>([])
+  const [loadingPnl, setLoadingPnl] = useState(false)
+  const [budgetEdits, setBudgetEdits] = useState<Record<string, string>>({})
+  const [savingBudget, setSavingBudget] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!seasonId) { setPnl([]); return }
+    setLoadingPnl(true)
+    getFinancePnL(seasonId).then(setPnl).finally(() => setLoadingPnl(false))
+  }, [seasonId])
+
+  async function handleSaveBudget(categoryId: string) {
+    const raw = budgetEdits[categoryId]
+    if (raw === undefined) return
+    const cents = Math.round(parseFloat(raw) * 100)
+    if (Number.isNaN(cents)) return
+    setSavingBudget(categoryId)
+    try {
+      await setFinanceBudget({ seasonId, categoryId, targetAmountCents: cents })
+      setPnl(prev => prev.map(r => r.id === categoryId ? { ...r, budgetCents: cents } : r))
+      setBudgetEdits(prev => { const next = { ...prev }; delete next[categoryId]; return next })
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
+    } finally {
+      setSavingBudget(null)
+    }
+  }
+
+  function formatCents(cents: number): string {
+    return `$${(cents / 100).toFixed(2)}`
+  }
+
+  const income = pnl.filter(r => r.kind === 'income')
+  const expense = pnl.filter(r => r.kind === 'expense')
+  const totalIncomeBudget = income.reduce((sum, r) => sum + r.budgetCents, 0)
+  const totalIncomeActual = income.reduce((sum, r) => sum + r.actualCents, 0)
+  const totalExpenseBudget = expense.reduce((sum, r) => sum + r.budgetCents, 0)
+  const totalExpenseActual = expense.reduce((sum, r) => sum + r.actualCents, 0)
 
   function startEdit(s: FinanceSeason) {
     setEditingId(s.id)
@@ -75,6 +115,11 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
   }
 
   const selectedSeason = seasons.find(s => s.id === seasonId) ?? null
+
+  function variance(row: FinancePnLRow): number {
+    const diff = row.actualCents - row.budgetCents
+    return row.kind === 'income' ? diff : -diff
+  }
 
   return (
     <section className="space-y-6">
@@ -160,7 +205,93 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
         </div>
       )}
 
-      {selectedSeason && <p className="text-brand-muted text-sm">Categories loaded: {categories.length}</p>}
+      {selectedSeason && (
+        loadingPnl ? (
+          <p className="text-brand-muted text-sm">Loading…</p>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-brand-creamAlt">
+              <tr>
+                {['Category', 'Budget', 'Actual', 'Variance'].map(h => (
+                  <th key={h} className="text-left p-3">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {[...income, ...expense].map(row => {
+                const isAuto = categories.find(c => c.id === row.id)?.autoSource != null
+                const v = variance(row)
+                return (
+                  <tr key={row.id} className="border-t">
+                    <td className="p-3 font-medium">{row.name}</td>
+                    <td className="p-3">
+                      {budgetEdits[row.id] !== undefined ? (
+                        <div className="flex gap-1 items-center">
+                          <input
+                            type="number" step="0.01" className="input w-24"
+                            value={budgetEdits[row.id]}
+                            onChange={e => setBudgetEdits(prev => ({ ...prev, [row.id]: e.target.value }))}
+                          />
+                          <button
+                            onClick={() => handleSaveBudget(row.id)}
+                            disabled={savingBudget === row.id}
+                            className="btn-primary text-xs px-2 py-1"
+                          >Save</button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setBudgetEdits(prev => ({ ...prev, [row.id]: (row.budgetCents / 100).toFixed(2) }))}
+                          className="hover:underline"
+                        >{formatCents(row.budgetCents)}</button>
+                      )}
+                    </td>
+                    <td className="p-3">{formatCents(row.actualCents)}{isAuto && <span className="text-brand-mutedWarm text-xs ml-1">(auto)</span>}</td>
+                    <td className={`p-3 font-medium ${v >= 0 ? 'text-green-600' : 'text-brand-primary'}`}>
+                      {v >= 0 ? '+' : ''}{formatCents(v)}
+                    </td>
+                  </tr>
+                )
+              })}
+              {(() => {
+                // Same club's-favor sign convention as the per-row variance() helper:
+                // higher-than-budget income is good, higher-than-budget expense is bad
+                // (so expense variance flips sign), and Net (income minus expense) is
+                // already combined, so it doesn't need flipping — a higher realized net
+                // than budgeted is good exactly as-is. Every totals row uses the same
+                // green/red + "+" prefix styling as the per-category rows above, rather
+                // than showing an unsigned, uncolored number.
+                const totalIncomeVariance = totalIncomeActual - totalIncomeBudget
+                const totalExpenseVariance = totalExpenseBudget - totalExpenseActual
+                const netVariance = (totalIncomeActual - totalExpenseActual) - (totalIncomeBudget - totalExpenseBudget)
+                const varianceClass = (v: number) => `p-3 font-bold ${v >= 0 ? 'text-green-600' : 'text-brand-primary'}`
+                const varianceText = (v: number) => `${v >= 0 ? '+' : ''}${formatCents(v)}`
+                return (
+                  <>
+                    <tr className="border-t-2 font-bold">
+                      <td className="p-3">Total Income</td>
+                      <td className="p-3">{formatCents(totalIncomeBudget)}</td>
+                      <td className="p-3">{formatCents(totalIncomeActual)}</td>
+                      <td className={varianceClass(totalIncomeVariance)}>{varianceText(totalIncomeVariance)}</td>
+                    </tr>
+                    <tr className="font-bold">
+                      <td className="p-3">Total Expenses</td>
+                      <td className="p-3">{formatCents(totalExpenseBudget)}</td>
+                      <td className="p-3">{formatCents(totalExpenseActual)}</td>
+                      <td className={varianceClass(totalExpenseVariance)}>{varianceText(totalExpenseVariance)}</td>
+                    </tr>
+                    <tr className="border-t-2 font-bold">
+                      <td className="p-3">Net</td>
+                      <td className="p-3">{formatCents(totalIncomeBudget - totalExpenseBudget)}</td>
+                      <td className="p-3">{formatCents(totalIncomeActual - totalExpenseActual)}</td>
+                      <td className={varianceClass(netVariance)}>{varianceText(netVariance)}</td>
+                    </tr>
+                  </>
+                )
+              })()}
+            </tbody>
+          </table>
+        )
+      )}
     </section>
   )
 }
