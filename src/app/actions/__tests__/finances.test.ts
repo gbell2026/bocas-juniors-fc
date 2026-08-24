@@ -4,7 +4,7 @@ import {
   getFinanceSeasons, createFinanceSeason, updateFinanceSeason,
   getFinanceCategories, createFinanceCategory, renameFinanceCategory, deleteFinanceCategory,
   getFinanceEntries, createFinanceEntry, updateFinanceEntry, deleteFinanceEntry,
-  getFinanceBudgets, setFinanceBudget,
+  getFinanceBudgets, setFinanceBudget, getFinancePnL,
 } from '../finances'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 
@@ -19,6 +19,9 @@ const mockSupabase = {
   single: jest.fn(),
   limit: jest.fn(),
   upsert: jest.fn(),
+  in: jest.fn(),
+  gte: jest.fn(),
+  lt: jest.fn(),
 }
 
 beforeEach(() => {
@@ -234,5 +237,58 @@ describe('setFinanceBudget', () => {
       { season_id: 's1', category_id: 'c1', target_amount_cents: 200000 },
       { onConflict: 'season_id,category_id' }
     )
+  })
+})
+
+describe('getFinancePnL', () => {
+  const categories = [
+    { id: 'reg', name: 'Registration Fees', kind: 'income', auto_source: 'registration' },
+    { id: 'sub', name: 'Subscriptions', kind: 'income', auto_source: 'subscription' },
+    { id: 'spon', name: 'Sponsorship', kind: 'income', auto_source: null },
+    { id: 'wages', name: 'Wages', kind: 'expense', auto_source: null },
+  ]
+  const season = { id: 's1', start_date: '2026-08-01', end_date: '2026-11-30' }
+
+  it('computes actuals from payments for auto-source categories and from entries for manual categories, against each category\'s budget', async () => {
+    // getFinancePnL's real call sequence, traced against this mock's chaining:
+    // 1. finance_seasons: .eq('id', seasonId) [chainable] -> .single() [terminal]
+    // 2. finance_categories: .order('kind') [chainable] -> .order('name') [terminal]
+    // 3. finance_budgets: .eq('season_id', seasonId) [terminal]
+    // 4. payments (registration): .eq('status', 'succeeded') [chainable] -> .in(...) [chainable] -> .gte(...) [chainable] -> .lt(...) [terminal]
+    // 5. payments (subscription): same shape as 4
+    // 6. finance_entries: .eq('season_id', seasonId) [terminal]
+    // Every non-terminal call in this chain is explicitly queued with mockReturnValueOnce(mockSupabase) below —
+    // relying on a default return value here would let an EARLIER queued resolved-value entry get
+    // front-consumed by an unrelated call, exactly the mock-ordering bug documented in
+    // admin.test.ts's deletePlayer tests. Queue order below must match the real call order above exactly.
+
+    mockSupabase.eq.mockReturnValueOnce(mockSupabase) // 1a: season .eq('id', seasonId)
+    mockSupabase.single.mockResolvedValueOnce({ data: season, error: null }) // 1b: season .single()
+
+    mockSupabase.order.mockReturnValueOnce(mockSupabase) // 2a: categories .order('kind')
+    mockSupabase.order.mockResolvedValueOnce({ data: categories, error: null }) // 2b: categories .order('name')
+
+    mockSupabase.eq.mockResolvedValueOnce({ data: [{ category_id: 'wages', target_amount_cents: 100000 }], error: null }) // 3: budgets .eq('season_id', seasonId)
+
+    mockSupabase.eq.mockReturnValueOnce(mockSupabase) // 4a: registration payments .eq('status', 'succeeded')
+    mockSupabase.in.mockReturnValueOnce(mockSupabase) // 4b: registration payments .in(...)
+    mockSupabase.gte.mockReturnValueOnce(mockSupabase) // 4c: registration payments .gte(...)
+    mockSupabase.lt.mockResolvedValueOnce({ data: [{ amount: 3000 }, { amount: 3000 }], error: null }) // 4d: registration payments .lt(...)
+
+    mockSupabase.eq.mockReturnValueOnce(mockSupabase) // 5a: subscription payments .eq('status', 'succeeded')
+    mockSupabase.in.mockReturnValueOnce(mockSupabase) // 5b: subscription payments .in(...)
+    mockSupabase.gte.mockReturnValueOnce(mockSupabase) // 5c: subscription payments .gte(...)
+    mockSupabase.lt.mockResolvedValueOnce({ data: [{ amount: 21000 }], error: null }) // 5d: subscription payments .lt(...)
+
+    mockSupabase.eq.mockResolvedValueOnce({ data: [{ category_id: 'wages', amount_cents: 45000 }], error: null }) // 6: finance_entries .eq('season_id', seasonId)
+
+    const result = await getFinancePnL('s1')
+
+    expect(result).toEqual([
+      { id: 'reg', name: 'Registration Fees', kind: 'income', budgetCents: 0, actualCents: 6000 },
+      { id: 'sub', name: 'Subscriptions', kind: 'income', budgetCents: 0, actualCents: 21000 },
+      { id: 'spon', name: 'Sponsorship', kind: 'income', budgetCents: 0, actualCents: 0 },
+      { id: 'wages', name: 'Wages', kind: 'expense', budgetCents: 100000, actualCents: 45000 },
+    ])
   })
 })

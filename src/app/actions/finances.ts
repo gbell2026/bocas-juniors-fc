@@ -148,3 +148,58 @@ export async function setFinanceBudget(input: { seasonId: string; categoryId: st
   if (error) return { error: 'Failed to set budget' }
   return {}
 }
+
+export type FinancePnLRow = { id: string; name: string; kind: 'income' | 'expense'; budgetCents: number; actualCents: number }
+
+function addOneDay(isoDate: string): string {
+  const d = new Date(`${isoDate}T00:00:00.000Z`)
+  d.setUTCDate(d.getUTCDate() + 1)
+  return d.toISOString().slice(0, 10)
+}
+
+export async function getFinancePnL(seasonId: string): Promise<FinancePnLRow[]> {
+  const supabase = createSupabaseServiceClient()
+
+  const { data: season } = await supabase.from('finance_seasons').select('start_date, end_date').eq('id', seasonId).single()
+  if (!season) return []
+
+  const { data: categoriesData } = await supabase.from('finance_categories').select('*').order('kind').order('name')
+  const categories = categoriesData ?? []
+
+  const { data: budgetsData } = await supabase.from('finance_budgets').select('category_id, target_amount_cents').eq('season_id', seasonId)
+  const budgets = Object.fromEntries((budgetsData ?? []).map(b => [b.category_id, b.target_amount_cents]))
+
+  const rangeStart = `${season.start_date}T00:00:00.000Z`
+  const rangeEnd = `${addOneDay(season.end_date)}T00:00:00.000Z`
+
+  async function paymentsTotal(labels: string[]): Promise<number> {
+    const { data } = await supabase
+      .from('payments')
+      .select('amount')
+      .eq('status', 'succeeded')
+      .in('installment_label', labels)
+      .gte('paid_at', rangeStart)
+      .lt('paid_at', rangeEnd)
+    return (data ?? []).reduce((sum, p) => sum + p.amount, 0)
+  }
+
+  const registrationTotal = await paymentsTotal(['registration'])
+  const subscriptionTotal = await paymentsTotal(['full', 'august', 'september', 'october', 'november'])
+
+  const { data: entriesData } = await supabase.from('finance_entries').select('category_id, amount_cents').eq('season_id', seasonId)
+  const entryTotals: Record<string, number> = {}
+  for (const e of entriesData ?? []) {
+    entryTotals[e.category_id] = (entryTotals[e.category_id] ?? 0) + e.amount_cents
+  }
+
+  return categories.map(c => ({
+    id: c.id,
+    name: c.name,
+    kind: c.kind,
+    budgetCents: budgets[c.id] ?? 0,
+    actualCents:
+      c.auto_source === 'registration' ? registrationTotal
+      : c.auto_source === 'subscription' ? subscriptionTotal
+      : entryTotals[c.id] ?? 0,
+  }))
+}
