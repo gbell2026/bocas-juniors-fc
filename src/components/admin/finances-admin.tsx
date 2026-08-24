@@ -39,19 +39,34 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
   const [savingBudget, setSavingBudget] = useState<string | null>(null)
 
   useEffect(() => {
+    // Budget edits are keyed by category id, but categories are global — the
+    // same id can appear in another season's row. Clear any in-progress edit
+    // on season switch so a leftover value can't get saved against the wrong
+    // season's budget.
+    setBudgetEdits({})
+    setSavingBudget(null)
     if (!seasonId) { setPnl([]); return }
+    let cancelled = false
     setLoadingPnl(true)
-    getFinancePnL(seasonId).then(setPnl).finally(() => setLoadingPnl(false))
+    getFinancePnL(seasonId)
+      .then(rows => { if (!cancelled) setPnl(rows) })
+      .finally(() => { if (!cancelled) setLoadingPnl(false) })
+    return () => { cancelled = true }
   }, [seasonId])
 
   async function handleSaveBudget(categoryId: string) {
     const raw = budgetEdits[categoryId]
     if (raw === undefined) return
     const cents = Math.round(parseFloat(raw) * 100)
-    if (Number.isNaN(cents)) return
+    if (Number.isNaN(cents)) {
+      setErrorMessage('Enter a valid amount.')
+      return
+    }
+    setErrorMessage(null)
     setSavingBudget(categoryId)
     try {
-      await setFinanceBudget({ seasonId, categoryId, targetAmountCents: cents })
+      const result = await setFinanceBudget({ seasonId, categoryId, targetAmountCents: cents })
+      if (result.error) { setErrorMessage(result.error); return }
       setPnl(prev => prev.map(r => r.id === categoryId ? { ...r, budgetCents: cents } : r))
       setBudgetEdits(prev => { const next = { ...prev }; delete next[categoryId]; return next })
     } catch {
