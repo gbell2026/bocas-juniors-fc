@@ -169,6 +169,7 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
   }
 
   async function handleDeleteCategory(id: string) {
+    if (!window.confirm('Delete this category? This cannot be undone.')) return
     setErrorMessage(null)
     setCategoryBusy(id)
     try {
