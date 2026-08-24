@@ -56,6 +56,10 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
   async function handleSaveEdit(id: string) {
     const edit = edits[id]
     if (!edit) return
+    if (!edit.label || !edit.startDate || !edit.endDate) {
+      setErrorMessage('Label, start date, and end date are all required.')
+      return
+    }
     setErrorMessage(null)
     setSaving(id)
     try {
