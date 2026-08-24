@@ -98,6 +98,135 @@ export type Database = {
         }
         Relationships: []
       }
+      finance_budgets: {
+        Row: {
+          id: string
+          season_id: string
+          category_id: string
+          target_amount_cents: number
+        }
+        Insert: {
+          id?: string
+          season_id: string
+          category_id: string
+          target_amount_cents: number
+        }
+        Update: {
+          id?: string
+          season_id?: string
+          category_id?: string
+          target_amount_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_budgets_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "finance_seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_budgets_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "finance_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_categories: {
+        Row: {
+          id: string
+          name: string
+          kind: Database["public"]["Enums"]["finance_category_kind"]
+          auto_source: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          kind: Database["public"]["Enums"]["finance_category_kind"]
+          auto_source?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          kind?: Database["public"]["Enums"]["finance_category_kind"]
+          auto_source?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      finance_entries: {
+        Row: {
+          id: string
+          season_id: string
+          category_id: string
+          amount_cents: number
+          entry_date: string
+          note: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          season_id: string
+          category_id: string
+          amount_cents: number
+          entry_date: string
+          note?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          season_id?: string
+          category_id?: string
+          amount_cents?: number
+          entry_date?: string
+          note?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_entries_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "finance_seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_entries_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "finance_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_seasons: {
+        Row: {
+          id: string
+          label: string
+          start_date: string
+          end_date: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          label: string
+          start_date: string
+          end_date: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          label?: string
+          start_date?: string
+          end_date?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       get_involved_submissions: {
         Row: {
           email: string
@@ -633,6 +762,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      finance_category_kind: "income" | "expense"
       installment_label_type:
         | "full"
         | "august"
@@ -778,6 +908,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      finance_category_kind: ["income", "expense"],
       installment_label_type: [
         "full",
         "august",
