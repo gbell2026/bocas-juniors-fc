@@ -1,12 +1,18 @@
 jest.mock('@/lib/supabase/server', () => ({ createSupabaseServiceClient: jest.fn() }))
+// Deliberate deviation from this repo's convention of only mocking
+// @/lib/supabase/server — driving getPaymentSchedule's real DB-mock chain here
+// would be disproportionate to what these tests actually verify (forecast
+// aggregation, not schedule computation, which has its own tests).
+jest.mock('@/app/actions/payment', () => ({ getPaymentSchedule: jest.fn() }))
 
 import {
   getFinanceSeasons, createFinanceSeason, updateFinanceSeason,
   getFinanceCategories, createFinanceCategory, renameFinanceCategory, deleteFinanceCategory,
   getFinanceEntries, createFinanceEntry, updateFinanceEntry, deleteFinanceEntry,
-  getFinanceBudgets, setFinanceBudget, getFinancePnL,
+  getFinanceBudgets, setFinanceBudget, getFinancePnL, getOutstandingBalanceForecast,
 } from '../finances'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
+import { getPaymentSchedule } from '@/app/actions/payment'
 
 const mockSupabase = {
   from: jest.fn().mockReturnThis(),
@@ -15,6 +21,7 @@ const mockSupabase = {
   update: jest.fn().mockReturnThis(),
   delete: jest.fn().mockReturnThis(),
   eq: jest.fn().mockReturnThis(),
+  neq: jest.fn().mockReturnThis(),
   order: jest.fn(),
   single: jest.fn(),
   limit: jest.fn(),
@@ -172,11 +179,11 @@ describe('deleteFinanceCategory', () => {
 describe('getFinanceEntries', () => {
   it('returns entries for a season, newest first', async () => {
     mockSupabase.order.mockResolvedValueOnce({
-      data: [{ id: 'e1', season_id: 's1', category_id: 'c1', amount_cents: 50000, entry_date: '2026-09-01', note: 'Kit sponsor', finance_categories: { name: 'Sponsorship' } }],
+      data: [{ id: 'e1', season_id: 's1', category_id: 'c1', amount_cents: 50000, entry_date: '2026-09-01', note: 'Kit sponsor', status: 'confirmed', finance_categories: { name: 'Sponsorship' } }],
       error: null,
     })
     const result = await getFinanceEntries('s1')
-    expect(result).toEqual([{ id: 'e1', categoryId: 'c1', categoryName: 'Sponsorship', amountCents: 50000, entryDate: '2026-09-01', note: 'Kit sponsor' }])
+    expect(result).toEqual([{ id: 'e1', categoryId: 'c1', categoryName: 'Sponsorship', amountCents: 50000, entryDate: '2026-09-01', note: 'Kit sponsor', status: 'confirmed' }])
   })
 })
 
@@ -184,27 +191,27 @@ describe('createFinanceEntry', () => {
   it('creates an entry for a manual category', async () => {
     mockSupabase.single.mockResolvedValueOnce({ data: { auto_source: null }, error: null })
     mockSupabase.insert.mockResolvedValueOnce({ error: null })
-    const result = await createFinanceEntry({ seasonId: 's1', categoryId: 'c1', amountCents: 50000, entryDate: '2026-09-01', note: 'Kit sponsor' })
+    const result = await createFinanceEntry({ seasonId: 's1', categoryId: 'c1', amountCents: 50000, entryDate: '2026-09-01', note: 'Kit sponsor', status: 'confirmed' })
     expect(result.error).toBeUndefined()
     expect(mockSupabase.insert).toHaveBeenCalledWith({
-      season_id: 's1', category_id: 'c1', amount_cents: 50000, entry_date: '2026-09-01', note: 'Kit sponsor',
+      season_id: 's1', category_id: 'c1', amount_cents: 50000, entry_date: '2026-09-01', note: 'Kit sponsor', status: 'confirmed',
     })
   })
 
   it('refuses to create an entry for an auto-source category', async () => {
     mockSupabase.single.mockResolvedValueOnce({ data: { auto_source: 'registration' }, error: null })
-    const result = await createFinanceEntry({ seasonId: 's1', categoryId: 'c1', amountCents: 50000, entryDate: '2026-09-01' })
+    const result = await createFinanceEntry({ seasonId: 's1', categoryId: 'c1', amountCents: 50000, entryDate: '2026-09-01', status: 'confirmed' })
     expect(result.error).toBe("This category is computed automatically — it can't be logged manually")
     expect(mockSupabase.insert).not.toHaveBeenCalled()
   })
 })
 
 describe('updateFinanceEntry', () => {
-  it('updates an entry', async () => {
+  it('updates an entry, including moving it from forecasted to confirmed', async () => {
     mockSupabase.eq.mockResolvedValueOnce({ error: null })
-    const result = await updateFinanceEntry('e1', { amountCents: 60000, entryDate: '2026-09-02', note: 'Updated' })
+    const result = await updateFinanceEntry('e1', { amountCents: 60000, entryDate: '2026-09-02', note: 'Updated', status: 'confirmed' })
     expect(result.error).toBeUndefined()
-    expect(mockSupabase.update).toHaveBeenCalledWith({ amount_cents: 60000, entry_date: '2026-09-02', note: 'Updated' })
+    expect(mockSupabase.update).toHaveBeenCalledWith({ amount_cents: 60000, entry_date: '2026-09-02', note: 'Updated', status: 'confirmed' })
   })
 })
 
@@ -249,7 +256,7 @@ describe('getFinancePnL', () => {
   ]
   const season = { id: 's1', start_date: '2026-08-01', end_date: '2026-11-30' }
 
-  it('computes actuals from payments for auto-source categories and from entries for manual categories, against each category\'s budget', async () => {
+  it('computes actuals from confirmed-only entries and payments, forecasted from forecasted entries and outstanding balances, against each category\'s budget', async () => {
     // getFinancePnL's real call sequence, traced against this mock's chaining:
     // 1. finance_seasons: .eq('id', seasonId) [chainable] -> .single() [terminal]
     // 2. finance_categories: .order('kind') [chainable] -> .order('name') [terminal]
@@ -257,6 +264,8 @@ describe('getFinancePnL', () => {
     // 4. payments (registration): .eq('status', 'succeeded') [chainable] -> .in(...) [chainable] -> .gte(...) [chainable] -> .lt(...) [terminal]
     // 5. payments (subscription): same shape as 4
     // 6. finance_entries: .eq('season_id', seasonId) [terminal]
+    // 7. getOutstandingBalanceForecast: players .neq('status','inactive') [chainable] -> .neq('status','cancelled') [terminal],
+    //    then getPaymentSchedule(playerId) per active player (mocked cross-module import)
     // Every non-terminal call in this chain is explicitly queued with mockReturnValueOnce(mockSupabase) below —
     // relying on a default return value here would let an EARLIER queued resolved-value entry get
     // front-consumed by an unrelated call, exactly the mock-ordering bug documented in
@@ -280,15 +289,30 @@ describe('getFinancePnL', () => {
     mockSupabase.gte.mockReturnValueOnce(mockSupabase) // 5c: subscription payments .gte(...)
     mockSupabase.lt.mockResolvedValueOnce({ data: [{ amount: 21000 }], error: null }) // 5d: subscription payments .lt(...)
 
-    mockSupabase.eq.mockResolvedValueOnce({ data: [{ category_id: 'wages', amount_cents: 45000 }], error: null }) // 6: finance_entries .eq('season_id', seasonId)
+    mockSupabase.eq.mockResolvedValueOnce({ // 6: finance_entries .eq('season_id', seasonId)
+      data: [
+        { category_id: 'wages', amount_cents: 45000, status: 'confirmed' },
+        { category_id: 'wages', amount_cents: 5000, status: 'forecasted' },
+      ],
+      error: null,
+    })
+
+    mockSupabase.neq.mockReturnValueOnce(mockSupabase) // 7a: players .neq('status', 'inactive')
+    mockSupabase.neq.mockResolvedValueOnce({ data: [{ id: 'p1' }, { id: 'p2' }], error: null }) // 7b: players .neq('status', 'cancelled')
+    ;(getPaymentSchedule as jest.Mock)
+      .mockResolvedValueOnce([{ label: 'registration', amountCents: 3000, status: 'outstanding', discounted: false }]) // p1: owes reg fee
+      .mockResolvedValueOnce([ // p2: reg paid, one subscription installment still pending
+        { label: 'registration', amountCents: 3000, status: 'paid', discounted: false },
+        { label: 'august', amountCents: 1500, status: 'pending', discounted: false },
+      ])
 
     const result = await getFinancePnL('s1')
 
     expect(result).toEqual([
-      { id: 'reg', name: 'Registration Fees', kind: 'income', budgetCents: 0, actualCents: 6000 },
-      { id: 'sub', name: 'Subscriptions', kind: 'income', budgetCents: 0, actualCents: 21000 },
-      { id: 'spon', name: 'Sponsorship', kind: 'income', budgetCents: 0, actualCents: 0 },
-      { id: 'wages', name: 'Wages', kind: 'expense', budgetCents: 100000, actualCents: 45000 },
+      { id: 'reg', name: 'Registration Fees', kind: 'income', budgetCents: 0, actualCents: 6000, forecastedCents: 3000, totalCents: 9000 },
+      { id: 'sub', name: 'Subscriptions', kind: 'income', budgetCents: 0, actualCents: 21000, forecastedCents: 1500, totalCents: 22500 },
+      { id: 'spon', name: 'Sponsorship', kind: 'income', budgetCents: 0, actualCents: 0, forecastedCents: 0, totalCents: 0 },
+      { id: 'wages', name: 'Wages', kind: 'expense', budgetCents: 100000, actualCents: 45000, forecastedCents: 5000, totalCents: 50000 },
     ])
 
     // The date-range math (addOneDay + the UTC-pinned boundary strings) is the
@@ -305,5 +329,35 @@ describe('getFinancePnL', () => {
     // drift out of sync with the real installment schedule.
     expect(mockSupabase.in).toHaveBeenNthCalledWith(1, 'installment_label', ['registration'])
     expect(mockSupabase.in).toHaveBeenNthCalledWith(2, 'installment_label', ['full', 'august', 'september', 'october', 'november'])
+  })
+})
+
+describe('getOutstandingBalanceForecast', () => {
+  it('excludes inactive and cancelled players via the query itself', async () => {
+    mockSupabase.neq.mockReturnValueOnce(mockSupabase) // .neq('status', 'inactive')
+    mockSupabase.neq.mockResolvedValueOnce({ data: [], error: null }) // .neq('status', 'cancelled')
+    await getOutstandingBalanceForecast()
+    expect(mockSupabase.neq).toHaveBeenCalledWith('status', 'inactive')
+    expect(mockSupabase.neq).toHaveBeenCalledWith('status', 'cancelled')
+  })
+
+  it('sums outstanding/pending installments across active players, split by registration vs. subscription, excluding paid ones', async () => {
+    mockSupabase.neq.mockReturnValueOnce(mockSupabase)
+    mockSupabase.neq.mockResolvedValueOnce({ data: [{ id: 'p1' }, { id: 'p2' }, { id: 'p3' }], error: null })
+    ;(getPaymentSchedule as jest.Mock)
+      .mockResolvedValueOnce([ // p1: outstanding registration fee
+        { label: 'registration', amountCents: 3000, status: 'outstanding', discounted: false },
+      ])
+      .mockResolvedValueOnce([ // p2: reg paid, a self-reported (pending) subscription installment still counts as forecast
+        { label: 'registration', amountCents: 3000, status: 'paid', discounted: false },
+        { label: 'august', amountCents: 1500, status: 'pending', discounted: false },
+      ])
+      .mockResolvedValueOnce([ // p3: fully paid — contributes $0
+        { label: 'registration', amountCents: 3000, status: 'paid', discounted: false },
+        { label: 'full', amountCents: 21000, status: 'paid', discounted: false },
+      ])
+
+    const result = await getOutstandingBalanceForecast()
+    expect(result).toEqual({ registrationCents: 3000, subscriptionCents: 1500 })
   })
 })

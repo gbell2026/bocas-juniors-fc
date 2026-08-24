@@ -2,6 +2,7 @@
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 import { JOIN_MONTHS } from '@/lib/payment-schedule'
 import type { InstallmentLabel } from '@/lib/supabase/types'
+import { getPaymentSchedule } from '@/app/actions/payment'
 
 export type FinanceSeason = { id: string; label: string; startDate: string; endDate: string }
 
@@ -88,7 +89,8 @@ export async function deleteFinanceCategory(id: string): Promise<{ error?: strin
   return {}
 }
 
-export type FinanceEntry = { id: string; categoryId: string; categoryName: string; amountCents: number; entryDate: string; note: string | null }
+export type FinanceEntryStatus = 'confirmed' | 'forecasted'
+export type FinanceEntry = { id: string; categoryId: string; categoryName: string; amountCents: number; entryDate: string; note: string | null; status: FinanceEntryStatus }
 
 export async function getFinanceEntries(seasonId: string): Promise<FinanceEntry[]> {
   const supabase = createSupabaseServiceClient()
@@ -99,11 +101,11 @@ export async function getFinanceEntries(seasonId: string): Promise<FinanceEntry[
     .order('entry_date', { ascending: false })
   return (data ?? []).map((e: any) => ({
     id: e.id, categoryId: e.category_id, categoryName: e.finance_categories.name,
-    amountCents: e.amount_cents, entryDate: e.entry_date, note: e.note,
+    amountCents: e.amount_cents, entryDate: e.entry_date, note: e.note, status: e.status,
   }))
 }
 
-export type FinanceEntryInput = { seasonId: string; categoryId: string; amountCents: number; entryDate: string; note?: string }
+export type FinanceEntryInput = { seasonId: string; categoryId: string; amountCents: number; entryDate: string; note?: string; status: FinanceEntryStatus }
 
 export async function createFinanceEntry(input: FinanceEntryInput): Promise<{ error?: string }> {
   const supabase = createSupabaseServiceClient()
@@ -113,16 +115,16 @@ export async function createFinanceEntry(input: FinanceEntryInput): Promise<{ er
   }
   const { error } = await supabase.from('finance_entries').insert({
     season_id: input.seasonId, category_id: input.categoryId,
-    amount_cents: input.amountCents, entry_date: input.entryDate, note: input.note ?? null,
+    amount_cents: input.amountCents, entry_date: input.entryDate, note: input.note ?? null, status: input.status,
   })
   if (error) return { error: 'Failed to create entry' }
   return {}
 }
 
-export async function updateFinanceEntry(id: string, input: { amountCents: number; entryDate: string; note?: string }): Promise<{ error?: string }> {
+export async function updateFinanceEntry(id: string, input: { amountCents: number; entryDate: string; note?: string; status: FinanceEntryStatus }): Promise<{ error?: string }> {
   const supabase = createSupabaseServiceClient()
   const { error } = await supabase.from('finance_entries').update({
-    amount_cents: input.amountCents, entry_date: input.entryDate, note: input.note ?? null,
+    amount_cents: input.amountCents, entry_date: input.entryDate, note: input.note ?? null, status: input.status,
   }).eq('id', id)
   if (error) return { error: 'Failed to update entry' }
   return {}
@@ -151,12 +153,36 @@ export async function setFinanceBudget(input: { seasonId: string; categoryId: st
   return {}
 }
 
-export type FinancePnLRow = { id: string; name: string; kind: 'income' | 'expense'; budgetCents: number; actualCents: number }
+export type FinancePnLRow = { id: string; name: string; kind: 'income' | 'expense'; budgetCents: number; actualCents: number; forecastedCents: number; totalCents: number }
 
 function addOneDay(isoDate: string): string {
   const d = new Date(`${isoDate}T00:00:00.000Z`)
   d.setUTCDate(d.getUTCDate() + 1)
   return d.toISOString().slice(0, 10)
+}
+
+// Live snapshot of what active players still owe, independent of which
+// finance season is selected — see the "Explicitly out of scope" note in
+// docs/superpowers/specs/2026-08-24-finance-forecasting.md on why this isn't
+// season-date-filtered. 'pending' (a parent self-reported payment not yet
+// confirmed) counts alongside 'outstanding', since neither is money that's
+// actually landed.
+export async function getOutstandingBalanceForecast(): Promise<{ registrationCents: number; subscriptionCents: number }> {
+  const supabase = createSupabaseServiceClient()
+  const { data } = await supabase.from('players').select('id').neq('status', 'inactive').neq('status', 'cancelled')
+  const players = data ?? []
+  const schedules = await Promise.all(players.map(p => getPaymentSchedule(p.id)))
+
+  let registrationCents = 0
+  let subscriptionCents = 0
+  for (const schedule of schedules) {
+    for (const item of schedule) {
+      if (item.status === 'paid') continue
+      if (item.label === 'registration') registrationCents += item.amountCents
+      else subscriptionCents += item.amountCents
+    }
+  }
+  return { registrationCents, subscriptionCents }
 }
 
 export async function getFinancePnL(seasonId: string): Promise<FinancePnLRow[]> {
@@ -192,20 +218,33 @@ export async function getFinancePnL(seasonId: string): Promise<FinancePnLRow[]> 
   // plan/join-month change adds a new installment label.
   const subscriptionTotal = await paymentsTotal(['full', ...JOIN_MONTHS])
 
-  const { data: entriesData } = await supabase.from('finance_entries').select('category_id, amount_cents').eq('season_id', seasonId)
-  const entryTotals: Record<string, number> = {}
+  const { data: entriesData } = await supabase.from('finance_entries').select('category_id, amount_cents, status').eq('season_id', seasonId)
+  const confirmedTotals: Record<string, number> = {}
+  const forecastedTotals: Record<string, number> = {}
   for (const e of entriesData ?? []) {
-    entryTotals[e.category_id] = (entryTotals[e.category_id] ?? 0) + e.amount_cents
+    const bucket = e.status === 'forecasted' ? forecastedTotals : confirmedTotals
+    bucket[e.category_id] = (bucket[e.category_id] ?? 0) + e.amount_cents
   }
 
-  return categories.map(c => ({
-    id: c.id,
-    name: c.name,
-    kind: c.kind,
-    budgetCents: budgets[c.id] ?? 0,
-    actualCents:
+  const outstanding = await getOutstandingBalanceForecast()
+
+  return categories.map(c => {
+    const actualCents =
       c.auto_source === 'registration' ? registrationTotal
       : c.auto_source === 'subscription' ? subscriptionTotal
-      : entryTotals[c.id] ?? 0,
-  }))
+      : confirmedTotals[c.id] ?? 0
+    const forecastedCents =
+      c.auto_source === 'registration' ? outstanding.registrationCents
+      : c.auto_source === 'subscription' ? outstanding.subscriptionCents
+      : forecastedTotals[c.id] ?? 0
+    return {
+      id: c.id,
+      name: c.name,
+      kind: c.kind,
+      budgetCents: budgets[c.id] ?? 0,
+      actualCents,
+      forecastedCents,
+      totalCents: actualCents + forecastedCents,
+    }
+  })
 }

@@ -170,6 +170,7 @@ export type Database = {
           id: string
           note: string | null
           season_id: string
+          status: Database["public"]["Enums"]["finance_entry_status"]
         }
         Insert: {
           amount_cents: number
@@ -179,6 +180,7 @@ export type Database = {
           id?: string
           note?: string | null
           season_id: string
+          status?: Database["public"]["Enums"]["finance_entry_status"]
         }
         Update: {
           amount_cents?: number
@@ -188,6 +190,7 @@ export type Database = {
           id?: string
           note?: string | null
           season_id?: string
+          status?: Database["public"]["Enums"]["finance_entry_status"]
         }
         Relationships: [
           {
@@ -766,6 +769,7 @@ export type Database = {
     }
     Enums: {
       finance_category_kind: "income" | "expense"
+      finance_entry_status: "confirmed" | "forecasted"
       installment_label_type:
         | "full"
         | "august"
@@ -912,6 +916,7 @@ export const Constants = {
   public: {
     Enums: {
       finance_category_kind: ["income", "expense"],
+      finance_entry_status: ["confirmed", "forecasted"],
       installment_label_type: [
         "full",
         "august",

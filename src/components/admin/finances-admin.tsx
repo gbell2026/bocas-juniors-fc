@@ -50,9 +50,10 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
   const [entryAmount, setEntryAmount] = useState('')
   const [entryDate, setEntryDate] = useState('')
   const [entryNote, setEntryNote] = useState('')
+  const [entryStatus, setEntryStatus] = useState<'confirmed' | 'forecasted'>('confirmed')
   const [creatingEntry, setCreatingEntry] = useState(false)
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null)
-  const [entryEdits, setEntryEdits] = useState<Record<string, { amount: string; date: string; note: string }>>({})
+  const [entryEdits, setEntryEdits] = useState<Record<string, { amount: string; date: string; note: string; status: 'confirmed' | 'forecasted' }>>({})
   const [entryBusy, setEntryBusy] = useState<string | null>(null)
 
   // Always holds the latest seasonId, for async callbacks (mutation handlers'
@@ -115,8 +116,12 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
   const expense = pnl.filter(r => r.kind === 'expense')
   const totalIncomeBudget = income.reduce((sum, r) => sum + r.budgetCents, 0)
   const totalIncomeActual = income.reduce((sum, r) => sum + r.actualCents, 0)
+  const totalIncomeForecasted = income.reduce((sum, r) => sum + r.forecastedCents, 0)
+  const totalIncomeTotal = income.reduce((sum, r) => sum + r.totalCents, 0)
   const totalExpenseBudget = expense.reduce((sum, r) => sum + r.budgetCents, 0)
   const totalExpenseActual = expense.reduce((sum, r) => sum + r.actualCents, 0)
+  const totalExpenseForecasted = expense.reduce((sum, r) => sum + r.forecastedCents, 0)
+  const totalExpenseTotal = expense.reduce((sum, r) => sum + r.totalCents, 0)
 
   function startEdit(s: FinanceSeason) {
     setEditingId(s.id)
@@ -214,9 +219,9 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
     setCreatingEntry(true)
     try {
       const amountCents = Math.round(parseFloat(entryAmount) * 100)
-      const result = await createFinanceEntry({ seasonId, categoryId: entryCategoryId, amountCents, entryDate, note: entryNote || undefined })
+      const result = await createFinanceEntry({ seasonId, categoryId: entryCategoryId, amountCents, entryDate, note: entryNote || undefined, status: entryStatus })
       if (result.error) { setErrorMessage(result.error); return }
-      setEntryAmount(''); setEntryDate(''); setEntryNote('')
+      setEntryAmount(''); setEntryDate(''); setEntryNote(''); setEntryStatus('confirmed')
       const [refreshedEntries, refreshedPnl] = await Promise.all([getFinanceEntries(seasonId), getFinancePnL(seasonId)])
       // The admin may have switched seasons while this request was in flight —
       // don't overwrite the now-selected season's data with this one's.
@@ -241,7 +246,7 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
     setErrorMessage(null)
     setEntryBusy(id)
     try {
-      const result = await updateFinanceEntry(id, { amountCents, entryDate: edit.date, note: edit.note || undefined })
+      const result = await updateFinanceEntry(id, { amountCents, entryDate: edit.date, note: edit.note || undefined, status: edit.status })
       if (result.error) { setErrorMessage(result.error); return }
       const [refreshedEntries, refreshedPnl] = await Promise.all([getFinanceEntries(seasonId), getFinancePnL(seasonId)])
       if (seasonIdRef.current !== seasonId) return
@@ -276,7 +281,7 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
   const selectedSeason = seasons.find(s => s.id === seasonId) ?? null
 
   function variance(row: FinancePnLRow): number {
-    const diff = row.actualCents - row.budgetCents
+    const diff = row.totalCents - row.budgetCents
     return row.kind === 'income' ? diff : -diff
   }
 
@@ -371,7 +376,7 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
           <table className="w-full text-sm">
             <thead className="bg-brand-creamAlt">
               <tr>
-                {['Category', 'Budget', 'Actual', 'Variance'].map(h => (
+                {['Category', 'Budget', 'Actual', 'Forecasted', 'Total', 'Variance'].map(h => (
                   <th key={h} className="text-left p-3">{h}</th>
                 ))}
               </tr>
@@ -405,6 +410,8 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
                       )}
                     </td>
                     <td className="p-3">{formatCents(row.actualCents)}{isAuto && <span className="text-brand-mutedWarm text-xs ml-1">(auto)</span>}</td>
+                    <td className="p-3">{formatCents(row.forecastedCents)}</td>
+                    <td className="p-3">{formatCents(row.totalCents)}</td>
                     <td className={`p-3 font-medium ${v >= 0 ? 'text-green-600' : 'text-brand-primary'}`}>
                       {v >= 0 ? '+' : ''}{formatCents(v)}
                     </td>
@@ -419,9 +426,10 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
                 // than budgeted is good exactly as-is. Every totals row uses the same
                 // green/red + "+" prefix styling as the per-category rows above, rather
                 // than showing an unsigned, uncolored number.
-                const totalIncomeVariance = totalIncomeActual - totalIncomeBudget
-                const totalExpenseVariance = totalExpenseBudget - totalExpenseActual
-                const netVariance = (totalIncomeActual - totalExpenseActual) - (totalIncomeBudget - totalExpenseBudget)
+                const totalIncomeVariance = totalIncomeTotal - totalIncomeBudget
+                const totalExpenseVariance = totalExpenseBudget - totalExpenseTotal
+                const netTotal = totalIncomeTotal - totalExpenseTotal
+                const netVariance = netTotal - (totalIncomeBudget - totalExpenseBudget)
                 const varianceClass = (v: number) => `p-3 font-bold ${v >= 0 ? 'text-green-600' : 'text-brand-primary'}`
                 const varianceText = (v: number) => `${v >= 0 ? '+' : ''}${formatCents(v)}`
                 return (
@@ -430,18 +438,24 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
                       <td className="p-3">Total Income</td>
                       <td className="p-3">{formatCents(totalIncomeBudget)}</td>
                       <td className="p-3">{formatCents(totalIncomeActual)}</td>
+                      <td className="p-3">{formatCents(totalIncomeForecasted)}</td>
+                      <td className="p-3">{formatCents(totalIncomeTotal)}</td>
                       <td className={varianceClass(totalIncomeVariance)}>{varianceText(totalIncomeVariance)}</td>
                     </tr>
                     <tr className="font-bold">
                       <td className="p-3">Total Expenses</td>
                       <td className="p-3">{formatCents(totalExpenseBudget)}</td>
                       <td className="p-3">{formatCents(totalExpenseActual)}</td>
+                      <td className="p-3">{formatCents(totalExpenseForecasted)}</td>
+                      <td className="p-3">{formatCents(totalExpenseTotal)}</td>
                       <td className={varianceClass(totalExpenseVariance)}>{varianceText(totalExpenseVariance)}</td>
                     </tr>
                     <tr className="border-t-2 font-bold">
                       <td className="p-3">Net</td>
                       <td className="p-3">{formatCents(totalIncomeBudget - totalExpenseBudget)}</td>
                       <td className="p-3">{formatCents(totalIncomeActual - totalExpenseActual)}</td>
+                      <td className="p-3">{formatCents(totalIncomeForecasted - totalExpenseForecasted)}</td>
+                      <td className="p-3">{formatCents(netTotal)}</td>
                       <td className={varianceClass(netVariance)}>{varianceText(netVariance)}</td>
                     </tr>
                   </>
@@ -524,6 +538,10 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
               <input type="date" required className="input flex-1" value={entryDate} onChange={e => setEntryDate(e.target.value)} />
             </div>
             <input placeholder="Note (optional)" className="input w-full" value={entryNote} onChange={e => setEntryNote(e.target.value)} />
+            <select value={entryStatus} onChange={e => setEntryStatus(e.target.value as 'confirmed' | 'forecasted')} className="input w-full">
+              <option value="confirmed">Confirmed</option>
+              <option value="forecasted">Forecasted</option>
+            </select>
             <button type="submit" disabled={creatingEntry} className="btn-primary text-sm w-full">
               {creatingEntry ? 'Logging…' : 'Log Entry'}
             </button>
@@ -539,6 +557,14 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
                       <input type="date" className="input flex-1" value={entryEdits[entry.id]?.date ?? ''} onChange={e => setEntryEdits(prev => ({ ...prev, [entry.id]: { ...prev[entry.id], date: e.target.value } }))} />
                     </div>
                     <input className="input w-full" value={entryEdits[entry.id]?.note ?? ''} onChange={e => setEntryEdits(prev => ({ ...prev, [entry.id]: { ...prev[entry.id], note: e.target.value } }))} />
+                    <select
+                      value={entryEdits[entry.id]?.status ?? 'confirmed'}
+                      onChange={e => setEntryEdits(prev => ({ ...prev, [entry.id]: { ...prev[entry.id], status: e.target.value as 'confirmed' | 'forecasted' } }))}
+                      className="input w-full"
+                    >
+                      <option value="confirmed">Confirmed</option>
+                      <option value="forecasted">Forecasted</option>
+                    </select>
                     <div className="flex gap-2">
                       <button onClick={() => handleSaveEntryEdit(entry.id)} disabled={entryBusy === entry.id} className="btn-primary text-xs px-3 py-1.5">Save</button>
                       <button onClick={() => setEditingEntryId(null)} className="btn-secondary text-xs px-3 py-1.5">Cancel</button>
@@ -547,12 +573,17 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
                 ) : (
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <p className="text-brand-ink font-bold text-sm">{entry.categoryName} — {formatCents(entry.amountCents)}</p>
+                      <p className="text-brand-ink font-bold text-sm">
+                        {entry.categoryName} — {formatCents(entry.amountCents)}
+                        {entry.status === 'forecasted' && (
+                          <span className="ml-2 text-brand-mutedWarm text-xs font-bold uppercase tracking-wider align-middle">Forecasted</span>
+                        )}
+                      </p>
                       <p className="text-brand-muted text-xs">{entry.entryDate}{entry.note ? ` · ${entry.note}` : ''}</p>
                     </div>
                     <div className="flex gap-2 flex-shrink-0">
                       <button
-                        onClick={() => { setEditingEntryId(entry.id); setEntryEdits(prev => ({ ...prev, [entry.id]: { amount: (entry.amountCents / 100).toFixed(2), date: entry.entryDate, note: entry.note ?? '' } })) }}
+                        onClick={() => { setEditingEntryId(entry.id); setEntryEdits(prev => ({ ...prev, [entry.id]: { amount: (entry.amountCents / 100).toFixed(2), date: entry.entryDate, note: entry.note ?? '', status: entry.status } })) }}
                         className="btn-secondary text-xs px-3 py-1.5"
                       >Edit</button>
                       <button
