@@ -31,11 +31,16 @@ create table finance_entries (
   created_at timestamptz not null default now()
 );
 
+-- The P&L view's primary access pattern is "all entries for a season" —
+-- index it now, before real data/query volume exists.
+create index finance_entries_season_id_idx on finance_entries(season_id);
+
 create table finance_budgets (
   id uuid primary key default gen_random_uuid(),
   season_id uuid not null references finance_seasons(id) on delete cascade,
   category_id uuid not null references finance_categories(id) on delete restrict,
   target_amount_cents integer not null,
+  created_at timestamptz not null default now(),
   unique (season_id, category_id)
 );
 

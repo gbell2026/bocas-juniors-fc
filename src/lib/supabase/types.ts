@@ -100,21 +100,24 @@ export type Database = {
       }
       finance_budgets: {
         Row: {
+          category_id: string
+          created_at: string
           id: string
           season_id: string
-          category_id: string
           target_amount_cents: number
         }
         Insert: {
+          category_id: string
+          created_at?: string
           id?: string
           season_id: string
-          category_id: string
           target_amount_cents: number
         }
         Update: {
+          category_id?: string
+          created_at?: string
           id?: string
           season_id?: string
-          category_id?: string
           target_amount_cents?: number
         }
         Relationships: [
@@ -136,55 +139,55 @@ export type Database = {
       }
       finance_categories: {
         Row: {
-          id: string
-          name: string
-          kind: Database["public"]["Enums"]["finance_category_kind"]
           auto_source: string | null
           created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["finance_category_kind"]
+          name: string
         }
         Insert: {
-          id?: string
-          name: string
-          kind: Database["public"]["Enums"]["finance_category_kind"]
           auto_source?: string | null
           created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["finance_category_kind"]
+          name: string
         }
         Update: {
-          id?: string
-          name?: string
-          kind?: Database["public"]["Enums"]["finance_category_kind"]
           auto_source?: string | null
           created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["finance_category_kind"]
+          name?: string
         }
         Relationships: []
       }
       finance_entries: {
         Row: {
-          id: string
-          season_id: string
-          category_id: string
           amount_cents: number
-          entry_date: string
-          note: string | null
+          category_id: string
           created_at: string
+          entry_date: string
+          id: string
+          note: string | null
+          season_id: string
         }
         Insert: {
-          id?: string
-          season_id: string
-          category_id: string
           amount_cents: number
-          entry_date: string
-          note?: string | null
+          category_id: string
           created_at?: string
+          entry_date: string
+          id?: string
+          note?: string | null
+          season_id: string
         }
         Update: {
-          id?: string
-          season_id?: string
-          category_id?: string
           amount_cents?: number
-          entry_date?: string
-          note?: string | null
+          category_id?: string
           created_at?: string
+          entry_date?: string
+          id?: string
+          note?: string | null
+          season_id?: string
         }
         Relationships: [
           {
@@ -205,25 +208,25 @@ export type Database = {
       }
       finance_seasons: {
         Row: {
+          created_at: string
+          end_date: string
           id: string
           label: string
           start_date: string
-          end_date: string
-          created_at: string
         }
         Insert: {
+          created_at?: string
+          end_date: string
           id?: string
           label: string
           start_date: string
-          end_date: string
-          created_at?: string
         }
         Update: {
+          created_at?: string
+          end_date?: string
           id?: string
           label?: string
           start_date?: string
-          end_date?: string
-          created_at?: string
         }
         Relationships: []
       }
