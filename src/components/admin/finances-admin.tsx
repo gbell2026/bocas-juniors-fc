@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createFinanceSeason, updateFinanceSeason, createFinanceCategory, renameFinanceCategory, deleteFinanceCategory, getFinanceEntries, createFinanceEntry, updateFinanceEntry, deleteFinanceEntry } from '@/app/actions/finances'
 import type { FinanceSeason, FinanceCategory, FinanceEntry } from '@/app/actions/finances'
-import { getFinancePnL, setFinanceBudget } from '@/app/actions/finances'
+import { getFinancePnL, setFinanceBudget, setSeasonStartingBalance } from '@/app/actions/finances'
 import type { FinancePnLRow } from '@/app/actions/finances'
 
 type Props = {
@@ -37,6 +37,8 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
   const [loadingPnl, setLoadingPnl] = useState(false)
   const [budgetEdits, setBudgetEdits] = useState<Record<string, string>>({})
   const [savingBudget, setSavingBudget] = useState<string | null>(null)
+  const [startingBalanceEdit, setStartingBalanceEdit] = useState<string | null>(null)
+  const [savingStartingBalance, setSavingStartingBalance] = useState(false)
   const [categoryList, setCategoryList] = useState(categories)
   const [managingCategories, setManagingCategories] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
@@ -70,6 +72,8 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
     // season's budget.
     setBudgetEdits({})
     setSavingBudget(null)
+    setStartingBalanceEdit(null)
+    setSavingStartingBalance(false)
     if (!seasonId) { setPnl([]); return }
     let cancelled = false
     setLoadingPnl(true)
@@ -105,6 +109,27 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
       setErrorMessage('Something went wrong. Please try again.')
     } finally {
       setSavingBudget(null)
+    }
+  }
+
+  async function handleSaveStartingBalance() {
+    if (startingBalanceEdit === null) return
+    const cents = Math.round(parseFloat(startingBalanceEdit) * 100)
+    if (Number.isNaN(cents)) {
+      setErrorMessage('Enter a valid amount.')
+      return
+    }
+    setErrorMessage(null)
+    setSavingStartingBalance(true)
+    try {
+      const result = await setSeasonStartingBalance(seasonId, cents)
+      if (result.error) { setErrorMessage(result.error); return }
+      setSeasons(prev => prev.map(s => s.id === seasonId ? { ...s, startingBalanceCents: cents } : s))
+      setStartingBalanceEdit(null)
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
+    } finally {
+      setSavingStartingBalance(false)
     }
   }
 
@@ -457,6 +482,42 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
                       <td className="p-3">{formatCents(totalIncomeForecasted - totalExpenseForecasted)}</td>
                       <td className="p-3">{formatCents(netTotal)}</td>
                       <td className={varianceClass(netVariance)}>{varianceText(netVariance)}</td>
+                    </tr>
+                    <tr className="border-t-2 font-bold">
+                      <td className="p-3">Starting Balance</td>
+                      <td className="p-3" />
+                      <td className="p-3" />
+                      <td className="p-3" />
+                      <td className="p-3">
+                        {startingBalanceEdit !== null ? (
+                          <div className="flex gap-1 items-center">
+                            <input
+                              type="number" step="0.01" className="input w-24"
+                              value={startingBalanceEdit}
+                              onChange={e => setStartingBalanceEdit(e.target.value)}
+                            />
+                            <button
+                              onClick={handleSaveStartingBalance}
+                              disabled={savingStartingBalance}
+                              className="btn-primary text-xs px-2 py-1"
+                            >Save</button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setStartingBalanceEdit((selectedSeason.startingBalanceCents / 100).toFixed(2))}
+                            className="hover:underline"
+                          >{formatCents(selectedSeason.startingBalanceCents)}</button>
+                        )}
+                      </td>
+                      <td className="p-3" />
+                    </tr>
+                    <tr className="font-bold">
+                      <td className="p-3">Ending Balance</td>
+                      <td className="p-3" />
+                      <td className="p-3" />
+                      <td className="p-3" />
+                      <td className="p-3">{formatCents(selectedSeason.startingBalanceCents + netTotal)}</td>
+                      <td className="p-3" />
                     </tr>
                   </>
                 )

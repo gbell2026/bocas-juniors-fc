@@ -6,7 +6,7 @@ jest.mock('@/lib/supabase/server', () => ({ createSupabaseServiceClient: jest.fn
 jest.mock('@/app/actions/payment', () => ({ getPaymentSchedule: jest.fn() }))
 
 import {
-  getFinanceSeasons, createFinanceSeason, updateFinanceSeason,
+  getFinanceSeasons, createFinanceSeason, updateFinanceSeason, setSeasonStartingBalance,
   getFinanceCategories, createFinanceCategory, renameFinanceCategory, deleteFinanceCategory,
   getFinanceEntries, createFinanceEntry, updateFinanceEntry, deleteFinanceEntry,
   getFinanceBudgets, setFinanceBudget, getFinancePnL, getOutstandingBalanceForecast,
@@ -39,12 +39,22 @@ beforeEach(() => {
 describe('getFinanceSeasons', () => {
   it('returns seasons ordered newest first', async () => {
     mockSupabase.order.mockResolvedValueOnce({
-      data: [{ id: 's1', label: '2026 Season', start_date: '2026-08-01', end_date: '2026-12-31', created_at: '2026-01-01' }],
+      data: [{ id: 's1', label: '2026 Season', start_date: '2026-08-01', end_date: '2026-12-31', created_at: '2026-01-01', starting_balance_cents: 180000 }],
       error: null,
     })
     const result = await getFinanceSeasons()
-    expect(result).toEqual([{ id: 's1', label: '2026 Season', startDate: '2026-08-01', endDate: '2026-12-31' }])
+    expect(result).toEqual([{ id: 's1', label: '2026 Season', startDate: '2026-08-01', endDate: '2026-12-31', startingBalanceCents: 180000 }])
     expect(mockSupabase.order).toHaveBeenCalledWith('start_date', { ascending: false })
+  })
+})
+
+describe('setSeasonStartingBalance', () => {
+  it("updates a season's starting balance", async () => {
+    mockSupabase.eq.mockResolvedValueOnce({ error: null })
+    const result = await setSeasonStartingBalance('s1', 180000)
+    expect(result.error).toBeUndefined()
+    expect(mockSupabase.update).toHaveBeenCalledWith({ starting_balance_cents: 180000 })
+    expect(mockSupabase.eq).toHaveBeenCalledWith('id', 's1')
   })
 })
 

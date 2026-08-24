@@ -4,12 +4,25 @@ import { JOIN_MONTHS } from '@/lib/payment-schedule'
 import type { InstallmentLabel } from '@/lib/supabase/types'
 import { getPaymentSchedule } from '@/app/actions/payment'
 
-export type FinanceSeason = { id: string; label: string; startDate: string; endDate: string }
+export type FinanceSeason = { id: string; label: string; startDate: string; endDate: string; startingBalanceCents: number }
 
 export async function getFinanceSeasons(): Promise<FinanceSeason[]> {
   const supabase = createSupabaseServiceClient()
   const { data } = await supabase.from('finance_seasons').select('*').order('start_date', { ascending: false })
-  return (data ?? []).map(s => ({ id: s.id, label: s.label, startDate: s.start_date, endDate: s.end_date }))
+  return (data ?? []).map(s => ({
+    id: s.id, label: s.label, startDate: s.start_date, endDate: s.end_date,
+    startingBalanceCents: s.starting_balance_cents,
+  }))
+}
+
+// One-time, manually-set opening balance for a season (e.g. cash carried
+// over from the prior year) — not computed, not rolled forward
+// automatically between seasons.
+export async function setSeasonStartingBalance(seasonId: string, startingBalanceCents: number): Promise<{ error?: string }> {
+  const supabase = createSupabaseServiceClient()
+  const { error } = await supabase.from('finance_seasons').update({ starting_balance_cents: startingBalanceCents }).eq('id', seasonId)
+  if (error) return { error: 'Failed to update starting balance' }
+  return {}
 }
 
 export type FinanceSeasonInput = { label: string; startDate: string; endDate: string }

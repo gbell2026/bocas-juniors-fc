@@ -216,6 +216,7 @@ export type Database = {
           id: string
           label: string
           start_date: string
+          starting_balance_cents: number
         }
         Insert: {
           created_at?: string
@@ -223,6 +224,7 @@ export type Database = {
           id?: string
           label: string
           start_date: string
+          starting_balance_cents?: number
         }
         Update: {
           created_at?: string
@@ -230,6 +232,7 @@ export type Database = {
           id?: string
           label?: string
           start_date?: string
+          starting_balance_cents?: number
         }
         Relationships: []
       }
