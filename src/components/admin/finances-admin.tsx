@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { createFinanceSeason, updateFinanceSeason, createFinanceCategory, renameFinanceCategory, deleteFinanceCategory } from '@/app/actions/finances'
-import type { FinanceSeason, FinanceCategory } from '@/app/actions/finances'
+import { createFinanceSeason, updateFinanceSeason, createFinanceCategory, renameFinanceCategory, deleteFinanceCategory, getFinanceEntries, createFinanceEntry, updateFinanceEntry, deleteFinanceEntry } from '@/app/actions/finances'
+import type { FinanceSeason, FinanceCategory, FinanceEntry } from '@/app/actions/finances'
 import { getFinancePnL, setFinanceBudget } from '@/app/actions/finances'
 import type { FinancePnLRow } from '@/app/actions/finances'
 
@@ -45,6 +45,15 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
   const [categoryNameEdit, setCategoryNameEdit] = useState('')
   const [categoryBusy, setCategoryBusy] = useState<string | null>(null)
+  const [entries, setEntries] = useState<FinanceEntry[]>([])
+  const [entryCategoryId, setEntryCategoryId] = useState('')
+  const [entryAmount, setEntryAmount] = useState('')
+  const [entryDate, setEntryDate] = useState('')
+  const [entryNote, setEntryNote] = useState('')
+  const [creatingEntry, setCreatingEntry] = useState(false)
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null)
+  const [entryEdits, setEntryEdits] = useState<Record<string, { amount: string; date: string; note: string }>>({})
+  const [entryBusy, setEntryBusy] = useState<string | null>(null)
 
   useEffect(() => {
     // Budget edits are keyed by category id, but categories are global — the
@@ -60,6 +69,11 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
       .then(rows => { if (!cancelled) setPnl(rows) })
       .finally(() => { if (!cancelled) setLoadingPnl(false) })
     return () => { cancelled = true }
+  }, [seasonId])
+
+  useEffect(() => {
+    if (!seasonId) { setEntries([]); return }
+    getFinanceEntries(seasonId).then(setEntries)
   }, [seasonId])
 
   async function handleSaveBudget(categoryId: string) {
@@ -180,6 +194,67 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
       setErrorMessage('Something went wrong. Please try again.')
     } finally {
       setCategoryBusy(null)
+    }
+  }
+
+  const manualCategories = categoryList.filter(c => !c.autoSource)
+
+  async function handleCreateEntry(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setErrorMessage(null)
+    setCreatingEntry(true)
+    try {
+      const amountCents = Math.round(parseFloat(entryAmount) * 100)
+      const result = await createFinanceEntry({ seasonId, categoryId: entryCategoryId, amountCents, entryDate, note: entryNote || undefined })
+      if (result.error) { setErrorMessage(result.error); return }
+      setEntryAmount(''); setEntryDate(''); setEntryNote('')
+      const [refreshedEntries, refreshedPnl] = await Promise.all([getFinanceEntries(seasonId), getFinancePnL(seasonId)])
+      setEntries(refreshedEntries)
+      setPnl(refreshedPnl)
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
+    } finally {
+      setCreatingEntry(false)
+    }
+  }
+
+  async function handleSaveEntryEdit(id: string) {
+    const edit = entryEdits[id]
+    if (!edit) return
+    const amountCents = Math.round(parseFloat(edit.amount) * 100)
+    if (Number.isNaN(amountCents)) {
+      setErrorMessage('Enter a valid amount')
+      return
+    }
+    setErrorMessage(null)
+    setEntryBusy(id)
+    try {
+      const result = await updateFinanceEntry(id, { amountCents, entryDate: edit.date, note: edit.note || undefined })
+      if (result.error) { setErrorMessage(result.error); return }
+      const [refreshedEntries, refreshedPnl] = await Promise.all([getFinanceEntries(seasonId), getFinancePnL(seasonId)])
+      setEntries(refreshedEntries)
+      setPnl(refreshedPnl)
+      setEditingEntryId(null)
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
+    } finally {
+      setEntryBusy(null)
+    }
+  }
+
+  async function handleDeleteEntry(id: string) {
+    setErrorMessage(null)
+    setEntryBusy(id)
+    try {
+      const result = await deleteFinanceEntry(id)
+      if (result.error) { setErrorMessage(result.error); return }
+      const [refreshedEntries, refreshedPnl] = await Promise.all([getFinanceEntries(seasonId), getFinancePnL(seasonId)])
+      setEntries(refreshedEntries)
+      setPnl(refreshedPnl)
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
+    } finally {
+      setEntryBusy(null)
     }
   }
 
@@ -413,6 +488,69 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
               {creatingCategory ? 'Creating…' : 'Create Category'}
             </button>
           </form>
+        </div>
+      )}
+
+      {selectedSeason && (
+        <div className="space-y-3">
+          <h3 className="font-heading text-sm uppercase tracking-wide text-brand-ink">Log Income / Expense</h3>
+          <form onSubmit={handleCreateEntry} className="border border-brand-line rounded p-4 space-y-3">
+            <select required value={entryCategoryId} onChange={e => setEntryCategoryId(e.target.value)} className="input w-full">
+              <option value="" disabled>Select a category</option>
+              <optgroup label="Income">
+                {manualCategories.filter(c => c.kind === 'income').map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </optgroup>
+              <optgroup label="Expense">
+                {manualCategories.filter(c => c.kind === 'expense').map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </optgroup>
+            </select>
+            <div className="flex gap-2">
+              <input type="number" step="0.01" placeholder="Amount" required className="input flex-1" value={entryAmount} onChange={e => setEntryAmount(e.target.value)} />
+              <input type="date" required className="input flex-1" value={entryDate} onChange={e => setEntryDate(e.target.value)} />
+            </div>
+            <input placeholder="Note (optional)" className="input w-full" value={entryNote} onChange={e => setEntryNote(e.target.value)} />
+            <button type="submit" disabled={creatingEntry} className="btn-primary text-sm w-full">
+              {creatingEntry ? 'Logging…' : 'Log Entry'}
+            </button>
+          </form>
+
+          <div className="space-y-2">
+            {entries.map(entry => (
+              <div key={entry.id} className="bg-brand-tint border border-brand-line rounded p-3">
+                {editingEntryId === entry.id ? (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <input type="number" step="0.01" className="input flex-1" value={entryEdits[entry.id]?.amount ?? ''} onChange={e => setEntryEdits(prev => ({ ...prev, [entry.id]: { ...prev[entry.id], amount: e.target.value } }))} />
+                      <input type="date" className="input flex-1" value={entryEdits[entry.id]?.date ?? ''} onChange={e => setEntryEdits(prev => ({ ...prev, [entry.id]: { ...prev[entry.id], date: e.target.value } }))} />
+                    </div>
+                    <input className="input w-full" value={entryEdits[entry.id]?.note ?? ''} onChange={e => setEntryEdits(prev => ({ ...prev, [entry.id]: { ...prev[entry.id], note: e.target.value } }))} />
+                    <div className="flex gap-2">
+                      <button onClick={() => handleSaveEntryEdit(entry.id)} disabled={entryBusy === entry.id} className="btn-primary text-xs px-3 py-1.5">Save</button>
+                      <button onClick={() => setEditingEntryId(null)} className="btn-secondary text-xs px-3 py-1.5">Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-brand-ink font-bold text-sm">{entry.categoryName} — {formatCents(entry.amountCents)}</p>
+                      <p className="text-brand-muted text-xs">{entry.entryDate}{entry.note ? ` · ${entry.note}` : ''}</p>
+                    </div>
+                    <div className="flex gap-2 flex-shrink-0">
+                      <button
+                        onClick={() => { setEditingEntryId(entry.id); setEntryEdits(prev => ({ ...prev, [entry.id]: { amount: (entry.amountCents / 100).toFixed(2), date: entry.entryDate, note: entry.note ?? '' } })) }}
+                        className="btn-secondary text-xs px-3 py-1.5"
+                      >Edit</button>
+                      <button
+                        onClick={() => handleDeleteEntry(entry.id)}
+                        disabled={entryBusy === entry.id}
+                        className="text-xs px-3 py-1.5 border border-red-600 text-red-600 rounded font-bold uppercase tracking-wider hover:bg-red-600 hover:text-white transition disabled:opacity-50"
+                      >Delete</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </section>
