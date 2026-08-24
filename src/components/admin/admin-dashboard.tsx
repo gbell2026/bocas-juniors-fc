@@ -9,14 +9,16 @@ import { LeagueAdminSection } from '@/components/admin/league-admin-section'
 import { AnnouncementsAdmin } from '@/components/admin/announcements-admin'
 import { StaffAdmin } from '@/components/admin/staff-admin'
 import { CoachAccounts } from '@/components/admin/coach-accounts'
+import { FinancesAdmin } from '@/components/admin/finances-admin'
 import type { getAllPlayers, getPendingPayments, getPendingSubmissions, getGetInvolvedSubmissions, getCoachAccounts } from '@/app/actions/admin'
 import type { getPendingLeagueClubs, getPendingLeagueTeams, getPendingLeaguePlayers, getLeagueDivisionsAdmin, getAllLeagueClubs, getAllLeagueTeams } from '@/app/actions/league-admin'
 import type { getApprovedTeams } from '@/app/actions/league'
 import type { getAnnouncements } from '@/app/actions/announcements'
 import type { getStaffMembers } from '@/app/actions/staff'
 import type { getAllPractices } from '@/app/actions/practices'
+import type { getFinanceSeasons, getFinanceCategories } from '@/app/actions/finances'
 
-type Tab = 'overview' | 'players' | 'submissions' | 'league' | 'content'
+type Tab = 'overview' | 'players' | 'submissions' | 'league' | 'content' | 'finances'
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'overview', label: 'Overview' },
@@ -24,6 +26,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'submissions', label: 'Submissions' },
   { key: 'league', label: 'Schedule' },
   { key: 'content', label: 'Content' },
+  { key: 'finances', label: 'Finances' },
 ]
 
 type Props = {
@@ -43,6 +46,8 @@ type Props = {
   staffMembers: Awaited<ReturnType<typeof getStaffMembers>>
   practices: Awaited<ReturnType<typeof getAllPractices>>
   coachAccounts: Awaited<ReturnType<typeof getCoachAccounts>>
+  financeSeasons: Awaited<ReturnType<typeof getFinanceSeasons>>
+  financeCategories: Awaited<ReturnType<typeof getFinanceCategories>>
   userId: string
 }
 
@@ -50,7 +55,7 @@ export function AdminDashboard({
   totalRevenueCents, players, pendingPayments, pendingSubmissions, getInvolvedSubmissions,
   pendingLeagueClubs, pendingLeagueTeams, pendingLeaguePlayers, leagueDivisions, approvedLeagueTeams,
   allLeagueClubs, allLeagueTeams,
-  announcements, staffMembers, practices, coachAccounts, userId,
+  announcements, staffMembers, practices, coachAccounts, financeSeasons, financeCategories, userId,
 }: Props) {
   const [tab, setTab] = useState<Tab>('overview')
 
@@ -122,6 +127,10 @@ export function AdminDashboard({
             <MediaUploader uploadedBy={userId} />
           </section>
         </div>
+      )}
+
+      {tab === 'finances' && (
+        <FinancesAdmin seasons={financeSeasons} categories={financeCategories} />
       )}
     </main>
   )
