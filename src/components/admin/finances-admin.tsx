@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createFinanceSeason, updateFinanceSeason, createFinanceCategory, renameFinanceCategory, deleteFinanceCategory, getFinanceEntries, createFinanceEntry, updateFinanceEntry, deleteFinanceEntry } from '@/app/actions/finances'
 import type { FinanceSeason, FinanceCategory, FinanceEntry } from '@/app/actions/finances'
 import { getFinancePnL, setFinanceBudget } from '@/app/actions/finances'
@@ -55,6 +55,13 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
   const [entryEdits, setEntryEdits] = useState<Record<string, { amount: string; date: string; note: string }>>({})
   const [entryBusy, setEntryBusy] = useState<string | null>(null)
 
+  // Always holds the latest seasonId, for async callbacks (mutation handlers'
+  // post-save refetches) to check against after the user may have already
+  // switched seasons — a plain closure over seasonId would still reference
+  // whichever season was selected when the handler started.
+  const seasonIdRef = useRef(seasonId)
+  seasonIdRef.current = seasonId
+
   useEffect(() => {
     // Budget edits are keyed by category id, but categories are global — the
     // same id can appear in another season's row. Clear any in-progress edit
@@ -73,7 +80,9 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
 
   useEffect(() => {
     if (!seasonId) { setEntries([]); return }
-    getFinanceEntries(seasonId).then(setEntries)
+    let cancelled = false
+    getFinanceEntries(seasonId).then(rows => { if (!cancelled) setEntries(rows) })
+    return () => { cancelled = true }
   }, [seasonId])
 
   async function handleSaveBudget(categoryId: string) {
@@ -209,6 +218,9 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
       if (result.error) { setErrorMessage(result.error); return }
       setEntryAmount(''); setEntryDate(''); setEntryNote('')
       const [refreshedEntries, refreshedPnl] = await Promise.all([getFinanceEntries(seasonId), getFinancePnL(seasonId)])
+      // The admin may have switched seasons while this request was in flight —
+      // don't overwrite the now-selected season's data with this one's.
+      if (seasonIdRef.current !== seasonId) return
       setEntries(refreshedEntries)
       setPnl(refreshedPnl)
     } catch {
@@ -232,6 +244,7 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
       const result = await updateFinanceEntry(id, { amountCents, entryDate: edit.date, note: edit.note || undefined })
       if (result.error) { setErrorMessage(result.error); return }
       const [refreshedEntries, refreshedPnl] = await Promise.all([getFinanceEntries(seasonId), getFinancePnL(seasonId)])
+      if (seasonIdRef.current !== seasonId) return
       setEntries(refreshedEntries)
       setPnl(refreshedPnl)
       setEditingEntryId(null)
@@ -243,12 +256,14 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
   }
 
   async function handleDeleteEntry(id: string) {
+    if (!window.confirm('Delete this entry? This cannot be undone.')) return
     setErrorMessage(null)
     setEntryBusy(id)
     try {
       const result = await deleteFinanceEntry(id)
       if (result.error) { setErrorMessage(result.error); return }
       const [refreshedEntries, refreshedPnl] = await Promise.all([getFinanceEntries(seasonId), getFinancePnL(seasonId)])
+      if (seasonIdRef.current !== seasonId) return
       setEntries(refreshedEntries)
       setPnl(refreshedPnl)
     } catch {
