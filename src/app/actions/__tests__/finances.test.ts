@@ -290,5 +290,20 @@ describe('getFinancePnL', () => {
       { id: 'spon', name: 'Sponsorship', kind: 'income', budgetCents: 0, actualCents: 0 },
       { id: 'wages', name: 'Wages', kind: 'expense', budgetCents: 100000, actualCents: 45000 },
     ])
+
+    // The date-range math (addOneDay + the UTC-pinned boundary strings) is the
+    // riskiest part of this function — pin down its actual arguments so an
+    // off-by-one or a swapped start/end would fail this test, not just produce
+    // a silently wrong number on a real P&L report.
+    expect(mockSupabase.gte).toHaveBeenNthCalledWith(1, 'paid_at', '2026-08-01T00:00:00.000Z')
+    expect(mockSupabase.lt).toHaveBeenNthCalledWith(1, 'paid_at', '2026-12-01T00:00:00.000Z')
+    expect(mockSupabase.gte).toHaveBeenNthCalledWith(2, 'paid_at', '2026-08-01T00:00:00.000Z')
+    expect(mockSupabase.lt).toHaveBeenNthCalledWith(2, 'paid_at', '2026-12-01T00:00:00.000Z')
+
+    // The subscription label list must stay derived from JOIN_MONTHS
+    // (src/lib/payment-schedule.ts), not hand-copied, so it can't silently
+    // drift out of sync with the real installment schedule.
+    expect(mockSupabase.in).toHaveBeenNthCalledWith(1, 'installment_label', ['registration'])
+    expect(mockSupabase.in).toHaveBeenNthCalledWith(2, 'installment_label', ['full', 'august', 'september', 'october', 'november'])
   })
 })

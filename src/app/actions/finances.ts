@@ -1,5 +1,7 @@
 'use server'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
+import { JOIN_MONTHS } from '@/lib/payment-schedule'
+import type { InstallmentLabel } from '@/lib/supabase/types'
 
 export type FinanceSeason = { id: string; label: string; startDate: string; endDate: string }
 
@@ -172,7 +174,7 @@ export async function getFinancePnL(seasonId: string): Promise<FinancePnLRow[]> 
   const rangeStart = `${season.start_date}T00:00:00.000Z`
   const rangeEnd = `${addOneDay(season.end_date)}T00:00:00.000Z`
 
-  async function paymentsTotal(labels: string[]): Promise<number> {
+  async function paymentsTotal(labels: InstallmentLabel[]): Promise<number> {
     const { data } = await supabase
       .from('payments')
       .select('amount')
@@ -184,7 +186,11 @@ export async function getFinancePnL(seasonId: string): Promise<FinancePnLRow[]> 
   }
 
   const registrationTotal = await paymentsTotal(['registration'])
-  const subscriptionTotal = await paymentsTotal(['full', 'august', 'september', 'october', 'november'])
+  // 'full' (lump-sum season fee) plus every month a player can join in (per-month
+  // season fee) — derived from JOIN_MONTHS rather than hardcoded, so this list
+  // can't silently drift out of sync with src/lib/payment-schedule.ts if a future
+  // plan/join-month change adds a new installment label.
+  const subscriptionTotal = await paymentsTotal(['full', ...JOIN_MONTHS])
 
   const { data: entriesData } = await supabase.from('finance_entries').select('category_id, amount_cents').eq('season_id', seasonId)
   const entryTotals: Record<string, number> = {}
