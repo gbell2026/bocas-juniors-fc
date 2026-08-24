@@ -3,6 +3,7 @@ jest.mock('@/lib/supabase/server', () => ({ createSupabaseServiceClient: jest.fn
 import {
   getFinanceSeasons, createFinanceSeason, updateFinanceSeason,
   getFinanceCategories, createFinanceCategory, renameFinanceCategory, deleteFinanceCategory,
+  getFinanceEntries, createFinanceEntry, updateFinanceEntry, deleteFinanceEntry,
 } from '../finances'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 
@@ -158,6 +159,54 @@ describe('deleteFinanceCategory', () => {
     mockSupabase.limit.mockResolvedValueOnce({ data: [], error: null }) // no budget
     mockSupabase.eq.mockResolvedValueOnce({ error: null }) // the delete itself .eq('id', id)
     const result = await deleteFinanceCategory('c1')
+    expect(result.error).toBeUndefined()
+    expect(mockSupabase.delete).toHaveBeenCalled()
+  })
+})
+
+describe('getFinanceEntries', () => {
+  it('returns entries for a season, newest first', async () => {
+    mockSupabase.order.mockResolvedValueOnce({
+      data: [{ id: 'e1', season_id: 's1', category_id: 'c1', amount_cents: 50000, entry_date: '2026-09-01', note: 'Kit sponsor', finance_categories: { name: 'Sponsorship' } }],
+      error: null,
+    })
+    const result = await getFinanceEntries('s1')
+    expect(result).toEqual([{ id: 'e1', categoryId: 'c1', categoryName: 'Sponsorship', amountCents: 50000, entryDate: '2026-09-01', note: 'Kit sponsor' }])
+  })
+})
+
+describe('createFinanceEntry', () => {
+  it('creates an entry for a manual category', async () => {
+    mockSupabase.single.mockResolvedValueOnce({ data: { auto_source: null }, error: null })
+    mockSupabase.insert.mockResolvedValueOnce({ error: null })
+    const result = await createFinanceEntry({ seasonId: 's1', categoryId: 'c1', amountCents: 50000, entryDate: '2026-09-01', note: 'Kit sponsor' })
+    expect(result.error).toBeUndefined()
+    expect(mockSupabase.insert).toHaveBeenCalledWith({
+      season_id: 's1', category_id: 'c1', amount_cents: 50000, entry_date: '2026-09-01', note: 'Kit sponsor',
+    })
+  })
+
+  it('refuses to create an entry for an auto-source category', async () => {
+    mockSupabase.single.mockResolvedValueOnce({ data: { auto_source: 'registration' }, error: null })
+    const result = await createFinanceEntry({ seasonId: 's1', categoryId: 'c1', amountCents: 50000, entryDate: '2026-09-01' })
+    expect(result.error).toBe("This category is computed automatically — it can't be logged manually")
+    expect(mockSupabase.insert).not.toHaveBeenCalled()
+  })
+})
+
+describe('updateFinanceEntry', () => {
+  it('updates an entry', async () => {
+    mockSupabase.eq.mockResolvedValueOnce({ error: null })
+    const result = await updateFinanceEntry('e1', { amountCents: 60000, entryDate: '2026-09-02', note: 'Updated' })
+    expect(result.error).toBeUndefined()
+    expect(mockSupabase.update).toHaveBeenCalledWith({ amount_cents: 60000, entry_date: '2026-09-02', note: 'Updated' })
+  })
+})
+
+describe('deleteFinanceEntry', () => {
+  it('deletes an entry', async () => {
+    mockSupabase.eq.mockResolvedValueOnce({ error: null })
+    const result = await deleteFinanceEntry('e1')
     expect(result.error).toBeUndefined()
     expect(mockSupabase.delete).toHaveBeenCalled()
   })

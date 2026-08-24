@@ -85,3 +85,50 @@ export async function deleteFinanceCategory(id: string): Promise<{ error?: strin
   if (error) return { error: 'Failed to delete category' }
   return {}
 }
+
+export type FinanceEntry = { id: string; categoryId: string; categoryName: string; amountCents: number; entryDate: string; note: string | null }
+
+export async function getFinanceEntries(seasonId: string): Promise<FinanceEntry[]> {
+  const supabase = createSupabaseServiceClient()
+  const { data } = await supabase
+    .from('finance_entries')
+    .select('*, finance_categories(name)')
+    .eq('season_id', seasonId)
+    .order('entry_date', { ascending: false })
+  return (data ?? []).map((e: any) => ({
+    id: e.id, categoryId: e.category_id, categoryName: e.finance_categories.name,
+    amountCents: e.amount_cents, entryDate: e.entry_date, note: e.note,
+  }))
+}
+
+export type FinanceEntryInput = { seasonId: string; categoryId: string; amountCents: number; entryDate: string; note?: string }
+
+export async function createFinanceEntry(input: FinanceEntryInput): Promise<{ error?: string }> {
+  const supabase = createSupabaseServiceClient()
+  const { data: category } = await supabase.from('finance_categories').select('auto_source').eq('id', input.categoryId).single()
+  if (category?.auto_source) {
+    return { error: "This category is computed automatically — it can't be logged manually" }
+  }
+  const { error } = await supabase.from('finance_entries').insert({
+    season_id: input.seasonId, category_id: input.categoryId,
+    amount_cents: input.amountCents, entry_date: input.entryDate, note: input.note ?? null,
+  })
+  if (error) return { error: 'Failed to create entry' }
+  return {}
+}
+
+export async function updateFinanceEntry(id: string, input: { amountCents: number; entryDate: string; note?: string }): Promise<{ error?: string }> {
+  const supabase = createSupabaseServiceClient()
+  const { error } = await supabase.from('finance_entries').update({
+    amount_cents: input.amountCents, entry_date: input.entryDate, note: input.note ?? null,
+  }).eq('id', id)
+  if (error) return { error: 'Failed to update entry' }
+  return {}
+}
+
+export async function deleteFinanceEntry(id: string): Promise<{ error?: string }> {
+  const supabase = createSupabaseServiceClient()
+  const { error } = await supabase.from('finance_entries').delete().eq('id', id)
+  if (error) return { error: 'Failed to delete entry' }
+  return {}
+}
