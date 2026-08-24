@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { createFinanceSeason, updateFinanceSeason } from '@/app/actions/finances'
+import { createFinanceSeason, updateFinanceSeason, createFinanceCategory, renameFinanceCategory, deleteFinanceCategory } from '@/app/actions/finances'
 import type { FinanceSeason, FinanceCategory } from '@/app/actions/finances'
 import { getFinancePnL, setFinanceBudget } from '@/app/actions/finances'
 import type { FinancePnLRow } from '@/app/actions/finances'
@@ -37,6 +37,14 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
   const [loadingPnl, setLoadingPnl] = useState(false)
   const [budgetEdits, setBudgetEdits] = useState<Record<string, string>>({})
   const [savingBudget, setSavingBudget] = useState<string | null>(null)
+  const [categoryList, setCategoryList] = useState(categories)
+  const [managingCategories, setManagingCategories] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [newCategoryKind, setNewCategoryKind] = useState<'income' | 'expense'>('expense')
+  const [creatingCategory, setCreatingCategory] = useState(false)
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
+  const [categoryNameEdit, setCategoryNameEdit] = useState('')
+  const [categoryBusy, setCategoryBusy] = useState<string | null>(null)
 
   useEffect(() => {
     // Budget edits are keyed by category id, but categories are global — the
@@ -126,6 +134,51 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
       setErrorMessage('Something went wrong. Please try again.')
     } finally {
       setSaving(null)
+    }
+  }
+
+  async function handleCreateCategory(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setErrorMessage(null)
+    setCreatingCategory(true)
+    try {
+      const result = await createFinanceCategory({ name: newCategoryName, kind: newCategoryKind })
+      if (result.error) { setErrorMessage(result.error); return }
+      setNewCategoryName('')
+      window.location.reload()
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
+    } finally {
+      setCreatingCategory(false)
+    }
+  }
+
+  async function handleRenameCategory(id: string) {
+    setErrorMessage(null)
+    setCategoryBusy(id)
+    try {
+      const result = await renameFinanceCategory(id, categoryNameEdit)
+      if (result.error) { setErrorMessage(result.error); return }
+      setCategoryList(prev => prev.map(c => c.id === id ? { ...c, name: categoryNameEdit } : c))
+      setEditingCategoryId(null)
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
+    } finally {
+      setCategoryBusy(null)
+    }
+  }
+
+  async function handleDeleteCategory(id: string) {
+    setErrorMessage(null)
+    setCategoryBusy(id)
+    try {
+      const result = await deleteFinanceCategory(id)
+      if (result.error) { setErrorMessage(result.error); return }
+      setCategoryList(prev => prev.filter(c => c.id !== id))
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
+    } finally {
+      setCategoryBusy(null)
     }
   }
 
@@ -234,7 +287,7 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
             </thead>
             <tbody>
               {[...income, ...expense].map(row => {
-                const isAuto = categories.find(c => c.id === row.id)?.autoSource != null
+                const isAuto = categoryList.find(c => c.id === row.id)?.autoSource != null
                 const v = variance(row)
                 return (
                   <tr key={row.id} className="border-t">
@@ -306,6 +359,60 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
             </tbody>
           </table>
         )
+      )}
+
+      <div>
+        <button onClick={() => setManagingCategories(v => !v)} className="btn-secondary text-xs px-3 py-1.5">
+          {managingCategories ? 'Done' : 'Manage Categories'}
+        </button>
+      </div>
+
+      {managingCategories && (
+        <div className="space-y-2 border border-brand-line rounded p-4">
+          {categoryList.map(c => (
+            <div key={c.id} className="bg-brand-tint border border-brand-line rounded p-3 flex items-center justify-between gap-4">
+              {editingCategoryId === c.id ? (
+                <div className="flex gap-2 flex-1">
+                  <input className="input flex-1" value={categoryNameEdit} onChange={e => setCategoryNameEdit(e.target.value)} />
+                  <button onClick={() => handleRenameCategory(c.id)} disabled={categoryBusy === c.id} className="btn-primary text-xs px-3 py-1.5">Save</button>
+                  <button onClick={() => setEditingCategoryId(null)} className="btn-secondary text-xs px-3 py-1.5">Cancel</button>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <p className="text-brand-ink font-bold text-sm">{c.name}</p>
+                    <p className="text-brand-muted text-xs capitalize">{c.kind}{c.autoSource && ' · auto'}</p>
+                  </div>
+                  {!c.autoSource && (
+                    <div className="flex gap-2 flex-shrink-0">
+                      <button onClick={() => { setEditingCategoryId(c.id); setCategoryNameEdit(c.name) }} className="btn-secondary text-xs px-3 py-1.5">Rename</button>
+                      <button
+                        onClick={() => handleDeleteCategory(c.id)}
+                        disabled={categoryBusy === c.id}
+                        className="text-xs px-3 py-1.5 border border-red-600 text-red-600 rounded font-bold uppercase tracking-wider hover:bg-red-600 hover:text-white transition disabled:opacity-50"
+                      >Delete</button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          ))}
+
+          <form onSubmit={handleCreateCategory} className="border border-brand-line rounded p-4 space-y-3">
+            <p className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs">New Category</p>
+            <input
+              placeholder="Category name" required className="input w-full"
+              value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)}
+            />
+            <select value={newCategoryKind} onChange={e => setNewCategoryKind(e.target.value as 'income' | 'expense')} className="input w-full">
+              <option value="income">Income</option>
+              <option value="expense">Expense</option>
+            </select>
+            <button type="submit" disabled={creatingCategory} className="btn-primary text-sm w-full">
+              {creatingCategory ? 'Creating…' : 'Create Category'}
+            </button>
+          </form>
+        </div>
       )}
     </section>
   )
