@@ -132,3 +132,19 @@ export async function deleteFinanceEntry(id: string): Promise<{ error?: string }
   if (error) return { error: 'Failed to delete entry' }
   return {}
 }
+
+export async function getFinanceBudgets(seasonId: string): Promise<Record<string, number>> {
+  const supabase = createSupabaseServiceClient()
+  const { data } = await supabase.from('finance_budgets').select('category_id, target_amount_cents').eq('season_id', seasonId)
+  return Object.fromEntries((data ?? []).map(b => [b.category_id, b.target_amount_cents]))
+}
+
+export async function setFinanceBudget(input: { seasonId: string; categoryId: string; targetAmountCents: number }): Promise<{ error?: string }> {
+  const supabase = createSupabaseServiceClient()
+  const { error } = await supabase.from('finance_budgets').upsert(
+    { season_id: input.seasonId, category_id: input.categoryId, target_amount_cents: input.targetAmountCents },
+    { onConflict: 'season_id,category_id' }
+  )
+  if (error) return { error: 'Failed to set budget' }
+  return {}
+}

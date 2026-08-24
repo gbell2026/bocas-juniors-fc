@@ -4,6 +4,7 @@ import {
   getFinanceSeasons, createFinanceSeason, updateFinanceSeason,
   getFinanceCategories, createFinanceCategory, renameFinanceCategory, deleteFinanceCategory,
   getFinanceEntries, createFinanceEntry, updateFinanceEntry, deleteFinanceEntry,
+  getFinanceBudgets, setFinanceBudget,
 } from '../finances'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 
@@ -17,6 +18,7 @@ const mockSupabase = {
   order: jest.fn(),
   single: jest.fn(),
   limit: jest.fn(),
+  upsert: jest.fn(),
 }
 
 beforeEach(() => {
@@ -209,5 +211,28 @@ describe('deleteFinanceEntry', () => {
     const result = await deleteFinanceEntry('e1')
     expect(result.error).toBeUndefined()
     expect(mockSupabase.delete).toHaveBeenCalled()
+  })
+})
+
+describe('getFinanceBudgets', () => {
+  it('returns budgets for a season as a map of category id to target', async () => {
+    mockSupabase.eq.mockResolvedValueOnce({
+      data: [{ category_id: 'c1', target_amount_cents: 200000 }],
+      error: null,
+    })
+    const result = await getFinanceBudgets('s1')
+    expect(result).toEqual({ c1: 200000 })
+  })
+})
+
+describe('setFinanceBudget', () => {
+  it('upserts a budget target', async () => {
+    mockSupabase.upsert = jest.fn().mockResolvedValueOnce({ error: null })
+    const result = await setFinanceBudget({ seasonId: 's1', categoryId: 'c1', targetAmountCents: 200000 })
+    expect(result.error).toBeUndefined()
+    expect(mockSupabase.upsert).toHaveBeenCalledWith(
+      { season_id: 's1', category_id: 'c1', target_amount_cents: 200000 },
+      { onConflict: 'season_id,category_id' }
+    )
   })
 })
