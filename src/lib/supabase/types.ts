@@ -654,6 +654,7 @@ export type Database = {
       }
       practices: {
         Row: {
+          cancellation_reason: string | null
           cancelled: boolean
           created_at: string
           id: string
@@ -663,6 +664,7 @@ export type Database = {
           practice_time: string
         }
         Insert: {
+          cancellation_reason?: string | null
           cancelled?: boolean
           created_at?: string
           id?: string
@@ -672,6 +674,7 @@ export type Database = {
           practice_time: string
         }
         Update: {
+          cancellation_reason?: string | null
           cancelled?: boolean
           created_at?: string
           id?: string

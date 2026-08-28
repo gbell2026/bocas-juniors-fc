@@ -3,7 +3,8 @@ import { createSupabaseServiceClient } from '@/lib/supabase/server'
 import { shortDivisionLabel } from '@/lib/league/fixture-calendar'
 
 export type PracticeScheduleEntry = {
-  id: string; date: string; time: string; location: string | null; notes: string | null; cancelled: boolean
+  id: string; date: string; time: string; location: string | null; notes: string | null
+  cancelled: boolean; cancellationReason: string | null
 }
 
 export type LeagueMatchScheduleEntry = {
@@ -43,6 +44,7 @@ export async function getHomeSchedule(): Promise<HomeSchedule> {
     location: p.location,
     notes: p.notes,
     cancelled: p.cancelled,
+    cancellationReason: p.cancellation_reason,
   }))
 
   const matches = await getUpcomingLeagueMatches(today, addDays(today, 7))

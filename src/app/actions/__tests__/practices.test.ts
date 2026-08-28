@@ -23,7 +23,8 @@ beforeEach(() => {
 
 const row = {
   id: 'p1', practice_date: '2026-08-18', practice_time: '17:00:00',
-  location: 'Field A', notes: 'Bring water', cancelled: false, created_at: '2026-08-11T00:00:00Z',
+  location: 'Field A', notes: 'Bring water', cancelled: false, cancellation_reason: null,
+  created_at: '2026-08-11T00:00:00Z',
 }
 
 describe('getUpcomingPractices', () => {
@@ -35,7 +36,7 @@ describe('getUpcomingPractices', () => {
     const result = await getUpcomingPractices()
     expect(result).toEqual([{
       id: 'p1', practiceDate: '2026-08-18', practiceTime: '17:00:00',
-      location: 'Field A', notes: 'Bring water', cancelled: false,
+      location: 'Field A', notes: 'Bring water', cancelled: false, cancellationReason: null,
     }])
     expect(mockSupabase.gte).toHaveBeenCalledWith('practice_date', expect.any(String))
   })
@@ -59,7 +60,7 @@ describe('getAllPractices', () => {
     const result = await getAllPractices()
     expect(result).toEqual([{
       id: 'p1', practiceDate: '2026-08-18', practiceTime: '17:00:00',
-      location: 'Field A', notes: 'Bring water', cancelled: false,
+      location: 'Field A', notes: 'Bring water', cancelled: false, cancellationReason: null,
     }])
     expect(mockSupabase.gte).not.toHaveBeenCalled()
   })
@@ -104,12 +105,26 @@ describe('updatePractice', () => {
 })
 
 describe('setPracticeCancelled', () => {
-  it('marks a practice cancelled', async () => {
+  it('marks a practice cancelled with a trimmed reason', async () => {
     mockSupabase.update.mockReturnValueOnce(mockSupabase)
     mockSupabase.eq.mockResolvedValueOnce({ error: null })
-    const result = await setPracticeCancelled('p1', true)
+    const result = await setPracticeCancelled('p1', true, '  heavy rain  ')
     expect(result.error).toBeUndefined()
-    expect(mockSupabase.update).toHaveBeenCalledWith({ cancelled: true })
+    expect(mockSupabase.update).toHaveBeenCalledWith({ cancelled: true, cancellation_reason: 'heavy rain' })
+  })
+
+  it('stores a null reason when none is given', async () => {
+    mockSupabase.update.mockReturnValueOnce(mockSupabase)
+    mockSupabase.eq.mockResolvedValueOnce({ error: null })
+    await setPracticeCancelled('p1', true)
+    expect(mockSupabase.update).toHaveBeenCalledWith({ cancelled: true, cancellation_reason: null })
+  })
+
+  it('clears the reason when un-cancelling', async () => {
+    mockSupabase.update.mockReturnValueOnce(mockSupabase)
+    mockSupabase.eq.mockResolvedValueOnce({ error: null })
+    await setPracticeCancelled('p1', false, 'ignored')
+    expect(mockSupabase.update).toHaveBeenCalledWith({ cancelled: false, cancellation_reason: null })
   })
 })
 

@@ -43,6 +43,8 @@ export const es = {
       noPractices: 'No hay entrenamientos en las próximas dos semanas.',
       noMatches: 'No hay partidos en la próxima semana.',
       cancelled: 'Cancelado',
+      cancelledBanner: 'El entrenamiento de hoy ({date}) está CANCELADO',
+      cancelledBannerReason: 'debido a {reason}',
     },
     about: {
       title: 'Sobre Tangerine Toucans FC',

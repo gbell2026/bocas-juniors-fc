@@ -16,6 +16,7 @@ export type PracticeItem = {
   location: string | null
   notes: string | null
   cancelled: boolean
+  cancellationReason: string | null
 }
 
 function mapPractice(row: Practice): PracticeItem {
@@ -26,6 +27,7 @@ function mapPractice(row: Practice): PracticeItem {
     location: row.location,
     notes: row.notes,
     cancelled: row.cancelled,
+    cancellationReason: row.cancellation_reason,
   }
 }
 
@@ -82,10 +84,21 @@ export async function updatePractice(id: string, input: PracticeInput): Promise<
   return {}
 }
 
-// Admin: cancel or un-cancel a practice.
-export async function setPracticeCancelled(id: string, cancelled: boolean): Promise<{ error?: string }> {
+// Admin: cancel or un-cancel a practice. An optional free-text reason is stored
+// when cancelling and always cleared when un-cancelling.
+export async function setPracticeCancelled(
+  id: string,
+  cancelled: boolean,
+  reason?: string
+): Promise<{ error?: string }> {
   const supabase = createSupabaseServiceClient()
-  const { error } = await supabase.from('practices').update({ cancelled }).eq('id', id)
+  const { error } = await supabase
+    .from('practices')
+    .update({
+      cancelled,
+      cancellation_reason: cancelled ? (reason?.trim() || null) : null,
+    })
+    .eq('id', id)
   if (error) return { error: 'Failed to update practice' }
   return {}
 }

@@ -26,6 +26,8 @@ export function PracticesAdmin({ practices: initial }: { practices: Practice[] }
   const [edits, setEdits] = useState<Record<string, EditState>>({})
   const [saving, setSaving] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [cancellingId, setCancellingId] = useState<string | null>(null)
+  const [cancelReason, setCancelReason] = useState('')
 
   function startEdit(p: Practice) {
     setEditingId(p.id)
@@ -71,13 +73,40 @@ export function PracticesAdmin({ practices: initial }: { practices: Practice[] }
     }
   }
 
-  async function handleToggleCancelled(p: Practice) {
+  function startCancel(p: Practice) {
     setErrorMessage(null)
-    setSaving(p.id)
+    setCancellingId(p.id)
+    setCancelReason(p.cancellationReason ?? '')
+  }
+
+  async function handleConfirmCancel(id: string) {
+    setErrorMessage(null)
+    setSaving(id)
     try {
-      const result = await setPracticeCancelled(p.id, !p.cancelled)
+      const reason = cancelReason.trim()
+      const result = await setPracticeCancelled(id, true, reason)
       if (result.error) { setErrorMessage(result.error); return }
-      setPractices(prev => prev.map(item => item.id === p.id ? { ...item, cancelled: !p.cancelled } : item))
+      setPractices(prev => prev.map(item =>
+        item.id === id ? { ...item, cancelled: true, cancellationReason: reason || null } : item
+      ))
+      setCancellingId(null)
+      setCancelReason('')
+    } catch {
+      setErrorMessage('Something went wrong. Please try again.')
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  async function handleUncancel(id: string) {
+    setErrorMessage(null)
+    setSaving(id)
+    try {
+      const result = await setPracticeCancelled(id, false)
+      if (result.error) { setErrorMessage(result.error); return }
+      setPractices(prev => prev.map(item =>
+        item.id === id ? { ...item, cancelled: false, cancellationReason: null } : item
+      ))
     } catch {
       setErrorMessage('Something went wrong. Please try again.')
     } finally {
@@ -139,30 +168,61 @@ export function PracticesAdmin({ practices: initial }: { practices: Practice[] }
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-between gap-4 flex-wrap">
-                <div>
-                  {p.cancelled && <p className="text-red-600 text-[10px] font-bold uppercase tracking-wider">Cancelled</p>}
-                  <p className="text-brand-ink font-bold text-sm">{formatDate(p.practiceDate)} — {formatTime(p.practiceTime)}</p>
-                  {p.location && <p className="text-brand-muted text-xs">{p.location}</p>}
-                  {p.notes && <p className="text-brand-muted text-xs">{p.notes}</p>}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div>
+                    {p.cancelled && (
+                      <p className="text-red-600 text-[10px] font-bold uppercase tracking-wider">
+                        Cancelled{p.cancellationReason ? ` — ${p.cancellationReason}` : ''}
+                      </p>
+                    )}
+                    <p className="text-brand-ink font-bold text-sm">{formatDate(p.practiceDate)} — {formatTime(p.practiceTime)}</p>
+                    {p.location && <p className="text-brand-muted text-xs">{p.location}</p>}
+                    {p.notes && <p className="text-brand-muted text-xs">{p.notes}</p>}
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button onClick={() => startEdit(p)} className="btn-secondary text-xs px-3 py-1.5 disabled:opacity-50">Edit</button>
+                    <button
+                      onClick={() => p.cancelled ? handleUncancel(p.id) : startCancel(p)}
+                      disabled={saving === p.id || cancellingId === p.id}
+                      className="text-xs px-3 py-1.5 border border-brand-primary text-brand-primary rounded font-bold uppercase tracking-wider hover:bg-brand-primary hover:text-white transition disabled:opacity-50"
+                    >
+                      {p.cancelled ? 'Un-cancel' : 'Cancel'}
+                    </button>
+                    <button
+                      onClick={() => handleDelete(p.id)}
+                      disabled={saving === p.id}
+                      className="btn-secondary text-xs px-3 py-1.5 disabled:opacity-50"
+                    >
+                      {saving === p.id ? 'Deleting…' : 'Delete'}
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-2 flex-shrink-0">
-                  <button onClick={() => startEdit(p)} className="btn-secondary text-xs px-3 py-1.5 disabled:opacity-50">Edit</button>
-                  <button
-                    onClick={() => handleToggleCancelled(p)}
-                    disabled={saving === p.id}
-                    className="text-xs px-3 py-1.5 border border-brand-primary text-brand-primary rounded font-bold uppercase tracking-wider hover:bg-brand-primary hover:text-white transition disabled:opacity-50"
-                  >
-                    {p.cancelled ? 'Un-cancel' : 'Cancel'}
-                  </button>
-                  <button
-                    onClick={() => handleDelete(p.id)}
-                    disabled={saving === p.id}
-                    className="btn-secondary text-xs px-3 py-1.5 disabled:opacity-50"
-                  >
-                    {saving === p.id ? 'Deleting…' : 'Delete'}
-                  </button>
-                </div>
+
+                {cancellingId === p.id && (
+                  <div className="flex gap-2 flex-wrap items-center border-t border-brand-line pt-2">
+                    <input
+                      className="input flex-1 min-w-[12rem]"
+                      placeholder="Reason (optional) — shown on the homepage"
+                      value={cancelReason}
+                      onChange={e => setCancelReason(e.target.value)}
+                      autoFocus
+                    />
+                    <button
+                      onClick={() => handleConfirmCancel(p.id)}
+                      disabled={saving === p.id}
+                      className="btn-primary text-xs px-3 py-1.5 disabled:opacity-50"
+                    >
+                      {saving === p.id ? 'Saving…' : 'Confirm cancel'}
+                    </button>
+                    <button
+                      onClick={() => { setCancellingId(null); setCancelReason('') }}
+                      className="btn-secondary text-xs px-3 py-1.5"
+                    >
+                      Keep practice
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

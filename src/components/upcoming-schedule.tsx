@@ -43,14 +43,19 @@ export function UpcomingSchedule({ schedule, locale }: { schedule: HomeSchedule;
                 {practices.map(p => (
                   <div
                     key={p.id}
-                    className={`flex items-center gap-3 border border-brand-line rounded p-2.5 bg-brand-tint text-sm ${p.cancelled ? 'opacity-60' : ''}`}
+                    className={`border border-brand-line rounded p-2.5 bg-brand-tint text-sm ${p.cancelled ? 'opacity-60' : ''}`}
                   >
-                    <span className="font-bold text-brand-ink whitespace-nowrap flex-shrink-0">{formatDate(p.date, locale)}</span>
-                    <span className="text-brand-muted flex-1 min-w-0 truncate">
-                      {formatTime(p.time, locale)}{p.location ? ` · ${p.location}` : ''}
-                    </span>
-                    {p.cancelled && (
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-red-600 flex-shrink-0">{t.home.schedule.cancelled}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="font-bold text-brand-ink whitespace-nowrap flex-shrink-0">{formatDate(p.date, locale)}</span>
+                      <span className="text-brand-muted flex-1 min-w-0 truncate">
+                        {formatTime(p.time, locale)}{p.location ? ` · ${p.location}` : ''}
+                      </span>
+                      {p.cancelled && (
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-red-600 flex-shrink-0">{t.home.schedule.cancelled}</span>
+                      )}
+                    </div>
+                    {p.cancelled && p.cancellationReason && (
+                      <p className="text-red-600 text-xs mt-1">{p.cancellationReason}</p>
                     )}
                   </div>
                 ))}
