@@ -1,9 +1,16 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { PracticeBanner } from '@/components/practice-banner'
+
+// Render on each request so a just-cancelled practice shows immediately.
+export const dynamic = 'force-dynamic'
 
 export default function HomePage() {
   return (
     <main>
+      {/* Practice cancelled today? Admin toggles this from /admin. */}
+      <PracticeBanner />
+
       {/* Hero */}
       <section className="relative min-h-[500px] flex items-center justify-center text-center overflow-hidden">
         <Image

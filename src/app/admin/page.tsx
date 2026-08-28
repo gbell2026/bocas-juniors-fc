@@ -5,19 +5,22 @@ import { PendingPayments } from '@/components/admin/pending-payments'
 import { MediaUploader } from '@/components/admin/media-uploader'
 import { PendingSubmissions } from '@/components/admin/pending-submissions'
 import { GetInvolvedSubmissions } from '@/components/admin/get-involved-submissions'
+import { PracticeBannerControl } from '@/components/admin/practice-banner-control'
 import { getPendingPayments, getAllPlayers, getTotalRevenue, getPendingSubmissions, getGetInvolvedSubmissions } from '@/app/actions/admin'
+import { getPracticeBanner } from '@/app/actions/practice-banner'
 
 export default async function AdminPage() {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [players, pendingPayments, totalRevenueCents, pendingSubmissions, getInvolvedSubmissions] = await Promise.all([
+  const [players, pendingPayments, totalRevenueCents, pendingSubmissions, getInvolvedSubmissions, practiceBanner] = await Promise.all([
     getAllPlayers(),
     getPendingPayments(),
     getTotalRevenue(),
     getPendingSubmissions(),
     getGetInvolvedSubmissions(),
+    getPracticeBanner(),
   ])
 
   return (
@@ -28,6 +31,8 @@ export default async function AdminPage() {
           Total Revenue: ${(totalRevenueCents / 100).toFixed(2)}
         </p>
       </div>
+
+      <PracticeBannerControl initial={practiceBanner} />
 
       <GetInvolvedSubmissions submissions={getInvolvedSubmissions} />
 
