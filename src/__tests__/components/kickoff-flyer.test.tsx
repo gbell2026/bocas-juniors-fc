@@ -1,0 +1,59 @@
+import { render, screen, within } from '@testing-library/react'
+import { KickoffFlyer } from '@/components/flyer/kickoff-flyer'
+import type { KickoffFlyer as KickoffFlyerData } from '@/app/actions/flyer'
+
+const base: KickoffFlyerData = {
+  sundayIso: '2026-09-06',
+  divisions: [
+    {
+      id: 'd1',
+      name: 'U10 Division',
+      shortLabel: 'U10',
+      teams: [
+        { name: 'Tangerine Toucans', badge: null },
+        { name: 'Isla Colón FC', badge: null },
+      ],
+      fixtures: [
+        {
+          id: 'f1',
+          kickoff: '09:30',
+          homeTeam: 'Tangerine Toucans',
+          awayTeam: 'Isla Colón FC',
+          homeBadge: null,
+          awayBadge: null,
+        },
+      ],
+    },
+  ],
+}
+
+describe('KickoffFlyer', () => {
+  it('shows the coming Sunday date and the kick-off title', () => {
+    render(<KickoffFlyer flyer={base} locale="en" />)
+    expect(screen.getByRole('heading', { name: /sunday kick-off/i })).toBeInTheDocument()
+    expect(screen.getByText(/6 September 2026/i)).toBeInTheDocument()
+  })
+
+  it('lists the division, teams and the fixture with its kick-off time', () => {
+    render(<KickoffFlyer flyer={base} locale="en" />)
+    expect(screen.getByText('U10 Division')).toBeInTheDocument()
+    const fixture = screen.getByRole('listitem')
+    expect(within(fixture).getByText('Tangerine Toucans')).toBeInTheDocument()
+    expect(within(fixture).getByText('Isla Colón FC')).toBeInTheDocument()
+    expect(within(fixture).getByText(/9:30/)).toBeInTheDocument()
+  })
+
+  it('makes a sponsor with a URL clickable and leaves one without a URL unlinked', () => {
+    render(<KickoffFlyer flyer={base} locale="en" />)
+    const tesoro = screen.getByRole('link', { name: 'Tesoro Escondido' })
+    expect(tesoro).toHaveAttribute('href', 'https://www.tesoro-escondido.com/')
+    expect(screen.getByAltText('Bocas Dance Collective')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Bocas Dance Collective' })).not.toBeInTheDocument()
+  })
+
+  it('falls back to a message when there are no fixtures this Sunday', () => {
+    render(<KickoffFlyer flyer={{ sundayIso: '2026-09-06', divisions: [] }} locale="en" />)
+    expect(screen.getByText(/no fixtures scheduled for this sunday/i)).toBeInTheDocument()
+    expect(screen.queryByRole('listitem')).not.toBeInTheDocument()
+  })
+})
