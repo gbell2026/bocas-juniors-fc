@@ -9,7 +9,9 @@ import { FlyerExportToolbar } from '@/components/flyer/flyer-export-toolbar'
 
 const FLYER_CARD_ID = 'flyer-card'
 
-// League mark. Swap for '/loma-espino-logo.png' once that file is added to
+const LEAGUE_NAME = 'Liga Isleñitos de Bocas'
+
+// The league's logo. Point this at the league mark once its file is added to
 // public/ (a transparent-background version reads best on the cream card).
 const LEAGUE_LOGO = '/logo-white-bg.png'
 
@@ -77,9 +79,12 @@ export function KickoffFlyer({ flyer, locale }: { flyer: KickoffFlyerData; local
         {/* Header */}
         <header className="bg-brand-ink text-white text-center px-6 py-7">
           <Link href="/league" className="inline-block">
-            <img src={LEAGUE_LOGO} alt="" width={96} height={96} className="mx-auto mb-3 w-24 h-24 object-contain" />
+            <img src={LEAGUE_LOGO} alt={LEAGUE_NAME} width={96} height={96} className="mx-auto mb-3 w-24 h-24 object-contain" />
           </Link>
-          <p className="font-heading uppercase tracking-[0.25em] text-brand-accent text-xs">{t.matchdayHeading}</p>
+          <p className="font-heading uppercase tracking-[0.2em] text-white text-lg sm:text-xl leading-tight">
+            {LEAGUE_NAME}
+          </p>
+          <p className="font-heading uppercase tracking-[0.25em] text-brand-accent text-xs mt-3">{t.matchdayHeading}</p>
           <h1 className="font-heading uppercase tracking-widest text-3xl sm:text-4xl leading-none mt-1">
             {t.kickoffTitle}
           </h1>

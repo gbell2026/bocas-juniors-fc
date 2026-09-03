@@ -28,8 +28,9 @@ const base: KickoffFlyerData = {
 }
 
 describe('KickoffFlyer', () => {
-  it('shows the coming Sunday date and the kick-off title', () => {
+  it('shows the league name, the coming Sunday date and the kick-off title', () => {
     render(<KickoffFlyer flyer={base} locale="en" />)
+    expect(screen.getByText('Liga Isleñitos de Bocas')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /sunday kick-off/i })).toBeInTheDocument()
     expect(screen.getByText(/6 September 2026/i)).toBeInTheDocument()
   })

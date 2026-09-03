@@ -44,7 +44,7 @@ export function FlyerExportToolbar({
 }) {
   const [busy, setBusy] = useState<'png' | 'pdf' | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const fileBase = `loma-espino-kickoff-${sundayIso}`
+  const fileBase = `liga-islenitos-de-bocas-kickoff-${sundayIso}`
 
   async function downloadPng() {
     setBusy('png')
