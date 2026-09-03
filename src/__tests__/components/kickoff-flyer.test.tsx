@@ -44,10 +44,16 @@ describe('KickoffFlyer', () => {
     expect(within(fixture).getByText(/9:30/)).toBeInTheDocument()
   })
 
-  it('makes a sponsor with a URL clickable and leaves one without a URL unlinked', () => {
+  it('makes sponsors with a URL clickable and leaves ones without a URL unlinked', () => {
     render(<KickoffFlyer flyer={base} locale="en" />)
-    const tesoro = screen.getByRole('link', { name: 'Tesoro Escondido' })
-    expect(tesoro).toHaveAttribute('href', 'https://www.tesoro-escondido.com/')
+    expect(screen.getByRole('link', { name: 'Tesoro Escondido' })).toHaveAttribute(
+      'href',
+      'https://www.tesoro-escondido.com/'
+    )
+    expect(screen.getByRole('link', { name: 'Tangerine International' })).toHaveAttribute(
+      'href',
+      'https://tangerine.international'
+    )
     expect(screen.getByAltText('Bocas Dance Collective')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Bocas Dance Collective' })).not.toBeInTheDocument()
   })
