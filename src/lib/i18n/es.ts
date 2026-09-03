@@ -209,6 +209,11 @@ export const es = {
     noFixtures: 'No hay partidos programados para este domingo. Vuelve pronto.',
     sponsorsHeading: 'Gracias a nuestros patrocinadores',
     backToLeague: 'Calendario completo de la liga',
+    downloadPng: 'Descargar imagen',
+    downloadPdf: 'Descargar PDF',
+    preparing: 'Preparando…',
+    downloadHint: 'Guarda la imagen para publicarla en redes sociales, o el PDF para compartirlo como archivo.',
+    downloadError: 'No se pudo generar el archivo. Inténtalo de nuevo.',
   },
   register: {
     title: 'Inscripción',

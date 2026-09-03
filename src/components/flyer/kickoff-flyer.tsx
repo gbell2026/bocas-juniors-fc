@@ -5,6 +5,9 @@ import { en } from '@/lib/i18n/en'
 import { es } from '@/lib/i18n/es'
 import { cloudinaryUrl } from '@/lib/cloudinary-url'
 import { divisionPillClass } from '@/lib/league/fixture-calendar'
+import { FlyerExportToolbar } from '@/components/flyer/flyer-export-toolbar'
+
+const FLYER_CARD_ID = 'flyer-card'
 
 // League mark. Swap for '/loma-espino-logo.png' once that file is added to
 // public/ (a transparent-background version reads best on the cream card).
@@ -53,7 +56,24 @@ export function KickoffFlyer({ flyer, locale }: { flyer: KickoffFlyerData; local
 
   return (
     <main className="bg-brand-creamAlt min-h-screen py-8 px-4">
-      <article className="max-w-xl mx-auto bg-brand-cream border-4 border-brand-ink rounded-xl overflow-hidden">
+      <div className="max-w-xl mx-auto mb-4">
+        <FlyerExportToolbar
+          targetId={FLYER_CARD_ID}
+          sundayIso={flyer.sundayIso}
+          labels={{
+            downloadPng: t.downloadPng,
+            downloadPdf: t.downloadPdf,
+            preparing: t.preparing,
+            downloadHint: t.downloadHint,
+            downloadError: t.downloadError,
+          }}
+        />
+      </div>
+
+      <article
+        id={FLYER_CARD_ID}
+        className="max-w-xl mx-auto bg-brand-cream border-4 border-brand-ink rounded-xl overflow-hidden"
+      >
         {/* Header */}
         <header className="bg-brand-ink text-white text-center px-6 py-7">
           <Link href="/league" className="inline-block">
@@ -116,17 +136,17 @@ export function KickoffFlyer({ flyer, locale }: { flyer: KickoffFlyerData; local
                 {division.fixtures.map(fx => (
                   <li
                     key={fx.id}
-                    className="grid grid-cols-[auto_1fr_auto_1fr] items-center gap-2 border border-brand-line rounded bg-white px-3 py-2 text-sm"
+                    className="flex items-center gap-2 border border-brand-line rounded bg-white px-3 py-2 text-sm"
                   >
-                    <span className="font-mono tabular-nums text-xs text-brand-mutedWarm whitespace-nowrap">
+                    <span className="font-mono tabular-nums text-xs text-brand-mutedWarm whitespace-nowrap w-16 flex-shrink-0">
                       {fx.kickoff ? formatTime(fx.kickoff, locale) : t.timeTbc}
                     </span>
-                    <span className="flex items-center gap-1.5 justify-end text-right min-w-0">
+                    <span className="flex items-center gap-1.5 justify-end flex-1 min-w-0 text-right">
                       <span className="truncate font-medium text-brand-ink">{fx.homeTeam}</span>
                       <Badge publicId={fx.homeBadge} alt={fx.homeTeam} />
                     </span>
-                    <span className="text-brand-mutedWarm text-xs font-bold uppercase">{t.vs}</span>
-                    <span className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-brand-mutedWarm text-xs font-bold uppercase flex-shrink-0">{t.vs}</span>
+                    <span className="flex items-center gap-1.5 flex-1 min-w-0">
                       <Badge publicId={fx.awayBadge} alt={fx.awayTeam} />
                       <span className="truncate font-medium text-brand-ink">{fx.awayTeam}</span>
                     </span>

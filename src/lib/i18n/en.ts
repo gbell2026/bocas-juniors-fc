@@ -207,6 +207,11 @@ export const en = {
     noFixtures: 'No fixtures scheduled for this Sunday. Check back soon.',
     sponsorsHeading: 'With thanks to our sponsors',
     backToLeague: 'Full league schedule',
+    downloadPng: 'Download image',
+    downloadPdf: 'Download PDF',
+    preparing: 'Preparing…',
+    downloadHint: 'Save the image to post on social media, or the PDF to share as a file.',
+    downloadError: 'Could not generate the file. Please try again.',
   },
   register: {
     title: 'Register',

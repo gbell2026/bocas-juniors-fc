@@ -56,4 +56,10 @@ describe('KickoffFlyer', () => {
     expect(screen.getByText(/no fixtures scheduled for this sunday/i)).toBeInTheDocument()
     expect(screen.queryByRole('listitem')).not.toBeInTheDocument()
   })
+
+  it('offers image and PDF downloads', () => {
+    render(<KickoffFlyer flyer={base} locale="en" />)
+    expect(screen.getByRole('button', { name: /download image/i })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /download pdf/i })).toBeEnabled()
+  })
 })
