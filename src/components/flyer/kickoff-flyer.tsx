@@ -10,8 +10,9 @@ const FLYER_CARD_ID = 'flyer-card'
 
 const LEAGUE_NAME = 'Liga Isleñitos de Bocas'
 
-// Add public/liga-islenitos-logo.png (the league crest, transparent background).
-const LEAGUE_LOGO = '/liga-islenitos-logo.png'
+// The league crest (transparent background — /Liga_Islenitos_circle_on_dark.png
+// is the opaque-on-dark variant if ever needed).
+const LEAGUE_LOGO = '/Liga_Islenitos_Circular_Logo.png'
 
 // Flyer palette is pulled from the league crest — deep navy #0C2A3D, turquoise
 // #22AEC4, gold #F4B32C — and inlined as Tailwind arbitrary values below so the
@@ -20,7 +21,7 @@ const LEAGUE_LOGO = '/liga-islenitos-logo.png'
 // No sponsor data model yet — the club's homepage sponsors plus the league's
 // own. `href: null` renders the logo without a link.
 const SPONSORS: { name: string; logo: string; href: string | null }[] = [
-  { name: 'Tangerine International', logo: '/tangerine-international-logo.png', href: 'https://tangerine.international' },
+  { name: 'Tangerine International', logo: '/Tangerine-Logo-SM.png', href: 'https://tangerine.international' },
   { name: 'Tesoro Escondido', logo: '/tesoro-escondido-logo.jpg', href: 'https://www.tesoro-escondido.com/' },
   { name: 'Bocas Dance Collective', logo: '/bocas-dance-logo.png', href: null },
 ]
