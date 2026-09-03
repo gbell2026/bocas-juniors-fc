@@ -32,6 +32,12 @@ function flyerPillClass(shortLabel: string): string {
     : 'bg-[#F4B32C] text-[#0C2A3D]'
 }
 
+// DB division names carry a trailing qualifier, e.g. "U10 (as of Jan 2027)" —
+// drop it for the flyer.
+function divisionLabel(name: string): string {
+  return name.replace(/\s*\([^)]*\)\s*$/, '').trim()
+}
+
 function formatDate(iso: string, locale: Locale) {
   return new Intl.DateTimeFormat(locale === 'es' ? 'es-ES' : 'en-GB', {
     weekday: 'long',
@@ -121,7 +127,7 @@ export function KickoffFlyer({ flyer, locale }: { flyer: KickoffFlyerData; local
             <section key={division.id}>
               <div className="flex items-center gap-2 mb-3">
                 <span className={`text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded ${flyerPillClass(division.shortLabel)}`}>
-                  {division.name}
+                  {divisionLabel(division.name)}
                 </span>
                 <span className="h-px flex-1 bg-[#22AEC4]/30" />
               </div>
