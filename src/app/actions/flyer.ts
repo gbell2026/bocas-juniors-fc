@@ -33,7 +33,8 @@ function nextSundayIso(from = new Date()): string {
 }
 
 // Public: every non-cancelled league fixture for the coming Sunday, grouped by
-// division, with team names + club badges — the data behind the /flyer page.
+// division. Each division lists its full approved roster (not just the teams
+// playing this Sunday) plus that Sunday's fixtures — the data behind /flyer.
 export async function getKickoffFlyer(): Promise<KickoffFlyer> {
   const supabase = createSupabaseServiceClient()
   const sundayIso = nextSundayIso()
@@ -50,13 +51,14 @@ export async function getKickoffFlyer(): Promise<KickoffFlyer> {
   const { data: divisions } = await supabase.from('league_divisions').select('id, name')
   const divisionNameById = new Map((divisions ?? []).map(d => [d.id, d.name]))
 
-  const teamIds = Array.from(new Set(fixtures.flatMap(f => [f.home_team_id, f.away_team_id])))
-  const { data: teams } = await supabase
+  // Names/badges for the teams appearing in this Sunday's fixtures.
+  const fixtureTeamIds = Array.from(new Set(fixtures.flatMap(f => [f.home_team_id, f.away_team_id])))
+  const { data: fixtureTeams } = await supabase
     .from('league_teams')
     .select('id, name, league_clubs(badge_cloudinary_public_id)')
-    .in('id', teamIds)
+    .in('id', fixtureTeamIds)
   const teamById = new Map(
-    (teams ?? []).map(t => [
+    (fixtureTeams ?? []).map(t => [
       t.id,
       { name: t.name, badge: (t.league_clubs as any)?.badge_cloudinary_public_id ?? null },
     ])
@@ -82,22 +84,23 @@ export async function getKickoffFlyer(): Promise<KickoffFlyer> {
     })
   }
 
-  const result = Array.from(byDivision.values())
-  for (const entry of result) {
-    const seen = new Set<string>()
-    for (const fx of entry.fixtures) {
-      for (const [name, badge] of [
-        [fx.homeTeam, fx.homeBadge],
-        [fx.awayTeam, fx.awayBadge],
-      ] as const) {
-        if (name && !seen.has(name)) {
-          seen.add(name)
-          entry.teams.push({ name, badge })
-        }
-      }
-    }
-    entry.teams.sort((a, b) => a.name.localeCompare(b.name))
+  // Full approved roster for every division that has a fixture — the flyer
+  // shows all teams, whether or not they play this Sunday.
+  const { data: rosterTeams } = await supabase
+    .from('league_teams')
+    .select('name, division_id, league_clubs(badge_cloudinary_public_id)')
+    .in('division_id', Array.from(byDivision.keys()))
+    .eq('status', 'approved')
+    .order('name')
+
+  for (const team of rosterTeams ?? []) {
+    byDivision.get(team.division_id)?.teams.push({
+      name: team.name,
+      badge: (team.league_clubs as any)?.badge_cloudinary_public_id ?? null,
+    })
   }
+
+  const result = Array.from(byDivision.values())
   result.sort((a, b) => a.name.localeCompare(b.name))
 
   return { sundayIso, divisions: result }

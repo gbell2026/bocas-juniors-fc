@@ -12,6 +12,7 @@ const base: KickoffFlyerData = {
       teams: [
         { name: 'Tangerine Toucans', badge: null },
         { name: 'Isla Colón FC', badge: null },
+        { name: 'Bastimentos United', badge: null }, // in the division, not playing this Sunday
       ],
       fixtures: [
         {
@@ -39,6 +40,8 @@ describe('KickoffFlyer', () => {
     render(<KickoffFlyer flyer={base} locale="en" />)
     expect(screen.getByText('U10 Division')).toBeInTheDocument()
     expect(screen.queryByText(/as of Jan 2027/i)).not.toBeInTheDocument()
+    // every team in the division shows, including one not playing this Sunday
+    expect(screen.getByText('Bastimentos United')).toBeInTheDocument()
     const fixture = screen.getByRole('listitem')
     expect(within(fixture).getByText('Tangerine Toucans')).toBeInTheDocument()
     expect(within(fixture).getByText('Isla Colón FC')).toBeInTheDocument()
