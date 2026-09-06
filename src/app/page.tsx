@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { getHomeSchedule } from '@/app/actions/schedule'
 import { UpcomingSchedule } from '@/components/upcoming-schedule'
 import { PracticeCancelledBanner } from '@/components/practice-cancelled-banner'
+import { LeaguePostponedBanner } from '@/components/league-postponed-banner'
+import { getLeagueBanner } from '@/app/actions/league-banner'
 import { getLocale } from '@/lib/i18n/get-locale'
 import { en } from '@/lib/i18n/en'
 import { es } from '@/lib/i18n/es'
@@ -19,11 +21,13 @@ export const revalidate = 0
 export default async function HomePage() {
   const schedule = await getHomeSchedule()
   const locale = await getLocale()
+  const leagueBanner = await getLeagueBanner()
   const t = locale === 'es' ? es : en
   const todayIso = new Date().toISOString().slice(0, 10)
 
   return (
     <main className="bg-brand-cream min-h-screen">
+      <LeaguePostponedBanner banner={leagueBanner} />
       <PracticeCancelledBanner schedule={schedule} locale={locale} todayIso={todayIso} />
 
       {/* Hero */}

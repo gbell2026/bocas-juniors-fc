@@ -6,11 +6,12 @@ import { LeagueDivisions } from '@/components/admin/league-divisions'
 import { LeagueFixturesAdmin } from '@/components/admin/league-fixtures-admin'
 import { ManageLeagueClubs } from '@/components/admin/manage-league-clubs'
 import { ManageLeagueTeams } from '@/components/admin/manage-league-teams'
+import { LeagueBannerAdmin } from '@/components/admin/league-banner-admin'
 import type { getPendingLeagueClubs, getPendingLeagueTeams, getPendingLeaguePlayers, getLeagueDivisionsAdmin, getAllLeagueClubs, getAllLeagueTeams } from '@/app/actions/league-admin'
 import type { getApprovedTeams } from '@/app/actions/league'
 import type { getAllPractices } from '@/app/actions/practices'
 
-type SubTab = 'practices' | 'approvals' | 'divisions' | 'clubsTeams'
+type SubTab = 'practices' | 'approvals' | 'divisions' | 'clubsTeams' | 'banner'
 
 type Props = {
   practices: Awaited<ReturnType<typeof getAllPractices>>
@@ -35,6 +36,7 @@ export function LeagueAdminSection({
     { key: 'approvals', label: pendingCount > 0 ? `Approvals (${pendingCount})` : 'Approvals' },
     { key: 'divisions', label: 'Divisions & Fixtures' },
     { key: 'clubsTeams', label: 'Clubs & Teams' },
+    { key: 'banner', label: 'Homepage Banner' },
   ]
 
   return (
@@ -76,6 +78,8 @@ export function LeagueAdminSection({
           <ManageLeagueTeams teams={allLeagueTeams} divisions={leagueDivisions} />
         </div>
       )}
+
+      {subTab === 'banner' && <LeagueBannerAdmin />}
     </div>
   )
 }
