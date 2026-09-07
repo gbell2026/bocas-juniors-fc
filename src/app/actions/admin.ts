@@ -96,6 +96,43 @@ export async function updatePlayerAgeGroups(playerId: string, ageGroups: string[
   await supabase.from('players').update({ age_groups: ageGroups }).eq('id', playerId)
 }
 
+// --- Bulk player updates (admin players table) ---
+
+export async function bulkUpdatePlayerStatus(
+  playerIds: string[],
+  status: PlayerStatus,
+  returnDate?: string
+) {
+  if (playerIds.length === 0) return
+  const supabase = createSupabaseServiceClient()
+  await supabase
+    .from('players')
+    .update({ status, return_date: returnDate ?? null })
+    .in('id', playerIds)
+}
+
+export async function bulkUpdatePlayerPaymentPlan(playerIds: string[], paymentPlan: PaymentPlan) {
+  if (playerIds.length === 0) return
+  const supabase = createSupabaseServiceClient()
+  await supabase.from('players').update({ payment_plan: paymentPlan }).in('id', playerIds)
+}
+
+// Add/remove one age group across many players — each player's array is
+// merged individually since they start from different sets.
+export async function bulkSetAgeGroup(playerIds: string[], group: string, action: 'add' | 'remove') {
+  if (playerIds.length === 0) return
+  const supabase = createSupabaseServiceClient()
+  const { data } = await supabase.from('players').select('id, age_groups').in('id', playerIds)
+  await Promise.all(
+    (data ?? []).map(p => {
+      const next = new Set(p.age_groups ?? [])
+      if (action === 'add') next.add(group)
+      else next.delete(group)
+      return supabase.from('players').update({ age_groups: Array.from(next) }).eq('id', p.id)
+    })
+  )
+}
+
 // Reversible — sets the player aside without touching their payment
 // history. Does not preserve a prior injured/away status or return_date;
 // restorePlayer always lands them back on 'active'. This is a deliberate

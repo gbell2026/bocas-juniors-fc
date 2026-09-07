@@ -189,6 +189,21 @@ export async function adminMarkCashPaid({
   return {}
 }
 
+// Bulk "mark cash paid" for the admin players table. Runs the same
+// per-player logic (each player's next due installment differs), and
+// reports how many had nothing due so nothing is silently skipped.
+export async function bulkMarkCashPaid(
+  items: { playerId: string; parentId: string }[]
+): Promise<{ paid: number; skipped: number }> {
+  const results = await Promise.all(
+    items.map(i =>
+      adminMarkCashPaid({ playerId: i.playerId, parentId: i.parentId, adminNotes: 'Cash paid — bulk marked by admin' })
+    )
+  )
+  const skipped = results.filter(r => 'error' in r && r.error).length
+  return { paid: items.length - skipped, skipped }
+}
+
 // Called by the nav bar to decide whether to show a "registration fee
 // outstanding" banner for the currently logged-in parent. Checks every
 // child under the parent (not just one), since a parent can now register

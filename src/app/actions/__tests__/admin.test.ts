@@ -1,7 +1,7 @@
 jest.mock('@/lib/supabase/server', () => ({ createSupabaseServiceClient: jest.fn() }))
 jest.mock('@/app/actions/payment', () => ({ getAmountDue: jest.fn() }))
 
-import { createCoachAccount, getCoachAccounts, deleteCoachAccount, updatePlayerAgeGroups, cancelPlayer, restorePlayer, deletePlayer, getAllPlayers } from '../admin'
+import { createCoachAccount, getCoachAccounts, deleteCoachAccount, updatePlayerAgeGroups, cancelPlayer, restorePlayer, deletePlayer, getAllPlayers, bulkUpdatePlayerStatus, bulkUpdatePlayerPaymentPlan, bulkSetAgeGroup } from '../admin'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 import { getAmountDue } from '@/app/actions/payment'
 
@@ -13,6 +13,7 @@ const mockSupabase = {
   delete: jest.fn().mockReturnThis(),
   eq: jest.fn().mockReturnThis(),
   select: jest.fn().mockReturnThis(),
+  in: jest.fn().mockReturnThis(),
   limit: jest.fn(),
   order: jest.fn(),
 }
@@ -272,5 +273,53 @@ describe('deletePlayer', () => {
 
     const result = await deletePlayer('player-1')
     expect(result.error).toBe('Failed to delete player')
+  })
+})
+
+describe('bulkUpdatePlayerStatus', () => {
+  it('updates every id in one query, clearing return_date by default', async () => {
+    await bulkUpdatePlayerStatus(['a', 'b', 'c'], 'inactive')
+    expect(mockSupabase.update).toHaveBeenCalledWith({ status: 'inactive', return_date: null })
+    expect(mockSupabase.in).toHaveBeenCalledWith('id', ['a', 'b', 'c'])
+  })
+
+  it('passes the return date through for injured / away', async () => {
+    await bulkUpdatePlayerStatus(['a'], 'injured', '2026-10-01')
+    expect(mockSupabase.update).toHaveBeenCalledWith({ status: 'injured', return_date: '2026-10-01' })
+  })
+
+  it('does nothing when given no ids', async () => {
+    await bulkUpdatePlayerStatus([], 'active')
+    expect(mockSupabase.update).not.toHaveBeenCalled()
+  })
+})
+
+describe('bulkUpdatePlayerPaymentPlan', () => {
+  it('sets the plan for every id in one query', async () => {
+    await bulkUpdatePlayerPaymentPlan(['a', 'b'], 'monthly')
+    expect(mockSupabase.update).toHaveBeenCalledWith({ payment_plan: 'monthly' })
+    expect(mockSupabase.in).toHaveBeenCalledWith('id', ['a', 'b'])
+  })
+})
+
+describe('bulkSetAgeGroup', () => {
+  it('adds the group to each player, merging with their existing groups', async () => {
+    mockSupabase.in.mockResolvedValueOnce({
+      data: [
+        { id: 'a', age_groups: ['U10'] },
+        { id: 'b', age_groups: ['U14'] },
+      ],
+    })
+    await bulkSetAgeGroup(['a', 'b'], 'U14', 'add')
+    expect(mockSupabase.update).toHaveBeenCalledWith({ age_groups: ['U10', 'U14'] })
+    expect(mockSupabase.update).toHaveBeenCalledWith({ age_groups: ['U14'] })
+  })
+
+  it('removes the group from each player', async () => {
+    mockSupabase.in.mockResolvedValueOnce({
+      data: [{ id: 'a', age_groups: ['U10', 'U14'] }],
+    })
+    await bulkSetAgeGroup(['a'], 'U10', 'remove')
+    expect(mockSupabase.update).toHaveBeenCalledWith({ age_groups: ['U14'] })
   })
 })
