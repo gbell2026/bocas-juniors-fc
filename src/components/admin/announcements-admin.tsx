@@ -10,11 +10,13 @@ export function AnnouncementsAdmin({ announcements: initial }: { announcements: 
   const [announcements, setAnnouncements] = useState(initial)
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
+  const [emailParents, setEmailParents] = useState(false)
   const [creating, setCreating] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [edits, setEdits] = useState<Record<string, { title: string; body: string }>>({})
   const [saving, setSaving] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   function startEdit(a: AnnouncementWithComments) {
     setEditingId(a.id)
@@ -24,12 +26,27 @@ export function AnnouncementsAdmin({ announcements: initial }: { announcements: 
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setErrorMessage(null)
+    setSuccessMessage(null)
     setCreating(true)
     try {
-      const result = await createAnnouncement({ title, body })
-      if (result.error) { setErrorMessage(result.error); return }
-      setTitle(''); setBody('')
-      window.location.reload()
+      const result = await createAnnouncement({ title, body, emailParents })
+      if (result.error || !result.announcement) {
+        setErrorMessage(result.error ?? 'Something went wrong. Please try again.')
+        return
+      }
+      setAnnouncements(prev => [{ ...result.announcement!, comments: [] }, ...prev])
+      setTitle(''); setBody(''); setEmailParents(false)
+
+      if (result.email) {
+        setSuccessMessage(
+          result.email.error
+            ? `Posted. Email did not send: ${result.email.error}`
+            : `Posted and emailed ${result.email.sent} parent${result.email.sent === 1 ? '' : 's'}` +
+              (result.email.failed > 0 ? ` (${result.email.failed} failed).` : '.')
+        )
+      } else {
+        setSuccessMessage('Posted.')
+      }
     } catch {
       setErrorMessage('Something went wrong. Please try again.')
     } finally {
@@ -92,6 +109,7 @@ export function AnnouncementsAdmin({ announcements: initial }: { announcements: 
     <section>
       <h2 className="font-heading text-lg uppercase tracking-wide text-brand-ink mb-3">Announcements</h2>
       {errorMessage && <p className="text-brand-primary text-sm mb-2">{errorMessage}</p>}
+      {successMessage && <p className="text-green-700 text-sm mb-2">{successMessage}</p>}
 
       <div className="space-y-2 mb-4">
         {announcements.map(a => (
@@ -174,8 +192,12 @@ export function AnnouncementsAdmin({ announcements: initial }: { announcements: 
           placeholder="Body" required rows={3} className="input w-full"
           value={body} onChange={e => setBody(e.target.value)}
         />
+        <label className="flex items-center gap-2 text-sm text-brand-muted">
+          <input type="checkbox" checked={emailParents} onChange={e => setEmailParents(e.target.checked)} />
+          Also email all parents
+        </label>
         <button type="submit" disabled={creating} className="btn-primary text-sm w-full">
-          {creating ? 'Creating…' : 'Create Announcement'}
+          {creating ? (emailParents ? 'Posting & emailing…' : 'Creating…') : 'Create Announcement'}
         </button>
       </form>
     </section>

@@ -3,6 +3,11 @@ jest.mock('@/lib/supabase/server', () => ({
   createSupabaseServiceClient: jest.fn(),
 }))
 
+const mockBatchSend = jest.fn().mockResolvedValue({ data: { data: [{ id: '1' }] }, error: null })
+jest.mock('resend', () => ({
+  Resend: jest.fn().mockImplementation(() => ({ batch: { send: mockBatchSend } })),
+}))
+
 import { createAnnouncement, updateAnnouncement, deleteAnnouncement, postComment, deleteComment } from '../announcements'
 import { createSupabaseServerClient, createSupabaseServiceClient } from '@/lib/supabase/server'
 
@@ -15,6 +20,8 @@ const mockService = {
   eq: jest.fn().mockReturnThis(),
   single: jest.fn(),
 }
+
+const NEW_ROW = { id: 'a-1', title: 'Training moved', body: 'New time: 6pm Saturday.', created_at: '2026-09-06T00:00:00Z' }
 
 const mockSession = {
   auth: { getUser: jest.fn() },
@@ -30,15 +37,20 @@ beforeEach(() => {
 })
 
 describe('createAnnouncement', () => {
-  it('creates the announcement on success', async () => {
-    mockService.insert.mockResolvedValueOnce({ error: null })
+  it('creates the announcement and returns the new row', async () => {
+    mockService.single.mockResolvedValueOnce({ data: NEW_ROW, error: null })
     const result = await createAnnouncement({ title: 'Training moved', body: 'New time: 6pm Saturday.' })
     expect(result.error).toBeUndefined()
+    expect(result.announcement).toEqual({
+      id: 'a-1', title: 'Training moved', body: 'New time: 6pm Saturday.', createdAt: '2026-09-06T00:00:00Z',
+    })
     expect(mockService.insert).toHaveBeenCalledWith(expect.objectContaining({ title: 'Training moved' }))
+    expect(result.email).toBeUndefined()
+    expect(mockBatchSend).not.toHaveBeenCalled()
   })
 
   it('surfaces a friendly error on DB failure', async () => {
-    mockService.insert.mockResolvedValueOnce({ error: { message: 'db error' } })
+    mockService.single.mockResolvedValueOnce({ data: null, error: { message: 'db error' } })
     const result = await createAnnouncement({ title: 'x', body: 'y' })
     expect(result.error).toBe('Failed to create announcement')
   })
@@ -47,6 +59,36 @@ describe('createAnnouncement', () => {
     const result = await createAnnouncement({ title: '   ', body: 'y' })
     expect(result.error).toBe('Title and body are both required.')
     expect(mockService.insert).not.toHaveBeenCalled()
+  })
+
+  it('emails every distinct parent when emailParents is set', async () => {
+    mockService.single.mockResolvedValueOnce({ data: NEW_ROW, error: null })
+    mockService.select
+      .mockReturnValueOnce(mockService) // insert(...).select() chain
+      .mockResolvedValueOnce({ // parents.select('email')
+        data: [{ email: 'a@x.com' }, { email: 'A@x.com' }, { email: 'b@x.com' }, { email: null }],
+      })
+
+    const result = await createAnnouncement({ title: 'Games off', body: 'Rained out.', emailParents: true })
+
+    expect(mockBatchSend).toHaveBeenCalledTimes(1)
+    const batch = mockBatchSend.mock.calls[0][0]
+    expect(batch.map((m: { to: string[] }) => m.to[0])).toEqual(['a@x.com', 'b@x.com'])
+    expect(result.email).toEqual({ sent: 2, failed: 0, error: undefined })
+  })
+
+  it('reports an email failure without failing the announcement', async () => {
+    mockService.single.mockResolvedValueOnce({ data: NEW_ROW, error: null })
+    mockService.select
+      .mockReturnValueOnce(mockService)
+      .mockResolvedValueOnce({ data: [{ email: 'a@x.com' }] })
+    mockBatchSend.mockResolvedValueOnce({ data: null, error: { message: 'domain not verified' } })
+
+    const result = await createAnnouncement({ title: 'Games off', body: 'Rained out.', emailParents: true })
+
+    expect(result.announcement).toBeDefined()
+    expect(result.email?.failed).toBe(1)
+    expect(result.email?.error).toBeTruthy()
   })
 })
 

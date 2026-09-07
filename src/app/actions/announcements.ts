@@ -1,8 +1,11 @@
 'use server'
 import { createSupabaseServerClient, createSupabaseServiceClient } from '@/lib/supabase/server'
+import { RESEND_FROM } from '@/lib/resend-from'
 
 export type Announcement = { id: string; title: string; body: string; createdAt: string }
 export type Comment = { id: string; announcementId: string; authorName: string; body: string; createdAt: string }
+
+export type EmailResult = { sent: number; failed: number; error?: string }
 
 // Public: all announcements newest-first, each with its comments oldest-first.
 export async function getAnnouncements(): Promise<(Announcement & { comments: Comment[] })[]> {
@@ -25,15 +28,89 @@ export async function getAnnouncements(): Promise<(Announcement & { comments: Co
   }))
 }
 
-export type CreateAnnouncementInput = { title: string; body: string }
+export type CreateAnnouncementInput = { title: string; body: string; emailParents?: boolean }
 
-// Admin: create a new announcement.
-export async function createAnnouncement(input: CreateAnnouncementInput): Promise<{ error?: string }> {
+export type CreateAnnouncementResult = {
+  error?: string
+  announcement?: Announcement
+  email?: EmailResult
+}
+
+// Admin: create a new announcement, optionally emailing every parent.
+export async function createAnnouncement(input: CreateAnnouncementInput): Promise<CreateAnnouncementResult> {
   if (!input.title.trim() || !input.body.trim()) return { error: 'Title and body are both required.' }
   const supabase = createSupabaseServiceClient()
-  const { error } = await supabase.from('announcements').insert({ title: input.title, body: input.body })
-  if (error) return { error: 'Failed to create announcement' }
-  return {}
+  const { data, error } = await supabase
+    .from('announcements')
+    .insert({ title: input.title, body: input.body })
+    .select()
+    .single()
+  if (error || !data) return { error: 'Failed to create announcement' }
+
+  const result: CreateAnnouncementResult = {
+    announcement: { id: data.id, title: data.title, body: data.body, createdAt: data.created_at },
+  }
+  if (input.emailParents) {
+    result.email = await emailAllParents(input.title.trim(), input.body.trim())
+  }
+  return result
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+// Best-effort broadcast to every parent's email. Never throws — a failure here
+// must not undo an already-posted announcement (mirrors register.ts's
+// non-blocking email approach). Reaches real inboxes only once RESEND_FROM is
+// set to a verified-domain address.
+export async function emailAllParents(subject: string, body: string): Promise<EmailResult> {
+  const supabase = createSupabaseServiceClient()
+  const { data } = await supabase.from('parents').select('email')
+  const recipients = Array.from(
+    new Set(
+      (data ?? [])
+        .map(p => p.email?.trim().toLowerCase())
+        .filter((e): e is string => !!e && e.includes('@'))
+    )
+  )
+  if (recipients.length === 0) return { sent: 0, failed: 0 }
+
+  const html = body
+    .split('\n')
+    .map(line => (line.trim() === '' ? '<br/>' : `<p>${escapeHtml(line)}</p>`))
+    .join('')
+
+  try {
+    const { Resend } = await import('resend')
+    const resend = new Resend(process.env.RESEND_API_KEY)
+    let sent = 0
+    let failed = 0
+    for (let i = 0; i < recipients.length; i += 100) {
+      const chunk = recipients.slice(i, i + 100)
+      const { error } = await resend.batch.send(
+        chunk.map(to => ({
+          from: RESEND_FROM,
+          to: [to],
+          replyTo: process.env.ADMIN_EMAIL,
+          subject,
+          text: body,
+          html,
+        }))
+      )
+      if (error) {
+        failed += chunk.length
+        console.error('emailAllParents Resend error:', error)
+      } else {
+        // Resend's strict batch returns one result per input on success.
+        sent += chunk.length
+      }
+    }
+    return { sent, failed, error: sent === 0 ? 'No emails were sent — check the Resend sending domain.' : undefined }
+  } catch (e) {
+    console.error('emailAllParents threw:', e)
+    return { sent: 0, failed: recipients.length, error: 'Email service failed.' }
+  }
 }
 
 // Admin: edit an existing announcement.
