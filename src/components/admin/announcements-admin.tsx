@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { createAnnouncement, updateAnnouncement, deleteAnnouncement, deleteComment } from '@/app/actions/announcements'
 import type { getAnnouncements } from '@/app/actions/announcements'
+import { whatsappShareUrl } from '@/lib/whatsapp-share'
 
 type AnnouncementWithComments = Awaited<ReturnType<typeof getAnnouncements>>[number]
 
@@ -123,6 +124,14 @@ export function AnnouncementsAdmin({ announcements: initial }: { announcements: 
                     <p className="text-brand-muted text-xs">{a.body}</p>
                   </div>
                   <div className="flex gap-2 flex-shrink-0">
+                    <a
+                      href={whatsappShareUrl(`*${a.title}*\n\n${a.body}`)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs px-3 py-1.5 border border-[#25D366] text-[#128C3E] rounded font-bold uppercase tracking-wider hover:bg-[#25D366] hover:text-white transition"
+                    >
+                      Share on WhatsApp
+                    </a>
                     <button onClick={() => startEdit(a)} className="btn-secondary text-xs px-3 py-1.5 disabled:opacity-50">Edit</button>
                     <button
                       onClick={() => handleDelete(a.id)}
