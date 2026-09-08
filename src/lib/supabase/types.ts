@@ -340,6 +340,7 @@ export type Database = {
           home_team_id: string
           id: string
           kickoff: string | null
+          location: string | null
           match_date: string
         }
         Insert: {
@@ -352,6 +353,7 @@ export type Database = {
           home_team_id: string
           id?: string
           kickoff?: string | null
+          location?: string | null
           match_date: string
         }
         Update: {
@@ -364,6 +366,7 @@ export type Database = {
           home_team_id?: string
           id?: string
           kickoff?: string | null
+          location?: string | null
           match_date?: string
         }
         Relationships: [

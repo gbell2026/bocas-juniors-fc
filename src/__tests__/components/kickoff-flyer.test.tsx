@@ -22,6 +22,7 @@ const base: KickoffFlyerData = {
           awayTeam: 'Isla Colón FC',
           homeBadge: null,
           awayBadge: null,
+          location: null,
         },
       ],
     },

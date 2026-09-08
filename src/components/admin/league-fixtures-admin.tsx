@@ -1,10 +1,36 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getFixturesForAdmin, updateFixture, addFixture, recordFixtureScore, setFixtureCancelled } from '@/app/actions/league-admin'
+import { getFixturesForAdmin, updateFixture, addFixture, setFixtureCancelled } from '@/app/actions/league-admin'
 
 type Division = { id: string; name: string }
 type Team = { id: string; name: string; divisionId: string }
 type Fixture = Awaited<ReturnType<typeof getFixturesForAdmin>>[number]
+
+type Draft = {
+  matchDate: string
+  kickoff: string
+  location: string
+  homeTeamId: string
+  awayTeamId: string
+  homeScore: string
+  awayScore: string
+}
+
+function draftFromFixture(f: Fixture): Draft {
+  return {
+    matchDate: f.matchDate,
+    kickoff: f.kickoff ?? '',
+    location: f.location ?? '',
+    homeTeamId: f.homeTeamId,
+    awayTeamId: f.awayTeamId,
+    homeScore: String(f.homeScore ?? ''),
+    awayScore: String(f.awayScore ?? ''),
+  }
+}
+
+function draftsEqual(a: Draft, b: Draft): boolean {
+  return (Object.keys(a) as (keyof Draft)[]).every(k => a[k] === b[k])
+}
 
 export function LeagueFixturesAdmin({ divisions, teams }: { divisions: Division[]; teams: Team[] }) {
   const [divisionId, setDivisionId] = useState(divisions[0]?.id ?? '')
@@ -12,88 +38,63 @@ export function LeagueFixturesAdmin({ divisions, teams }: { divisions: Division[
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [scoreDrafts, setScoreDrafts] = useState<Record<string, { home: string; away: string }>>({})
-  const [newFixture, setNewFixture] = useState({ homeTeamId: '', awayTeamId: '', matchDate: '', kickoff: '' })
+  const [drafts, setDrafts] = useState<Record<string, Draft>>({})
+  const [newFixture, setNewFixture] = useState({ homeTeamId: '', awayTeamId: '', matchDate: '', kickoff: '', location: '' })
 
   async function refresh() {
     if (!divisionId) return
     setLoading(true)
     const data = await getFixturesForAdmin(divisionId)
     setFixtures(data)
+    setDrafts({})
     setLoading(false)
   }
 
   useEffect(() => {
     refresh()
-    // Switching divisions invalidates any in-progress "Add Fixture" selections —
-    // the previously-picked teams belong to the old division and won't appear
-    // as options in the new one, so stale state would otherwise sit there
-    // satisfying `required` with a team that isn't actually selectable anymore.
-    setNewFixture({ homeTeamId: '', awayTeamId: '', matchDate: '', kickoff: '' })
+    setNewFixture({ homeTeamId: '', awayTeamId: '', matchDate: '', kickoff: '', location: '' })
   }, [divisionId])
 
   const divisionTeams = teams.filter(t => t.divisionId === divisionId)
 
-  function draftFor(fixtureId: string, fixture: Fixture) {
-    return scoreDrafts[fixtureId] ?? { home: String(fixture.homeScore ?? ''), away: String(fixture.awayScore ?? '') }
+  function draftFor(f: Fixture): Draft {
+    return drafts[f.id] ?? draftFromFixture(f)
   }
 
-  async function handleSaveScore(fixtureId: string) {
-    const draft = scoreDrafts[fixtureId]
-    if (!draft || draft.home === '' || draft.away === '') return
+  function setField(f: Fixture, field: keyof Draft, value: string) {
+    setDrafts(prev => ({ ...prev, [f.id]: { ...draftFor(f), [field]: value } }))
+  }
+
+  function resetDraft(id: string) {
+    setDrafts(prev => {
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+  }
+
+  async function handleSave(f: Fixture) {
+    const draft = draftFor(f)
     setErrorMessage(null)
-    setSaving(fixtureId)
-    try {
-      const result = await recordFixtureScore(fixtureId, Number(draft.home), Number(draft.away))
-      if (result.error) { setErrorMessage(result.error); return }
-      await refresh()
-    } catch {
-      setErrorMessage('Something went wrong. Please try again.')
-    } finally {
-      setSaving(null)
-    }
-  }
 
-  async function handleDateChange(fixtureId: string, matchDate: string) {
-    setErrorMessage(null)
-    setSaving(fixtureId)
-    try {
-      const result = await updateFixture(fixtureId, { matchDate })
-      if (result.error) { setErrorMessage(result.error); return }
-      await refresh()
-    } catch {
-      setErrorMessage('Something went wrong. Please try again.')
-    } finally {
-      setSaving(null)
-    }
-  }
-
-  async function handleKickoffChange(fixtureId: string, kickoff: string) {
-    setErrorMessage(null)
-    setSaving(fixtureId)
-    try {
-      const result = await updateFixture(fixtureId, { kickoff })
-      if (result.error) { setErrorMessage(result.error); return }
-      await refresh()
-    } catch {
-      setErrorMessage('Something went wrong. Please try again.')
-    } finally {
-      setSaving(null)
-    }
-  }
-
-  async function handleTeamChange(fixtureId: string, side: 'homeTeamId' | 'awayTeamId', teamId: string) {
-    const fixture = fixtures.find(f => f.id === fixtureId)
-    const otherTeamId = side === 'homeTeamId' ? fixture?.awayTeamId : fixture?.homeTeamId
-    if (teamId === otherTeamId) {
-      setErrorMessage('A team cannot play itself — pick two different teams.')
+    if (!draft.matchDate) { setErrorMessage('A match needs a date.'); return }
+    if (draft.homeTeamId === draft.awayTeamId) { setErrorMessage('Home and away team must be different.'); return }
+    if ((draft.homeScore === '') !== (draft.awayScore === '')) {
+      setErrorMessage('Enter both scores or neither.')
       return
     }
 
-    setErrorMessage(null)
-    setSaving(fixtureId)
+    setSaving(f.id)
     try {
-      const result = await updateFixture(fixtureId, { [side]: teamId })
+      const result = await updateFixture(f.id, {
+        matchDate: draft.matchDate,
+        homeTeamId: draft.homeTeamId,
+        awayTeamId: draft.awayTeamId,
+        kickoff: draft.kickoff || null,
+        location: draft.location || null,
+        homeScore: draft.homeScore === '' ? null : Number(draft.homeScore),
+        awayScore: draft.awayScore === '' ? null : Number(draft.awayScore),
+      })
       if (result.error) { setErrorMessage(result.error); return }
       await refresh()
     } catch {
@@ -127,9 +128,14 @@ export function LeagueFixturesAdmin({ divisions, teams }: { divisions: Division[
     }
 
     try {
-      const result = await addFixture({ divisionId, ...newFixture, kickoff: newFixture.kickoff || undefined })
+      const result = await addFixture({
+        divisionId,
+        ...newFixture,
+        kickoff: newFixture.kickoff || undefined,
+        location: newFixture.location || undefined,
+      })
       if (result.error) { setErrorMessage(result.error); return }
-      setNewFixture({ homeTeamId: '', awayTeamId: '', matchDate: '', kickoff: '' })
+      setNewFixture({ homeTeamId: '', awayTeamId: '', matchDate: '', kickoff: '', location: '' })
       await refresh()
     } catch {
       setErrorMessage('Something went wrong. Please try again.')
@@ -158,65 +164,83 @@ export function LeagueFixturesAdmin({ divisions, teams }: { divisions: Division[
       ) : (
         <div className="space-y-2 mb-4">
           {fixtures.map(f => {
-            const draft = draftFor(f.id, f)
+            const draft = draftFor(f)
+            const dirty = !draftsEqual(draft, draftFromFixture(f))
+            const busy = saving === f.id
             return (
-              <div key={f.id} className={`bg-brand-tint border border-brand-line rounded p-3 flex items-center gap-3 flex-wrap ${f.cancelled ? 'opacity-60' : ''}`}>
+              <div key={f.id} className={`bg-brand-tint border border-brand-line rounded p-3 ${f.cancelled ? 'opacity-60' : ''}`}>
                 {f.cancelled && (
                   <span className="text-red-600 text-[10px] font-bold uppercase tracking-wider">Cancelled</span>
                 )}
-                <input
-                  key={`${f.id}-${f.matchDate}`}
-                  type="date"
-                  className="input text-xs"
-                  defaultValue={f.matchDate}
-                  onBlur={e => e.target.value !== f.matchDate && handleDateChange(f.id, e.target.value)}
-                />
-                <input
-                  key={`${f.id}-${f.kickoff}`}
-                  type="time"
-                  className="input text-xs"
-                  defaultValue={f.kickoff ?? ''}
-                  onBlur={e => e.target.value !== (f.kickoff ?? '') && handleKickoffChange(f.id, e.target.value)}
-                />
-                <select
-                  className="input text-xs flex-1"
-                  value={f.homeTeamId}
-                  onChange={e => handleTeamChange(f.id, 'homeTeamId', e.target.value)}
-                >
-                  {divisionTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
-                <span className="text-brand-muted text-xs">vs</span>
-                <select
-                  className="input text-xs flex-1"
-                  value={f.awayTeamId}
-                  onChange={e => handleTeamChange(f.id, 'awayTeamId', e.target.value)}
-                >
-                  {divisionTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
-                <input
-                  type="number" min={0} placeholder="H" className="input w-14 text-xs"
-                  value={draft.home}
-                  onChange={e => setScoreDrafts(prev => ({ ...prev, [f.id]: { home: e.target.value, away: draft.away } }))}
-                />
-                <input
-                  type="number" min={0} placeholder="A" className="input w-14 text-xs"
-                  value={draft.away}
-                  onChange={e => setScoreDrafts(prev => ({ ...prev, [f.id]: { home: draft.home, away: e.target.value } }))}
-                />
-                <button
-                  onClick={() => handleSaveScore(f.id)}
-                  disabled={saving === f.id}
-                  className="btn-secondary text-xs px-3 py-1.5"
-                >
-                  {saving === f.id ? 'Saving…' : 'Save Score'}
-                </button>
-                <button
-                  onClick={() => handleToggleCancelled(f.id, !f.cancelled)}
-                  disabled={saving === f.id}
-                  className="text-xs px-3 py-1.5 border border-brand-primary text-brand-primary rounded font-bold uppercase tracking-wider hover:bg-brand-primary hover:text-white transition disabled:opacity-50"
-                >
-                  {f.cancelled ? 'Un-cancel' : 'Cancel'}
-                </button>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <input
+                    type="date" className="input text-xs" disabled={busy}
+                    value={draft.matchDate}
+                    onChange={e => setField(f, 'matchDate', e.target.value)}
+                  />
+                  <input
+                    type="time" className="input text-xs" disabled={busy}
+                    value={draft.kickoff}
+                    onChange={e => setField(f, 'kickoff', e.target.value)}
+                  />
+                  <select
+                    className="input text-xs flex-1 min-w-[8rem]" disabled={busy}
+                    value={draft.homeTeamId}
+                    onChange={e => setField(f, 'homeTeamId', e.target.value)}
+                  >
+                    {divisionTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                  <span className="text-brand-muted text-xs">vs</span>
+                  <select
+                    className="input text-xs flex-1 min-w-[8rem]" disabled={busy}
+                    value={draft.awayTeamId}
+                    onChange={e => setField(f, 'awayTeamId', e.target.value)}
+                  >
+                    {divisionTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                  <input
+                    type="number" min={0} placeholder="H" className="input w-14 text-xs" disabled={busy}
+                    value={draft.homeScore}
+                    onChange={e => setField(f, 'homeScore', e.target.value)}
+                  />
+                  <input
+                    type="number" min={0} placeholder="A" className="input w-14 text-xs" disabled={busy}
+                    value={draft.awayScore}
+                    onChange={e => setField(f, 'awayScore', e.target.value)}
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap mt-2">
+                  <input
+                    type="text" className="input text-xs flex-1 min-w-[10rem]" disabled={busy}
+                    placeholder="Location (leave blank for the usual ground)"
+                    value={draft.location}
+                    onChange={e => setField(f, 'location', e.target.value)}
+                  />
+                  <button
+                    onClick={() => handleSave(f)}
+                    disabled={busy || !dirty}
+                    className="btn-primary text-xs px-3 py-1.5 disabled:opacity-50"
+                  >
+                    {busy ? 'Saving…' : 'Save changes'}
+                  </button>
+                  {dirty && (
+                    <button
+                      onClick={() => resetDraft(f.id)}
+                      disabled={busy}
+                      className="btn-secondary text-xs px-3 py-1.5 disabled:opacity-50"
+                    >
+                      Reset
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleToggleCancelled(f.id, !f.cancelled)}
+                    disabled={busy}
+                    className="text-xs px-3 py-1.5 border border-brand-primary text-brand-primary rounded font-bold uppercase tracking-wider hover:bg-brand-primary hover:text-white transition disabled:opacity-50"
+                  >
+                    {f.cancelled ? 'Un-cancel' : 'Cancel'}
+                  </button>
+                </div>
               </div>
             )
           })}
@@ -254,6 +278,12 @@ export function LeagueFixturesAdmin({ divisions, teams }: { divisions: Division[
             onChange={e => setNewFixture(prev => ({ ...prev, kickoff: e.target.value }))}
           />
         </div>
+        <input
+          type="text" className="input w-full"
+          placeholder="Location (optional — leave blank for the usual ground)"
+          value={newFixture.location}
+          onChange={e => setNewFixture(prev => ({ ...prev, location: e.target.value }))}
+        />
         <button type="submit" className="btn-primary text-sm w-full">Add Fixture</button>
       </form>
     </section>

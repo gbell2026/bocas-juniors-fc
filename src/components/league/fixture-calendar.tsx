@@ -90,6 +90,9 @@ export function FixtureCalendar() {
                 <span className="flex-1">
                   {m.homeTeam} <span className="text-brand-muted">v</span> {m.awayTeam}
                   {m.isHomeClubMatch && <span className="ml-1">★</span>}
+                  {m.location && (
+                    <span className="block text-brand-primaryDeep text-xs font-bold mt-0.5">📍 {m.location}</span>
+                  )}
                 </span>
                 {m.cancelled ? (
                   <span className="text-red-600 text-xs font-bold uppercase tracking-wider flex-shrink-0">{t.league.calendar.cancelled}</span>

@@ -75,23 +75,28 @@ export function UpcomingSchedule({ schedule, locale }: { schedule: HomeSchedule;
                 {matches.map(m => (
                   <div
                     key={m.id}
-                    className={`flex items-center gap-2 border border-brand-line rounded p-2.5 bg-brand-tint text-sm ${m.cancelled ? 'opacity-60' : ''}`}
+                    className={`border border-brand-line rounded p-2.5 bg-brand-tint text-sm ${m.cancelled ? 'opacity-60' : ''}`}
                   >
-                    <span className="font-bold text-brand-ink whitespace-nowrap flex-shrink-0">{formatDate(m.date, locale)}</span>
-                    <span className="font-mono tabular-nums text-xs text-brand-muted whitespace-nowrap flex-shrink-0">
-                      {m.kickoff ? formatTime(m.kickoff, locale) : ''}
-                    </span>
-                    <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded flex-shrink-0 ${divisionPillClass(m.division)}`}>
-                      {m.division}
-                    </span>
-                    <span className="text-brand-muted flex-1 min-w-0 truncate">
-                      {m.homeTeam} <span className="text-brand-mutedWarm">v</span> {m.awayTeam}
-                    </span>
-                    {m.cancelled ? (
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-red-600 flex-shrink-0">{t.home.schedule.cancelled}</span>
-                    ) : m.homeScore !== null && m.awayScore !== null ? (
-                      <span className="font-bold text-brand-ink flex-shrink-0">{m.homeScore}–{m.awayScore}</span>
-                    ) : null}
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-brand-ink whitespace-nowrap flex-shrink-0">{formatDate(m.date, locale)}</span>
+                      <span className="font-mono tabular-nums text-xs text-brand-muted whitespace-nowrap flex-shrink-0">
+                        {m.kickoff ? formatTime(m.kickoff, locale) : ''}
+                      </span>
+                      <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded flex-shrink-0 ${divisionPillClass(m.division)}`}>
+                        {m.division}
+                      </span>
+                      <span className="text-brand-muted flex-1 min-w-0 truncate">
+                        {m.homeTeam} <span className="text-brand-mutedWarm">v</span> {m.awayTeam}
+                      </span>
+                      {m.cancelled ? (
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-red-600 flex-shrink-0">{t.home.schedule.cancelled}</span>
+                      ) : m.homeScore !== null && m.awayScore !== null ? (
+                        <span className="font-bold text-brand-ink flex-shrink-0">{m.homeScore}–{m.awayScore}</span>
+                      ) : null}
+                    </div>
+                    {m.location && (
+                      <p className="text-brand-primaryDeep text-xs font-bold mt-1">📍 {m.location}</p>
+                    )}
                   </div>
                 ))}
               </div>

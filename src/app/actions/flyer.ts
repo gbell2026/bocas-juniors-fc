@@ -9,6 +9,7 @@ export type FlyerFixture = {
   awayTeam: string
   homeBadge: string | null // Cloudinary public id
   awayBadge: string | null
+  location: string | null // null → the league's default ground
 }
 
 export type FlyerDivision = {
@@ -81,6 +82,7 @@ export async function getKickoffFlyer(): Promise<KickoffFlyer> {
       homeBadge: home.badge,
       awayTeam: away.name,
       awayBadge: away.badge,
+      location: f.location,
     })
   }
 

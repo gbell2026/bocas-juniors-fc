@@ -235,12 +235,12 @@ describe('club/team/player approve-reject error surfacing', () => {
 })
 
 describe('updateFixture', () => {
-  it('returns a friendly error when the two teams would be the same (check constraint violation)', async () => {
+  it('returns a friendly error on a check-constraint violation', async () => {
     mockSupabase.update.mockReturnValueOnce(mockSupabase)
     mockSupabase.eq.mockResolvedValueOnce({ error: { code: '23514', message: 'check constraint violation' } })
 
     const result = await updateFixture('fx-1', { homeTeamId: 'team-1' })
-    expect(result.error).toBe('A team cannot play itself — pick two different teams.')
+    expect(result.error).toMatch(/two different teams/)
   })
 
   it('returns no error on success', async () => {
@@ -251,12 +251,44 @@ describe('updateFixture', () => {
     expect(result.error).toBeUndefined()
   })
 
-  it('includes kickoff in the patch when provided', async () => {
+  it('applies date, kickoff, teams, location and scores in one patch', async () => {
     mockSupabase.update.mockReturnValueOnce(mockSupabase)
     mockSupabase.eq.mockResolvedValueOnce({ error: null })
 
-    await updateFixture('fx-1', { kickoff: '10:00' })
-    expect(mockSupabase.update).toHaveBeenCalledWith(expect.objectContaining({ kickoff: '10:00' }))
+    await updateFixture('fx-1', {
+      matchDate: '2026-09-13',
+      homeTeamId: 'team-1',
+      awayTeamId: 'team-2',
+      kickoff: '10:00',
+      location: '  Bastimentos pitch  ',
+      homeScore: 2,
+      awayScore: 1,
+    })
+    expect(mockSupabase.update).toHaveBeenCalledWith({
+      match_date: '2026-09-13',
+      home_team_id: 'team-1',
+      away_team_id: 'team-2',
+      kickoff: '10:00',
+      location: 'Bastimentos pitch',
+      home_score: 2,
+      away_score: 1,
+    })
+  })
+
+  it('clears kickoff, location and scores when passed null', async () => {
+    mockSupabase.update.mockReturnValueOnce(mockSupabase)
+    mockSupabase.eq.mockResolvedValueOnce({ error: null })
+
+    await updateFixture('fx-1', { kickoff: null, location: null, homeScore: null, awayScore: null })
+    expect(mockSupabase.update).toHaveBeenCalledWith({
+      kickoff: null, location: null, home_score: null, away_score: null,
+    })
+  })
+
+  it('does not touch the database when nothing was provided', async () => {
+    const result = await updateFixture('fx-1', {})
+    expect(result.error).toBeUndefined()
+    expect(mockSupabase.update).not.toHaveBeenCalled()
   })
 })
 
@@ -270,6 +302,16 @@ describe('addFixture', () => {
     mockSupabase.insert.mockResolvedValueOnce({ error: null })
     await addFixture({ divisionId: 'div-1', homeTeamId: 'team-1', awayTeamId: 'team-2', matchDate: '2026-09-06' })
     expect(mockSupabase.insert).toHaveBeenCalledWith(expect.objectContaining({ kickoff: null }))
+  })
+
+  it('inserts a trimmed location, or null when omitted', async () => {
+    mockSupabase.insert.mockResolvedValueOnce({ error: null })
+    await addFixture({ divisionId: 'div-1', homeTeamId: 'team-1', awayTeamId: 'team-2', matchDate: '2026-09-06', location: '  Isla Verde  ' })
+    expect(mockSupabase.insert).toHaveBeenCalledWith(expect.objectContaining({ location: 'Isla Verde' }))
+
+    mockSupabase.insert.mockResolvedValueOnce({ error: null })
+    await addFixture({ divisionId: 'div-1', homeTeamId: 'team-1', awayTeamId: 'team-2', matchDate: '2026-09-06' })
+    expect(mockSupabase.insert).toHaveBeenCalledWith(expect.objectContaining({ location: null }))
   })
 })
 

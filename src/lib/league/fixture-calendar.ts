@@ -8,6 +8,7 @@ export type CalendarMatch = {
   homeScore: number | null
   awayScore: number | null
   cancelled: boolean
+  location: string | null  // null → the league's default ground
   isHomeClubMatch: boolean // set by the caller (getFixtureCalendar), not computed here
 }
 

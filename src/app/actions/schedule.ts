@@ -11,6 +11,7 @@ export type LeagueMatchScheduleEntry = {
   id: string; date: string; kickoff: string | null; division: string
   homeTeam: string; awayTeam: string; cancelled: boolean
   homeScore: number | null; awayScore: number | null
+  location: string | null
 }
 
 export type HomeSchedule = { practices: PracticeScheduleEntry[]; matches: LeagueMatchScheduleEntry[] }
@@ -78,5 +79,6 @@ async function getUpcomingLeagueMatches(today: string, until: string): Promise<L
     cancelled: f.cancelled,
     homeScore: f.home_score,
     awayScore: f.away_score,
+    location: f.location,
   }))
 }

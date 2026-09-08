@@ -151,20 +151,25 @@ export function KickoffFlyer({ flyer, locale }: { flyer: KickoffFlyerData; local
                 {division.fixtures.map(fx => (
                   <li
                     key={fx.id}
-                    className="flex items-center gap-2 border border-[#22AEC4]/30 bg-[#123A54] rounded px-3 py-2 text-sm"
+                    className="border border-[#22AEC4]/30 bg-[#123A54] rounded px-3 py-2 text-sm"
                   >
-                    <span className="font-mono tabular-nums text-xs font-bold text-[#F4B32C] whitespace-nowrap w-16 flex-shrink-0">
-                      {fx.kickoff ? formatTime(fx.kickoff, locale) : t.timeTbc}
-                    </span>
-                    <span className="flex items-center gap-1.5 justify-end flex-1 min-w-0 text-right">
-                      <span className="truncate font-medium text-white">{fx.homeTeam}</span>
-                      <Badge publicId={fx.homeBadge} alt={fx.homeTeam} />
-                    </span>
-                    <span className="text-[#22AEC4] text-xs font-bold uppercase flex-shrink-0">{t.vs}</span>
-                    <span className="flex items-center gap-1.5 flex-1 min-w-0">
-                      <Badge publicId={fx.awayBadge} alt={fx.awayTeam} />
-                      <span className="truncate font-medium text-white">{fx.awayTeam}</span>
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono tabular-nums text-xs font-bold text-[#F4B32C] whitespace-nowrap w-16 flex-shrink-0">
+                        {fx.kickoff ? formatTime(fx.kickoff, locale) : t.timeTbc}
+                      </span>
+                      <span className="flex items-center gap-1.5 justify-end flex-1 min-w-0 text-right">
+                        <span className="truncate font-medium text-white">{fx.homeTeam}</span>
+                        <Badge publicId={fx.homeBadge} alt={fx.homeTeam} />
+                      </span>
+                      <span className="text-[#22AEC4] text-xs font-bold uppercase flex-shrink-0">{t.vs}</span>
+                      <span className="flex items-center gap-1.5 flex-1 min-w-0">
+                        <Badge publicId={fx.awayBadge} alt={fx.awayTeam} />
+                        <span className="truncate font-medium text-white">{fx.awayTeam}</span>
+                      </span>
+                    </div>
+                    {fx.location && (
+                      <p className="text-[#F4B32C] text-xs font-bold mt-1 pl-[4.5rem]">📍 {fx.location}</p>
+                    )}
                   </li>
                 ))}
               </ul>

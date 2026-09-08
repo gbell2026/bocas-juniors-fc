@@ -211,6 +211,7 @@ export async function getFixtureCalendar() {
       homeScore: f.home_score,
       awayScore: f.away_score,
       cancelled: f.cancelled,
+      location: f.location,
       isHomeClubMatch: homeTeam === HOME_CLUB_NAME || awayTeam === HOME_CLUB_NAME,
     }
   })

@@ -11,6 +11,7 @@ function match(overrides: Partial<CalendarMatch> = {}): CalendarMatch {
     homeScore: null,
     awayScore: null,
     cancelled: false,
+    location: null,
     isHomeClubMatch: false,
     ...overrides,
   }
