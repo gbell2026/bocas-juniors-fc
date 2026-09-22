@@ -55,6 +55,19 @@ it('gives each adjusted team a different marker and colours a positive adjustmen
   expect(screen.getByText('Team B:').closest('p')).toHaveTextContent('†')
 })
 
+it('shows a footnote for a zero-point note (e.g. a default-loss scoreline) in a neutral colour', async () => {
+  (getStandings as jest.Mock).mockResolvedValue([
+    row({ teamId: 't1', teamName: 'New Generation FC', adjustmentPoints: 0, adjustmentNotes: ['Fielded an ineligible player — default loss awarded'] }),
+  ])
+
+  render(<StandingsTable divisionId="div-1" />)
+  expect(await screen.findByText(/Fielded an ineligible player/)).toBeInTheDocument()
+  expect(screen.getByText('New Generation FC:')).toBeInTheDocument()
+  for (const marker of screen.getAllByText('*')) {
+    expect(marker).toHaveClass('text-amber-600')
+  }
+})
+
 it('renders no footnotes section when nothing has been adjusted', async () => {
   (getStandings as jest.Mock).mockResolvedValue([row({ teamId: 't1' })])
   render(<StandingsTable divisionId="div-1" />)

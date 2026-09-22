@@ -35,7 +35,7 @@ export function StandingsTable({ divisionId }: { divisionId: string }) {
   // Assign each adjusted team its own footnote marker, in table order, so the
   // reason is spelled out below the table (a hover tooltip alone doesn't work
   // on a touch device, so it can't be the only way to see it).
-  const adjustedRows = rows.filter(r => r.adjustmentPoints !== 0)
+  const adjustedRows = rows.filter(r => r.adjustmentNotes.length > 0)
   const markerByTeamId = new Map(adjustedRows.map((r, i) => [r.teamId, footnoteMarker(i)]))
 
   return (
@@ -52,7 +52,7 @@ export function StandingsTable({ divisionId }: { divisionId: string }) {
           <tbody>
             {rows.map((row, index) => {
               const marker = markerByTeamId.get(row.teamId)
-              const adjustmentColor = row.adjustmentPoints < 0 ? 'text-red-600' : 'text-green-600'
+              const adjustmentColor = row.adjustmentPoints < 0 ? 'text-red-600' : row.adjustmentPoints > 0 ? 'text-green-600' : 'text-amber-600'
               return (
                 <tr key={row.teamId} className="border-t border-brand-line">
                   <td className="p-2 font-bold">{index + 1}</td>
@@ -86,7 +86,7 @@ export function StandingsTable({ divisionId }: { divisionId: string }) {
         <div className="px-2 py-3 space-y-1 text-xs border-t border-brand-line">
           {adjustedRows.map(row => (
             <p key={row.teamId}>
-              <span className={`font-bold mr-1 ${row.adjustmentPoints < 0 ? 'text-red-600' : 'text-green-600'}`}>
+              <span className={`font-bold mr-1 ${row.adjustmentPoints < 0 ? 'text-red-600' : row.adjustmentPoints > 0 ? 'text-green-600' : 'text-amber-600'}`}>
                 {markerByTeamId.get(row.teamId)}
               </span>
               <span className="font-bold text-brand-ink">{row.teamName}:</span>{' '}

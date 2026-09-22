@@ -62,6 +62,24 @@ it('adds a new adjustment and prepends it to the list', async () => {
   expect(entry).toHaveTextContent('-1 pts')
 })
 
+it('allows a zero points value, for a footnote-only note with no points impact', async () => {
+  (addPointsAdjustment as jest.Mock).mockResolvedValue({
+    adjustment: { id: 'adj-3', teamId: 't1', points: 0, reason: 'Default loss awarded, no further deduction', createdAt: '2026-09-20' },
+  })
+  const user = userEvent.setup()
+  render(<LeaguePointsAdjustments divisions={divisions} teams={teams} />)
+  await screen.findByText('No points adjustments for this division.')
+
+  await user.selectOptions(screen.getAllByRole('combobox')[1], 't1')
+  await user.type(screen.getByPlaceholderText('Points (e.g. -3)'), '0')
+  await user.type(screen.getByPlaceholderText('Reason (e.g. Fielded an overage player)'), 'Default loss awarded, no further deduction')
+  await user.click(screen.getByRole('button', { name: /^add adjustment$/i }))
+
+  expect(addPointsAdjustment).toHaveBeenCalledWith({ teamId: 't1', points: 0, reason: 'Default loss awarded, no further deduction' })
+  const entry = (await screen.findByText('Default loss awarded, no further deduction')).closest('div') as HTMLElement
+  expect(entry).toHaveTextContent('0 pts')
+})
+
 it('blocks submitting without a reason', async () => {
   const user = userEvent.setup()
   render(<LeaguePointsAdjustments divisions={divisions} teams={teams} />)
@@ -71,6 +89,6 @@ it('blocks submitting without a reason', async () => {
   await user.type(screen.getByPlaceholderText('Points (e.g. -3)'), '-1')
   await user.click(screen.getByRole('button', { name: /^add adjustment$/i }))
 
-  expect(await screen.findByText(/pick a team, a non-zero points value, and a reason/i)).toBeInTheDocument()
+  expect(await screen.findByText(/pick a team, a points value, and a reason/i)).toBeInTheDocument()
   expect(addPointsAdjustment).not.toHaveBeenCalled()
 })

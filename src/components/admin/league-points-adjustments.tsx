@@ -30,8 +30,8 @@ export function LeaguePointsAdjustments({ divisions, teams }: { divisions: Divis
     e.preventDefault()
     setErrorMessage(null)
     const pointsNum = Number(points)
-    if (!teamId || !reason.trim() || !pointsNum) {
-      setErrorMessage('Pick a team, a non-zero points value, and a reason.')
+    if (!teamId || !reason.trim() || points.trim() === '' || Number.isNaN(pointsNum)) {
+      setErrorMessage('Pick a team, a points value, and a reason.')
       return
     }
     setCreating(true)
@@ -66,7 +66,9 @@ export function LeaguePointsAdjustments({ divisions, teams }: { divisions: Divis
       <h2 className="font-heading text-lg uppercase tracking-wide text-brand-ink mb-3">Points Adjustments</h2>
       <p className="text-brand-muted text-xs mb-3">
         Standings otherwise come purely from match results — use this for a disciplinary deduction or bonus
-        (e.g. an overage player, a late kickoff). Positive or negative points both work.
+        (e.g. an overage player, a late kickoff). Positive or negative points both work; use 0 to add an
+        explanatory footnote without changing anyone's points (e.g. when the penalty is already baked into
+        a default-win scoreline).
       </p>
       {errorMessage && <p className="text-brand-primary text-sm mb-2">{errorMessage}</p>}
 
@@ -93,7 +95,7 @@ export function LeaguePointsAdjustments({ divisions, teams }: { divisions: Divis
                 <div>
                   <p className="text-brand-ink font-bold text-sm">
                     {team?.name ?? 'Unknown team'}{' '}
-                    <span className={a.points < 0 ? 'text-red-600' : 'text-green-600'}>
+                    <span className={a.points < 0 ? 'text-red-600' : a.points > 0 ? 'text-green-600' : 'text-amber-600'}>
                       {a.points > 0 ? `+${a.points}` : a.points} pts
                     </span>
                   </p>

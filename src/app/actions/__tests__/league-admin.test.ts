@@ -554,10 +554,15 @@ describe('addPointsAdjustment', () => {
     expect(mockSupabase.insert).not.toHaveBeenCalled()
   })
 
-  it('rejects a zero points value without touching the database', async () => {
-    const result = await addPointsAdjustment({ teamId: 'team-a', points: 0, reason: 'Late arrival' })
-    expect(result.error).toBe('Points adjustment cannot be zero.')
-    expect(mockSupabase.insert).not.toHaveBeenCalled()
+  it('allows a zero points value, for a footnote-only note with no points impact', async () => {
+    mockSupabase.single.mockResolvedValueOnce({
+      data: { id: 'adj-2', team_id: 'team-a', points: 0, reason: 'Default loss awarded, no further deduction', created_at: '2026-09-20T00:00:00Z' },
+      error: null,
+    })
+    const result = await addPointsAdjustment({ teamId: 'team-a', points: 0, reason: 'Default loss awarded, no further deduction' })
+    expect(result.error).toBeUndefined()
+    expect(mockSupabase.insert).toHaveBeenCalledWith({ team_id: 'team-a', points: 0, reason: 'Default loss awarded, no further deduction' })
+    expect(result.adjustment?.points).toBe(0)
   })
 
   it('creates the adjustment and returns it, mapped to camelCase', async () => {

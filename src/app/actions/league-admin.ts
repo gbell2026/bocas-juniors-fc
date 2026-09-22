@@ -529,7 +529,10 @@ export async function addPointsAdjustment(
   input: { teamId: string; points: number; reason: string }
 ): Promise<{ error?: string; adjustment?: PointsAdjustmentRow }> {
   if (!input.reason.trim()) return { error: 'A reason is required.' }
-  if (!input.points) return { error: 'Points adjustment cannot be zero.' }
+  // Zero is allowed deliberately: a disciplinary result (e.g. a fielded-an-
+  // ineligible-player default loss) is sometimes fully expressed by the
+  // fixture score itself, with no further points to dock — but it still
+  // needs an explanatory footnote on the public standings table.
 
   const supabase = createSupabaseServiceClient()
   const { data, error } = await supabase

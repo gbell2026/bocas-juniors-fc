@@ -258,7 +258,8 @@ export async function getStandings(divisionId: string) {
   const notesByTeam = new Map<string, string[]>()
   for (const a of adjustmentRows ?? []) {
     const list = notesByTeam.get(a.team_id) ?? []
-    list.push(`${a.points > 0 ? '+' : ''}${a.points}: ${a.reason}`)
+    const prefix = a.points === 0 ? '' : `${a.points > 0 ? '+' : ''}${a.points}: `
+    list.push(`${prefix}${a.reason}`)
     notesByTeam.set(a.team_id, list)
   }
 
