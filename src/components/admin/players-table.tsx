@@ -2,7 +2,7 @@
 import { Fragment, useMemo, useState } from 'react'
 import {
   updatePlayerStatus, updatePlayerPaymentPlan, updatePlayerAgeGroups,
-  cancelPlayer, restorePlayer, deletePlayer,
+  cancelPlayer, restorePlayer, deletePlayer, getPlayerById,
   bulkUpdatePlayerStatus, bulkUpdatePlayerPaymentPlan, bulkSetAgeGroup,
 } from '@/app/actions/admin'
 import type { PaymentStatusInfo } from '@/app/actions/admin'
@@ -100,7 +100,8 @@ function FilterGroup({
   )
 }
 
-export function PlayersTable({ players }: { players: PlayerWithParent[] }) {
+export function PlayersTable({ players: initial }: { players: PlayerWithParent[] }) {
+  const [players, setPlayers] = useState(initial)
   const [updating, setUpdating] = useState<string | null>(null)
   const [edits, setEdits] = useState<Record<string, { status: string; returnDate: string; paymentPlan: PaymentPlan; ageGroups: string[] }>>({})
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -178,35 +179,44 @@ export function PlayersTable({ players }: { players: PlayerWithParent[] }) {
     setEdits(prev => ({ ...prev, [p.id]: { ...edit, ageGroups } }))
   }
 
+  // Re-fetches just this one player and merges it into local state — the
+  // rest of the table's in-progress edits and filters are left untouched
+  // (unlike a full-page reload, which used to wipe all of that).
+  async function refreshPlayer(id: string) {
+    const refreshed = await getPlayerById(id)
+    if (refreshed) setPlayers(prev => prev.map(pl => pl.id === id ? (refreshed as PlayerWithParent) : pl))
+  }
+
   async function handleStatusSave(p: PlayerWithParent) {
     const { status, returnDate, paymentPlan, ageGroups } = getEdit(p)
     setUpdating(p.id)
     await updatePlayerStatus(p.id, status as PlayerStatus, returnDate || undefined)
     await updatePlayerPaymentPlan(p.id, paymentPlan)
     await updatePlayerAgeGroups(p.id, ageGroups)
+    await refreshPlayer(p.id)
+    setEdits(prev => { const next = { ...prev }; delete next[p.id]; return next })
     setUpdating(null)
-    window.location.reload()
   }
 
   async function handleMarkCashPaid(p: PlayerWithParent) {
     setUpdating(p.id)
     await adminMarkCashPaid({ playerId: p.id, parentId: p.parent_id, adminNotes: 'Marked paid at training' })
+    await refreshPlayer(p.id)
     setUpdating(null)
-    window.location.reload()
   }
 
   async function handleCancel(p: PlayerWithParent) {
     setUpdating(p.id)
     await cancelPlayer(p.id)
+    await refreshPlayer(p.id)
     setUpdating(null)
-    window.location.reload()
   }
 
   async function handleRestore(p: PlayerWithParent) {
     setUpdating(p.id)
     await restorePlayer(p.id)
+    await refreshPlayer(p.id)
     setUpdating(null)
-    window.location.reload()
   }
 
   async function handleDelete(p: PlayerWithParent) {
@@ -216,7 +226,7 @@ export function PlayersTable({ players }: { players: PlayerWithParent[] }) {
     const result = await deletePlayer(p.id)
     setUpdating(null)
     if (result.error) { setErrorMessage(result.error); return }
-    window.location.reload()
+    setPlayers(prev => prev.filter(pl => pl.id !== p.id))
   }
 
   async function handleBulkApply() {
@@ -245,9 +255,13 @@ export function PlayersTable({ players }: { players: PlayerWithParent[] }) {
           setErrorMessage(`${skipped} player${skipped > 1 ? 's' : ''} had nothing due and were skipped.`)
         }
       }
-      window.location.reload()
+      const refreshed = await Promise.all(ids.map(id => getPlayerById(id)))
+      setPlayers(prev => prev.map(pl => (refreshed.find(r => r?.id === pl.id) as PlayerWithParent | undefined) ?? pl))
+      setSelected(new Set())
+      setBulkAction('')
     } catch {
       setErrorMessage('The bulk update failed. Please try again.')
+    } finally {
       setBulkBusy(false)
     }
   }

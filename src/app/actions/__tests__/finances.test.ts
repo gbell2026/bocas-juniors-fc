@@ -59,11 +59,15 @@ describe('setSeasonStartingBalance', () => {
 })
 
 describe('createFinanceSeason', () => {
-  it('creates a season', async () => {
-    mockSupabase.insert.mockResolvedValueOnce({ error: null })
+  it('creates a season and returns it', async () => {
+    mockSupabase.single.mockResolvedValueOnce({
+      data: { id: 's1', label: '2026 Season', start_date: '2026-08-01', end_date: '2026-12-31', starting_balance_cents: 0 },
+      error: null,
+    })
     const result = await createFinanceSeason({ label: '2026 Season', startDate: '2026-08-01', endDate: '2026-12-31' })
     expect(result.error).toBeUndefined()
     expect(mockSupabase.insert).toHaveBeenCalledWith({ label: '2026 Season', start_date: '2026-08-01', end_date: '2026-12-31' })
+    expect(result.season).toEqual({ id: 's1', label: '2026 Season', startDate: '2026-08-01', endDate: '2026-12-31', startingBalanceCents: 0 })
   })
 
   it('rejects an end date on or before the start date', async () => {
@@ -106,11 +110,15 @@ describe('getFinanceCategories', () => {
 })
 
 describe('createFinanceCategory', () => {
-  it('creates a manual category', async () => {
-    mockSupabase.insert.mockResolvedValueOnce({ error: null })
+  it('creates a manual category and returns it', async () => {
+    mockSupabase.single.mockResolvedValueOnce({
+      data: { id: 'c1', name: 'Referee Fees', kind: 'expense', auto_source: null },
+      error: null,
+    })
     const result = await createFinanceCategory({ name: 'Referee Fees', kind: 'expense' })
     expect(result.error).toBeUndefined()
     expect(mockSupabase.insert).toHaveBeenCalledWith({ name: 'Referee Fees', kind: 'expense', auto_source: null })
+    expect(result.category).toEqual({ id: 'c1', name: 'Referee Fees', kind: 'expense', autoSource: null })
   })
 })
 

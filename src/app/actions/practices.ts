@@ -54,17 +54,17 @@ export async function getAllPractices(): Promise<PracticeItem[]> {
 }
 
 // Admin: add a new practice.
-export async function createPractice(input: PracticeInput): Promise<{ error?: string }> {
+export async function createPractice(input: PracticeInput): Promise<{ error?: string; practice?: PracticeItem }> {
   if (!input.practiceDate || !input.practiceTime) return { error: 'Date and time are both required.' }
   const supabase = createSupabaseServiceClient()
-  const { error } = await supabase.from('practices').insert({
+  const { data, error } = await supabase.from('practices').insert({
     practice_date: input.practiceDate,
     practice_time: input.practiceTime,
     location: input.location || null,
     notes: input.notes || null,
-  })
-  if (error) return { error: 'Failed to add practice' }
-  return {}
+  }).select().single()
+  if (error || !data) return { error: 'Failed to add practice' }
+  return { practice: mapPractice(data) }
 }
 
 // Admin: edit an existing practice.

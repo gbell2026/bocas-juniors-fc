@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { LeaguePendingQueue } from '../league-pending-queue'
 import {
-  approveLeagueClub, approveLeaguePlayer,
+  approveLeagueClub, approveLeaguePlayer, approveLeagueTeam,
 } from '@/app/actions/league-admin'
 
 jest.mock('@/app/actions/league-admin', () => ({
@@ -55,4 +55,28 @@ it('keeps the player row and shows the error when approval reports a squad-numbe
 
   expect(await screen.findByText(/already taken/i)).toBeInTheDocument()
   expect(screen.getByText('Junior')).toBeInTheDocument()
+})
+
+it('removes an approved team locally and reports it via onTeamApproved, without a page reload', async () => {
+  (approveLeagueTeam as jest.Mock).mockResolvedValue({
+    team: { id: 'team-1', name: 'Isla FC U12', divisionId: 'div-1', clubName: 'Isla FC', badgeCloudinaryPublicId: null, divisionName: 'U12' },
+  })
+  const user = userEvent.setup()
+  const onTeamApproved = jest.fn()
+  render(
+    <LeaguePendingQueue
+      clubs={[]}
+      teams={[{ id: 'team-1', name: 'Isla FC U12', clubName: 'Isla FC', divisionName: 'U12' }]}
+      players={[]}
+      onTeamApproved={onTeamApproved}
+    />
+  )
+  expect(screen.getByText(/Isla FC U12/)).toBeInTheDocument()
+
+  await user.click(screen.getByRole('button', { name: /approve/i }))
+
+  await waitFor(() => expect(screen.queryByText(/Isla FC U12/)).not.toBeInTheDocument())
+  expect(onTeamApproved).toHaveBeenCalledWith({
+    id: 'team-1', name: 'Isla FC U12', divisionId: 'div-1', clubName: 'Isla FC', badgeCloudinaryPublicId: null, divisionName: 'U12',
+  })
 })

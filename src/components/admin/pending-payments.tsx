@@ -1,4 +1,5 @@
 'use client'
+import { useState } from 'react'
 import { confirmPayment, denyPayment } from '@/app/actions/payment'
 
 type PendingPayment = {
@@ -14,17 +15,18 @@ const methodLabel: Record<string, string> = {
   cash: 'Cash',
 }
 
-export function PendingPayments({ payments }: { payments: PendingPayment[] }) {
+export function PendingPayments({ payments: initial }: { payments: PendingPayment[] }) {
+  const [payments, setPayments] = useState(initial)
   if (payments.length === 0) return null
 
   async function handleConfirm(id: string) {
     await confirmPayment(id)
-    window.location.reload()
+    setPayments(prev => prev.filter(p => p.id !== id))
   }
 
   async function handleDeny(id: string) {
     await denyPayment(id)
-    window.location.reload()
+    setPayments(prev => prev.filter(p => p.id !== id))
   }
 
   return (

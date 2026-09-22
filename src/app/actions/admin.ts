@@ -50,40 +50,59 @@ export async function getPendingPayments() {
   return data ?? []
 }
 
+// Attaches last-succeeded-payment date, registration-fee-paid status, amount-due
+// status, and monthly payment status to a raw player row (with its parents +
+// payments joined). Shared by getAllPlayers (the admin table) and
+// getPlayerById (a single-row re-fetch after editing one player, so the rest
+// of the table's in-progress edits don't need a full-list refetch to stay in
+// sync).
+async function enrichPlayer(p: any) {
+  const succeeded = (p.payments as any[])?.filter((pay: any) => pay.status === 'succeeded') ?? []
+  const pending = (p.payments as any[])?.filter((pay: any) => pay.status === 'pending') ?? []
+  const paidLabels = succeeded
+    .map((pay: any) => pay.installment_label)
+    .filter((label: any): label is InstallmentLabel => label !== null)
+  const pendingLabels = pending
+    .map((pay: any) => pay.installment_label)
+    .filter((label: any): label is InstallmentLabel => label !== null)
+  const due = await getAmountDue(p.id)
+  const paymentStatus: PaymentStatusInfo = !due
+    ? { kind: 'paidUp' }
+    : due.isFirstInstallment
+      ? { kind: 'awaitingRegistration' }
+      : { kind: 'owes', label: due.label, amountCents: due.amountCents }
+  return {
+    ...p,
+    lastPaidAt: succeeded.map((pay: any) => pay.paid_at).sort().at(-1) ?? null,
+    regFeePaid: isRegistrationFeePaid(p.payment_plan, paidLabels),
+    ageGroups: p.age_groups,
+    hasPayments: ((p.payments as any[]) ?? []).length > 0,
+    paymentStatus,
+    monthlyStatus: getMonthlyStatus(p.payment_plan, paidLabels, pendingLabels, (p.join_month ?? 'august') as JoinMonth),
+  }
+}
+
 export async function getAllPlayers() {
   const supabase = createSupabaseServiceClient()
   const { data } = await supabase
     .from('players')
     .select('*, parents(name, email), payments(paid_at, status, installment_label)')
     .order('name')
-  const players = data ?? []
-  const dueChecks = await Promise.all(players.map(p => getAmountDue(p.id)))
-  // Attach last succeeded payment date and registration-fee-paid status to each player
-  return players.map((p, i) => {
-    const succeeded = (p.payments as any[])?.filter((pay: any) => pay.status === 'succeeded') ?? []
-    const pending = (p.payments as any[])?.filter((pay: any) => pay.status === 'pending') ?? []
-    const paidLabels = succeeded
-      .map((pay: any) => pay.installment_label)
-      .filter((label: any): label is InstallmentLabel => label !== null)
-    const pendingLabels = pending
-      .map((pay: any) => pay.installment_label)
-      .filter((label: any): label is InstallmentLabel => label !== null)
-    const due = dueChecks[i]
-    const paymentStatus: PaymentStatusInfo = !due
-      ? { kind: 'paidUp' }
-      : due.isFirstInstallment
-        ? { kind: 'awaitingRegistration' }
-        : { kind: 'owes', label: due.label, amountCents: due.amountCents }
-    return {
-      ...p,
-      lastPaidAt: succeeded.map((pay: any) => pay.paid_at).sort().at(-1) ?? null,
-      regFeePaid: isRegistrationFeePaid(p.payment_plan, paidLabels),
-      ageGroups: p.age_groups,
-      hasPayments: ((p.payments as any[]) ?? []).length > 0,
-      paymentStatus,
-      monthlyStatus: getMonthlyStatus(p.payment_plan, paidLabels, pendingLabels, (p.join_month ?? 'august') as JoinMonth),
-    }
-  })
+  return Promise.all((data ?? []).map(enrichPlayer))
+}
+
+// Re-fetches and re-enriches a single player — used after editing one row in
+// the admin players table so the change can be reflected locally without
+// refetching (and thereby resetting) every other row's in-progress edit.
+export async function getPlayerById(playerId: string) {
+  const supabase = createSupabaseServiceClient()
+  const { data } = await supabase
+    .from('players')
+    .select('*, parents(name, email), payments(paid_at, status, installment_label)')
+    .eq('id', playerId)
+    .single()
+  if (!data) return null
+  return enrichPlayer(data)
 }
 
 export async function updatePlayerPaymentPlan(playerId: string, paymentPlan: PaymentPlan) {
@@ -171,7 +190,9 @@ export async function deletePlayer(playerId: string): Promise<{ error?: string }
 // create-then-rollback pattern — a coach account is an auth user plus a
 // user_roles row; if the role assignment fails, the orphaned auth user is
 // deleted rather than left dangling with no role.
-export async function createCoachAccount(input: { name: string; email: string; password: string }): Promise<{ error?: string }> {
+export async function createCoachAccount(
+  input: { name: string; email: string; password: string }
+): Promise<{ error?: string; account?: { userId: string; email: string } }> {
   const supabase = createSupabaseServiceClient()
 
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -188,7 +209,7 @@ export async function createCoachAccount(input: { name: string; email: string; p
     return { error: 'Failed to assign coach role' }
   }
 
-  return {}
+  return { account: { userId: authData.user.id, email: input.email } }
 }
 
 export async function getCoachAccounts(): Promise<{ userId: string; email: string }[]> {

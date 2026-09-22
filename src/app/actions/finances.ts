@@ -27,18 +27,23 @@ export async function setSeasonStartingBalance(seasonId: string, startingBalance
 
 export type FinanceSeasonInput = { label: string; startDate: string; endDate: string }
 
-export async function createFinanceSeason(input: FinanceSeasonInput): Promise<{ error?: string }> {
+export async function createFinanceSeason(input: FinanceSeasonInput): Promise<{ error?: string; season?: FinanceSeason }> {
   if (new Date(input.endDate) <= new Date(input.startDate)) {
     return { error: 'Season end date must be after the start date' }
   }
   const supabase = createSupabaseServiceClient()
-  const { error } = await supabase.from('finance_seasons').insert({
+  const { data, error } = await supabase.from('finance_seasons').insert({
     label: input.label,
     start_date: input.startDate,
     end_date: input.endDate,
-  })
-  if (error) return { error: 'Failed to create season' }
-  return {}
+  }).select().single()
+  if (error || !data) return { error: 'Failed to create season' }
+  return {
+    season: {
+      id: data.id, label: data.label, startDate: data.start_date, endDate: data.end_date,
+      startingBalanceCents: data.starting_balance_cents,
+    },
+  }
 }
 
 export async function updateFinanceSeason(id: string, input: FinanceSeasonInput): Promise<{ error?: string }> {
@@ -66,11 +71,16 @@ export async function getFinanceCategories(): Promise<FinanceCategory[]> {
   }))
 }
 
-export async function createFinanceCategory(input: { name: string; kind: 'income' | 'expense' }): Promise<{ error?: string }> {
+export async function createFinanceCategory(
+  input: { name: string; kind: 'income' | 'expense' }
+): Promise<{ error?: string; category?: FinanceCategory }> {
   const supabase = createSupabaseServiceClient()
-  const { error } = await supabase.from('finance_categories').insert({ name: input.name, kind: input.kind, auto_source: null })
-  if (error) return { error: 'Failed to create category' }
-  return {}
+  const { data, error } = await supabase
+    .from('finance_categories')
+    .insert({ name: input.name, kind: input.kind, auto_source: null })
+    .select().single()
+  if (error || !data) return { error: 'Failed to create category' }
+  return { category: { id: data.id, name: data.name, kind: data.kind, autoSource: data.auto_source as 'registration' | 'subscription' | null } }
 }
 
 export async function renameFinanceCategory(id: string, name: string): Promise<{ error?: string }> {

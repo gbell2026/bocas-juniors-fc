@@ -5,14 +5,18 @@ import {
   approveLeagueTeam, rejectLeagueTeam,
   approveLeaguePlayer, rejectLeaguePlayer,
 } from '@/app/actions/league-admin'
+import type { ApprovedLeagueTeam } from '@/app/actions/league-admin'
 
 type PendingClub = { id: string; name: string; contact_name: string | null; contact_email: string | null; contact_phone: string | null }
 type PendingTeam = { id: string; name: string; clubName: string; divisionName: string }
 type PendingPlayer = { id: string; name: string; squadNumber: number; teamName: string; clubName: string }
 
-type Props = { clubs: PendingClub[]; teams: PendingTeam[]; players: PendingPlayer[] }
+type Props = {
+  clubs: PendingClub[]; teams: PendingTeam[]; players: PendingPlayer[]
+  onTeamApproved?: (team: ApprovedLeagueTeam) => void
+}
 
-export function LeaguePendingQueue({ clubs: initialClubs, teams: initialTeams, players: initialPlayers }: Props) {
+export function LeaguePendingQueue({ clubs: initialClubs, teams: initialTeams, players: initialPlayers, onTeamApproved }: Props) {
   const [clubs, setClubs] = useState(initialClubs)
   const [teams, setTeams] = useState(initialTeams)
   const [players, setPlayers] = useState(initialPlayers)
@@ -46,11 +50,11 @@ export function LeaguePendingQueue({ clubs: initialClubs, teams: initialTeams, p
   const handleApproveTeam = (id: string) => withProcessing(id, async () => {
     const result = await approveLeagueTeam(id)
     if (result.error) { setErrorMessage(result.error); return }
+    setTeams(prev => prev.filter(t => t.id !== id))
     // A newly-approved team needs to show up in LeagueFixturesAdmin's team
-    // dropdowns (fed by a separate server-side getApprovedTeams() fetch on
-    // this same page) — reload so that data is fresh, matching the pattern
-    // LeagueDivisions already uses after create/generate-schedule.
-    window.location.reload()
+    // dropdown too — that list is lifted up to LeagueAdminSection, which
+    // passes this callback down.
+    if (result.team) onTeamApproved?.(result.team)
   })
   const handleRejectTeam = (id: string) => withProcessing(id, async () => {
     const result = await rejectLeagueTeam(id)

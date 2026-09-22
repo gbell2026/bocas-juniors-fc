@@ -42,7 +42,6 @@ export function MediaUploader({ uploadedBy }: { uploadedBy: string }) {
 
     setUploading(false)
     setMessage('Upload complete!')
-    window.location.reload()
   }
 
   return (

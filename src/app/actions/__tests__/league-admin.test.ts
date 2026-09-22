@@ -3,7 +3,7 @@ jest.mock('@/lib/supabase/server', () => ({ createSupabaseServiceClient: jest.fn
 import {
   generateSchedule, generateAlignedSchedule, approveLeaguePlayer, createDivision, updateDivision,
   approveLeagueClub, rejectLeagueClub, approveLeagueTeam, rejectLeagueTeam, rejectLeaguePlayer,
-  updateFixture, addFixture, recordFixtureScore, setFixtureCancelled,
+  updateFixture, bulkUpdateFixtures, addFixture, recordFixtureScore, setFixtureCancelled,
   updateLeagueClub, updateLeagueTeam,
 } from '../league-admin'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
@@ -165,13 +165,19 @@ describe('createDivision', () => {
     expect(mockSupabase.insert).not.toHaveBeenCalled()
   })
 
-  it('creates the division when the date range is valid', async () => {
-    mockSupabase.insert.mockResolvedValueOnce({ error: null })
+  it('creates the division when the date range is valid, and returns it', async () => {
+    mockSupabase.single.mockResolvedValueOnce({
+      data: { id: 'div-1', name: 'U12', season_start_date: '2026-08-01', season_end_date: '2026-11-01', created_at: '2026-01-01' },
+      error: null,
+    })
     const result = await createDivision({ name: 'U12', seasonStartDate: '2026-08-01', seasonEndDate: '2026-11-01' })
     expect(result.error).toBeUndefined()
     expect(mockSupabase.insert).toHaveBeenCalledWith(expect.objectContaining({
       season_start_date: '2026-08-01', season_end_date: '2026-11-01',
     }))
+    expect(result.division).toEqual({
+      id: 'div-1', name: 'U12', season_start_date: '2026-08-01', season_end_date: '2026-11-01', created_at: '2026-01-01',
+    })
   })
 })
 
@@ -212,7 +218,6 @@ describe('club/team/player approve-reject error surfacing', () => {
   const cases: [string, () => Promise<{ error?: string }>, string][] = [
     ['approveLeagueClub', () => approveLeagueClub('id-1'), 'Failed to approve club'],
     ['rejectLeagueClub', () => rejectLeagueClub('id-1'), 'Failed to reject club'],
-    ['approveLeagueTeam', () => approveLeagueTeam('id-1'), 'Failed to approve team'],
     ['rejectLeagueTeam', () => rejectLeagueTeam('id-1'), 'Failed to reject team'],
     ['rejectLeaguePlayer', () => rejectLeaguePlayer('id-1'), 'Failed to reject player'],
   ]
@@ -231,6 +236,39 @@ describe('club/team/player approve-reject error surfacing', () => {
 
     const result = await fn()
     expect(result.error).toBeUndefined()
+  })
+})
+
+// Pulled out of the shared table above: approveLeagueTeam chains
+// .eq().select().single() (to return the approved team's joined shape), so
+// its .eq() is no longer the terminal call the shared cases assume.
+describe('approveLeagueTeam', () => {
+  it('surfaces a friendly error on DB failure', async () => {
+    mockSupabase.eq.mockReturnValueOnce(mockSupabase)
+    mockSupabase.single.mockResolvedValueOnce({ data: null, error: { message: 'db error' } })
+
+    const result = await approveLeagueTeam('id-1')
+    expect(result.error).toBe('Failed to approve team')
+    expect(result.team).toBeUndefined()
+  })
+
+  it('returns the approved team with club and division names on success', async () => {
+    mockSupabase.eq.mockReturnValueOnce(mockSupabase)
+    mockSupabase.single.mockResolvedValueOnce({
+      data: {
+        id: 'id-1', name: 'Team A', division_id: 'div-1',
+        league_clubs: { name: 'Isla FC', badge_cloudinary_public_id: null },
+        league_divisions: { name: 'U12' },
+      },
+      error: null,
+    })
+
+    const result = await approveLeagueTeam('id-1')
+    expect(result.error).toBeUndefined()
+    expect(result.team).toEqual({
+      id: 'id-1', name: 'Team A', divisionId: 'div-1',
+      clubName: 'Isla FC', badgeCloudinaryPublicId: null, divisionName: 'U12',
+    })
   })
 })
 
@@ -293,25 +331,94 @@ describe('updateFixture', () => {
 })
 
 describe('addFixture', () => {
-  it('inserts the provided kickoff, or null when omitted', async () => {
-    mockSupabase.insert.mockResolvedValueOnce({ error: null })
+  const NEW_ROW = {
+    id: 'fx-9', match_date: '2026-09-06', home_team_id: 'team-1', away_team_id: 'team-2',
+    home_score: null, away_score: null, cancelled: false, kickoff: '09:00:00', location: null,
+  }
 
+  it('inserts the provided kickoff, or null when omitted', async () => {
+    mockSupabase.single.mockResolvedValueOnce({ data: NEW_ROW, error: null })
     await addFixture({ divisionId: 'div-1', homeTeamId: 'team-1', awayTeamId: 'team-2', matchDate: '2026-09-06', kickoff: '09:00' })
     expect(mockSupabase.insert).toHaveBeenCalledWith(expect.objectContaining({ kickoff: '09:00' }))
 
-    mockSupabase.insert.mockResolvedValueOnce({ error: null })
+    mockSupabase.single.mockResolvedValueOnce({ data: { ...NEW_ROW, kickoff: null }, error: null })
     await addFixture({ divisionId: 'div-1', homeTeamId: 'team-1', awayTeamId: 'team-2', matchDate: '2026-09-06' })
     expect(mockSupabase.insert).toHaveBeenCalledWith(expect.objectContaining({ kickoff: null }))
   })
 
   it('inserts a trimmed location, or null when omitted', async () => {
-    mockSupabase.insert.mockResolvedValueOnce({ error: null })
+    mockSupabase.single.mockResolvedValueOnce({ data: { ...NEW_ROW, location: 'Isla Verde' }, error: null })
     await addFixture({ divisionId: 'div-1', homeTeamId: 'team-1', awayTeamId: 'team-2', matchDate: '2026-09-06', location: '  Isla Verde  ' })
     expect(mockSupabase.insert).toHaveBeenCalledWith(expect.objectContaining({ location: 'Isla Verde' }))
 
-    mockSupabase.insert.mockResolvedValueOnce({ error: null })
+    mockSupabase.single.mockResolvedValueOnce({ data: NEW_ROW, error: null })
     await addFixture({ divisionId: 'div-1', homeTeamId: 'team-1', awayTeamId: 'team-2', matchDate: '2026-09-06' })
     expect(mockSupabase.insert).toHaveBeenCalledWith(expect.objectContaining({ location: null }))
+  })
+
+  it('returns the created fixture mapped to camelCase, with kickoff sliced to HH:MM', async () => {
+    mockSupabase.single.mockResolvedValueOnce({ data: NEW_ROW, error: null })
+    const result = await addFixture({ divisionId: 'div-1', homeTeamId: 'team-1', awayTeamId: 'team-2', matchDate: '2026-09-06' })
+    expect(result.error).toBeUndefined()
+    expect(result.fixture).toEqual({
+      id: 'fx-9', matchDate: '2026-09-06', homeTeamId: 'team-1', awayTeamId: 'team-2',
+      homeScore: null, awayScore: null, cancelled: false, kickoff: '09:00', location: null,
+    })
+  })
+
+  it('returns a friendly error and no fixture on a check-constraint violation', async () => {
+    mockSupabase.single.mockResolvedValueOnce({ data: null, error: { code: '23514' } })
+    const result = await addFixture({ divisionId: 'div-1', homeTeamId: 'team-1', awayTeamId: 'team-1', matchDate: '2026-09-06' })
+    expect(result.error).toMatch(/two different teams/)
+    expect(result.fixture).toBeUndefined()
+  })
+})
+
+describe('bulkUpdateFixtures', () => {
+  it('returns no errors and updates each fixture independently when all succeed', async () => {
+    mockSupabase.eq
+      .mockResolvedValueOnce({ error: null })
+      .mockResolvedValueOnce({ error: null })
+
+    const result = await bulkUpdateFixtures([
+      { id: 'fx-1', patch: { matchDate: '2026-09-06' } },
+      { id: 'fx-2', patch: { kickoff: '10:00' } },
+    ])
+    expect(result.errors).toEqual({})
+    expect(mockSupabase.update).toHaveBeenCalledWith({ match_date: '2026-09-06' })
+    expect(mockSupabase.update).toHaveBeenCalledWith({ kickoff: '10:00' })
+  })
+
+  it('continues saving the other fixtures when one fails a check constraint', async () => {
+    mockSupabase.eq
+      .mockResolvedValueOnce({ error: null })
+      .mockResolvedValueOnce({ error: { code: '23514' } })
+      .mockResolvedValueOnce({ error: null })
+
+    const result = await bulkUpdateFixtures([
+      { id: 'fx-1', patch: { matchDate: '2026-09-06' } },
+      { id: 'fx-2', patch: { homeTeamId: 'team-1' } },
+      { id: 'fx-3', patch: { kickoff: '11:00' } },
+    ])
+    expect(Object.keys(result.errors)).toEqual(['fx-2'])
+    expect(result.errors['fx-2']).toMatch(/two different teams/)
+    expect(mockSupabase.update).toHaveBeenCalledTimes(3)
+  })
+
+  it('does nothing and returns no errors for an empty array', async () => {
+    const result = await bulkUpdateFixtures([])
+    expect(result.errors).toEqual({})
+    expect(mockSupabase.update).not.toHaveBeenCalled()
+  })
+
+  it('skips an entry with an empty patch without touching the DB, but still saves the rest', async () => {
+    mockSupabase.eq.mockResolvedValueOnce({ error: null })
+    const result = await bulkUpdateFixtures([
+      { id: 'fx-1', patch: {} },
+      { id: 'fx-2', patch: { matchDate: '2026-09-06' } },
+    ])
+    expect(result.errors).toEqual({})
+    expect(mockSupabase.update).toHaveBeenCalledTimes(1)
   })
 })
 

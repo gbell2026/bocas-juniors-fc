@@ -9,6 +9,8 @@ const mockSupabase = {
   update: jest.fn().mockReturnThis(),
   delete: jest.fn().mockReturnThis(),
   eq: jest.fn().mockReturnThis(),
+  select: jest.fn().mockReturnThis(),
+  single: jest.fn(),
 }
 
 beforeEach(() => {
@@ -16,24 +18,36 @@ beforeEach(() => {
   jest.clearAllMocks()
 })
 
+const STAFF_ROW = {
+  id: 'staff-1', name: 'Jane Smith', role_title: 'Head Coach', bio: 'Coaching for 10 years.',
+  photo_cloudinary_public_id: null, nationality: null, one_line_intro: null, background: null,
+  qualifications: null, philosophy: null, favourite_team: null, fun_fact: null, created_at: '2026-01-01',
+}
+
 describe('createStaffMember', () => {
-  it('creates the staff member on success', async () => {
-    mockSupabase.insert.mockResolvedValueOnce({ error: null })
+  it('creates the staff member and returns it, mapped to camelCase', async () => {
+    mockSupabase.single.mockResolvedValueOnce({ data: STAFF_ROW, error: null })
     const result = await createStaffMember({ name: 'Jane Smith', roleTitle: 'Head Coach', bio: 'Coaching for 10 years.' })
     expect(result.error).toBeUndefined()
     expect(mockSupabase.insert).toHaveBeenCalledWith(expect.objectContaining({
       name: 'Jane Smith', role_title: 'Head Coach', bio: 'Coaching for 10 years.', photo_cloudinary_public_id: null,
     }))
+    expect(result.staff).toEqual({
+      id: 'staff-1', name: 'Jane Smith', roleTitle: 'Head Coach', bio: 'Coaching for 10 years.',
+      photoCloudinaryPublicId: null, nationality: null, oneLineIntro: null, background: null,
+      qualifications: null, philosophy: null, favouriteTeam: null, funFact: null, createdAt: '2026-01-01',
+    })
   })
 
   it('surfaces a friendly error on DB failure', async () => {
-    mockSupabase.insert.mockResolvedValueOnce({ error: { message: 'db error' } })
+    mockSupabase.single.mockResolvedValueOnce({ data: null, error: { message: 'db error' } })
     const result = await createStaffMember({ name: 'x', roleTitle: 'y', bio: 'z' })
     expect(result.error).toBe('Failed to add staff member')
+    expect(result.staff).toBeUndefined()
   })
 
   it('maps the optional rich bio fields to snake_case, defaulting to null when omitted', async () => {
-    mockSupabase.insert.mockResolvedValueOnce({ error: null })
+    mockSupabase.single.mockResolvedValueOnce({ data: STAFF_ROW, error: null })
     await createStaffMember({
       name: 'Josh', roleTitle: 'Director of Coaching', bio: 'About Josh.',
       nationality: 'American — Colorado, USA', oneLineIntro: 'A passionate youth coach.',
@@ -52,7 +66,7 @@ describe('createStaffMember', () => {
   })
 
   it('defaults every optional rich field to null when not provided', async () => {
-    mockSupabase.insert.mockResolvedValueOnce({ error: null })
+    mockSupabase.single.mockResolvedValueOnce({ data: STAFF_ROW, error: null })
     await createStaffMember({ name: 'Jane', roleTitle: 'Coach', bio: 'Bio.' })
     expect(mockSupabase.insert).toHaveBeenCalledWith(expect.objectContaining({
       nationality: null, one_line_intro: null, background: null,

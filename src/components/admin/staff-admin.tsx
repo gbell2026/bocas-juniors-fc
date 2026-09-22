@@ -84,9 +84,9 @@ export function StaffAdmin({ staff: initial }: { staff: Staff[] }) {
         nationality: form.nationality, oneLineIntro: form.oneLineIntro, background: form.background,
         qualifications: form.qualifications, philosophy: form.philosophy, favouriteTeam: form.favouriteTeam, funFact: form.funFact,
       })
-      if (result.error) { setErrorMessage(result.error); return }
+      if (result.error || !result.staff) { setErrorMessage(result.error ?? 'Something went wrong. Please try again.'); return }
+      setStaff(prev => [...prev, result.staff!])
       setForm(EMPTY_FORM); setPhotoFile(null)
-      window.location.reload()
     } catch {
       setErrorMessage('Something went wrong. Please try again.')
     } finally {

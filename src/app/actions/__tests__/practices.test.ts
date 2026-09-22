@@ -14,6 +14,7 @@ const mockSupabase = {
   eq: jest.fn().mockReturnThis(),
   gte: jest.fn().mockReturnThis(),
   order: jest.fn().mockReturnThis(),
+  single: jest.fn(),
 }
 
 beforeEach(() => {
@@ -67,13 +68,23 @@ describe('getAllPractices', () => {
 })
 
 describe('createPractice', () => {
-  it('inserts a new practice on success', async () => {
-    mockSupabase.insert.mockResolvedValueOnce({ error: null })
+  it('inserts a new practice and returns it, mapped to camelCase', async () => {
+    mockSupabase.single.mockResolvedValueOnce({
+      data: {
+        id: 'p1', practice_date: '2026-08-18', practice_time: '17:00', location: 'Field A',
+        notes: null, cancelled: false, cancellation_reason: null,
+      },
+      error: null,
+    })
     const result = await createPractice({ practiceDate: '2026-08-18', practiceTime: '17:00', location: 'Field A' })
     expect(result.error).toBeUndefined()
     expect(mockSupabase.insert).toHaveBeenCalledWith(expect.objectContaining({
       practice_date: '2026-08-18', practice_time: '17:00', location: 'Field A', notes: null,
     }))
+    expect(result.practice).toEqual({
+      id: 'p1', practiceDate: '2026-08-18', practiceTime: '17:00', location: 'Field A',
+      notes: null, cancelled: false, cancellationReason: null,
+    })
   })
 
   it('rejects a missing date or time without inserting', async () => {
@@ -83,7 +94,7 @@ describe('createPractice', () => {
   })
 
   it('surfaces a friendly error on DB failure', async () => {
-    mockSupabase.insert.mockResolvedValueOnce({ error: { message: 'db error' } })
+    mockSupabase.single.mockResolvedValueOnce({ data: null, error: { message: 'db error' } })
     const result = await createPractice({ practiceDate: '2026-08-18', practiceTime: '17:00' })
     expect(result.error).toBe('Failed to add practice')
   })

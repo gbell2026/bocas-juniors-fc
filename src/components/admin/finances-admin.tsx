@@ -159,9 +159,9 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
     setCreating(true)
     try {
       const result = await createFinanceSeason({ label, startDate, endDate })
-      if (result.error) { setErrorMessage(result.error); return }
+      if (result.error || !result.season) { setErrorMessage(result.error ?? 'Something went wrong. Please try again.'); return }
+      setSeasons(prev => [...prev, result.season!])
       setLabel(''); setStartDate(''); setEndDate('')
-      window.location.reload()
     } catch {
       setErrorMessage('Something went wrong. Please try again.')
     } finally {
@@ -196,9 +196,9 @@ export function FinancesAdmin({ seasons: initialSeasons, categories }: Props) {
     setCreatingCategory(true)
     try {
       const result = await createFinanceCategory({ name: newCategoryName, kind: newCategoryKind })
-      if (result.error) { setErrorMessage(result.error); return }
+      if (result.error || !result.category) { setErrorMessage(result.error ?? 'Something went wrong. Please try again.'); return }
+      setCategoryList(prev => [...prev, result.category!])
       setNewCategoryName('')
-      window.location.reload()
     } catch {
       setErrorMessage('Something went wrong. Please try again.')
     } finally {

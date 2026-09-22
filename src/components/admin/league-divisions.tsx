@@ -2,9 +2,15 @@
 import { useState } from 'react'
 import { createDivision, updateDivision, generateSchedule, generateAlignedSchedule } from '@/app/actions/league-admin'
 
-type Division = { id: string; name: string; season_start_date: string; season_end_date: string }
+type Division = { id: string; name: string; season_start_date: string; season_end_date: string; created_at: string }
 
-export function LeagueDivisions({ divisions: initial }: { divisions: Division[] }) {
+type Props = {
+  divisions: Division[]
+  onDivisionCreated?: (division: Division) => void
+  onScheduleGenerated?: () => void
+}
+
+export function LeagueDivisions({ divisions: initial, onDivisionCreated, onScheduleGenerated }: Props) {
   const [divisions, setDivisions] = useState(initial)
   const [name, setName] = useState('')
   const [seasonStartDate, setSeasonStartDate] = useState('')
@@ -28,9 +34,10 @@ export function LeagueDivisions({ divisions: initial }: { divisions: Division[] 
     setCreating(true)
     try {
       const result = await createDivision({ name, seasonStartDate, seasonEndDate })
-      if (result.error) { setErrorMessage(result.error); return }
+      if (result.error || !result.division) { setErrorMessage(result.error ?? 'Something went wrong. Please try again.'); return }
+      setDivisions(prev => [...prev, result.division!])
+      onDivisionCreated?.(result.division)
       setName(''); setSeasonStartDate(''); setSeasonEndDate('')
-      window.location.reload()
     } catch {
       setErrorMessage('Something went wrong. Please try again.')
     } finally {
@@ -68,7 +75,7 @@ export function LeagueDivisions({ divisions: initial }: { divisions: Division[] 
     try {
       const result = await generateSchedule(divisionId)
       if (result.error) { setErrorMessage(result.error); return }
-      window.location.reload()
+      onScheduleGenerated?.()
     } catch {
       setErrorMessage('Something went wrong. Please try again.')
     } finally {
@@ -82,7 +89,7 @@ export function LeagueDivisions({ divisions: initial }: { divisions: Division[] 
     try {
       const result = await generateAlignedSchedule(divisions.map(d => d.id))
       if (result.error) { setErrorMessage(result.error); return }
-      window.location.reload()
+      onScheduleGenerated?.()
     } catch {
       setErrorMessage('Something went wrong. Please try again.')
     } finally {

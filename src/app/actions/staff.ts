@@ -17,11 +17,8 @@ export type StaffMember = {
   createdAt: string
 }
 
-// Public: all staff members in the order they were added.
-export async function getStaffMembers(): Promise<StaffMember[]> {
-  const supabase = createSupabaseServiceClient()
-  const { data } = await supabase.from('staff_members').select('*').order('created_at')
-  return (data ?? []).map(s => ({
+function mapStaffRow(s: any): StaffMember {
+  return {
     id: s.id,
     name: s.name,
     roleTitle: s.role_title,
@@ -35,7 +32,14 @@ export async function getStaffMembers(): Promise<StaffMember[]> {
     favouriteTeam: s.favourite_team,
     funFact: s.fun_fact,
     createdAt: s.created_at,
-  }))
+  }
+}
+
+// Public: all staff members in the order they were added.
+export async function getStaffMembers(): Promise<StaffMember[]> {
+  const supabase = createSupabaseServiceClient()
+  const { data } = await supabase.from('staff_members').select('*').order('created_at')
+  return (data ?? []).map(mapStaffRow)
 }
 
 export type StaffMemberInput = {
@@ -69,11 +73,11 @@ function toRow(input: StaffMemberInput) {
 }
 
 // Admin: add a new staff member.
-export async function createStaffMember(input: StaffMemberInput): Promise<{ error?: string }> {
+export async function createStaffMember(input: StaffMemberInput): Promise<{ error?: string; staff?: StaffMember }> {
   const supabase = createSupabaseServiceClient()
-  const { error } = await supabase.from('staff_members').insert(toRow(input))
-  if (error) return { error: 'Failed to add staff member' }
-  return {}
+  const { data, error } = await supabase.from('staff_members').insert(toRow(input)).select().single()
+  if (error || !data) return { error: 'Failed to add staff member' }
+  return { staff: mapStaffRow(data) }
 }
 
 // Admin: edit an existing staff member.

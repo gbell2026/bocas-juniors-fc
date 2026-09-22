@@ -19,9 +19,9 @@ export function CoachAccounts({ accounts: initial }: { accounts: CoachAccount[] 
     setCreating(true)
     try {
       const result = await createCoachAccount({ name, email, password })
-      if (result.error) { setErrorMessage(result.error); return }
+      if (result.error || !result.account) { setErrorMessage(result.error ?? 'Something went wrong. Please try again.'); return }
+      setAccounts(prev => [...prev, result.account!])
       setName(''); setEmail(''); setPassword('')
-      window.location.reload()
     } catch {
       setErrorMessage('Something went wrong. Please try again.')
     } finally {

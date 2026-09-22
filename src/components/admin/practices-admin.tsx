@@ -40,9 +40,9 @@ export function PracticesAdmin({ practices: initial }: { practices: Practice[] }
     setCreating(true)
     try {
       const result = await createPractice({ practiceDate, practiceTime, location, notes })
-      if (result.error) { setErrorMessage(result.error); return }
+      if (result.error || !result.practice) { setErrorMessage(result.error ?? 'Something went wrong. Please try again.'); return }
+      setPractices(prev => [...prev, result.practice!])
       setPracticeDate(''); setPracticeTime(''); setLocation(''); setNotes('')
-      window.location.reload()
     } catch {
       setErrorMessage('Something went wrong. Please try again.')
     } finally {
