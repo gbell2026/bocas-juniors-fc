@@ -502,3 +502,48 @@ export async function setFixtureCancelled(id: string, cancelled: boolean): Promi
   if (error) return { error: 'Failed to update fixture' }
   return {}
 }
+
+// --- Points adjustments ---
+// Administrative penalties/bonuses (e.g. a deduction for fielding an
+// overage player) that standings folds in on top of win/draw/loss points —
+// see computeStandings in src/lib/league/standings.ts.
+
+export type PointsAdjustmentRow = { id: string; teamId: string; points: number; reason: string; createdAt: string }
+
+// Every adjustment for the teams in one division, newest first.
+export async function getPointsAdjustments(divisionId: string): Promise<PointsAdjustmentRow[]> {
+  const supabase = createSupabaseServiceClient()
+  const { data: teams } = await supabase.from('league_teams').select('id').eq('division_id', divisionId)
+  const teamIds = (teams ?? []).map(t => t.id)
+  if (teamIds.length === 0) return []
+
+  const { data } = await supabase
+    .from('league_points_adjustments')
+    .select('*')
+    .in('team_id', teamIds)
+    .order('created_at', { ascending: false })
+  return (data ?? []).map(a => ({ id: a.id, teamId: a.team_id, points: a.points, reason: a.reason, createdAt: a.created_at }))
+}
+
+export async function addPointsAdjustment(
+  input: { teamId: string; points: number; reason: string }
+): Promise<{ error?: string; adjustment?: PointsAdjustmentRow }> {
+  if (!input.reason.trim()) return { error: 'A reason is required.' }
+  if (!input.points) return { error: 'Points adjustment cannot be zero.' }
+
+  const supabase = createSupabaseServiceClient()
+  const { data, error } = await supabase
+    .from('league_points_adjustments')
+    .insert({ team_id: input.teamId, points: input.points, reason: input.reason.trim() })
+    .select()
+    .single()
+  if (error || !data) return { error: 'Failed to add points adjustment' }
+  return { adjustment: { id: data.id, teamId: data.team_id, points: data.points, reason: data.reason, createdAt: data.created_at } }
+}
+
+export async function deletePointsAdjustment(id: string): Promise<{ error?: string }> {
+  const supabase = createSupabaseServiceClient()
+  const { error } = await supabase.from('league_points_adjustments').delete().eq('id', id)
+  if (error) return { error: 'Failed to delete points adjustment' }
+  return {}
+}

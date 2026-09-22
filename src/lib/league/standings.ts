@@ -8,6 +8,10 @@ export type StandingsRow = {
   goalsAgainst: number
   goalDifference: number
   points: number
+  // Sum of any administrative points adjustments (e.g. a disciplinary
+  // deduction) already folded into `points` above — kept separate too so
+  // callers can show "18 (-4)" rather than just the opaque total.
+  adjustmentPoints: number
 }
 
 export type FixtureResult = {
@@ -17,11 +21,20 @@ export type FixtureResult = {
   awayScore: number | null
 }
 
-function emptyRow(teamId: string): StandingsRow {
-  return { teamId, played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 }
+export type PointsAdjustment = {
+  teamId: string
+  points: number
 }
 
-export function computeStandings(teamIds: string[], fixtures: FixtureResult[]): StandingsRow[] {
+function emptyRow(teamId: string): StandingsRow {
+  return { teamId, played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0, adjustmentPoints: 0 }
+}
+
+export function computeStandings(
+  teamIds: string[],
+  fixtures: FixtureResult[],
+  adjustments: PointsAdjustment[] = []
+): StandingsRow[] {
   const rows = new Map(teamIds.map(id => [id, emptyRow(id)]))
 
   for (const fx of fixtures) {
@@ -51,6 +64,13 @@ export function computeStandings(teamIds: string[], fixtures: FixtureResult[]): 
       home.points += 1
       away.points += 1
     }
+  }
+
+  for (const adj of adjustments) {
+    const row = rows.get(adj.teamId)
+    if (!row) continue
+    row.adjustmentPoints += adj.points
+    row.points += adj.points
   }
 
   const result = Array.from(rows.values()).map(r => ({ ...r, goalDifference: r.goalsFor - r.goalsAgainst }))

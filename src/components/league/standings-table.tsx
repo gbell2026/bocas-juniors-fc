@@ -53,7 +53,17 @@ export function StandingsTable({ divisionId }: { divisionId: string }) {
               <td className="p-2">{row.drawn}</td>
               <td className="p-2">{row.lost}</td>
               <td className="p-2">{row.goalDifference > 0 ? `+${row.goalDifference}` : row.goalDifference}</td>
-              <td className="p-2 font-bold">{row.points}</td>
+              <td className="p-2 font-bold">
+                {row.points}
+                {row.adjustmentPoints !== 0 && (
+                  <span
+                    className="text-red-600 text-xs align-top ml-0.5 cursor-help"
+                    title={row.adjustmentNotes.join('; ')}
+                  >
+                    *
+                  </span>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>

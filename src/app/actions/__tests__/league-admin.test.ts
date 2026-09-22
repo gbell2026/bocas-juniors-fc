@@ -5,6 +5,7 @@ import {
   approveLeagueClub, rejectLeagueClub, approveLeagueTeam, rejectLeagueTeam, rejectLeaguePlayer,
   updateFixture, bulkUpdateFixtures, addFixture, recordFixtureScore, setFixtureCancelled,
   updateLeagueClub, updateLeagueTeam,
+  getPointsAdjustments, addPointsAdjustment, deletePointsAdjustment,
 } from '../league-admin'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 
@@ -12,10 +13,12 @@ const mockSupabase = {
   from: jest.fn().mockReturnThis(),
   insert: jest.fn().mockReturnThis(),
   update: jest.fn().mockReturnThis(),
+  delete: jest.fn().mockReturnThis(),
   eq: jest.fn().mockReturnThis(),
   select: jest.fn().mockReturnThis(),
   limit: jest.fn().mockReturnThis(),
   in: jest.fn().mockReturnThis(),
+  order: jest.fn().mockReturnThis(),
   single: jest.fn(),
 }
 
@@ -521,5 +524,72 @@ describe('setFixtureCancelled', () => {
 
     const result = await setFixtureCancelled('fx-1', false)
     expect(result.error).toBe('Failed to update fixture')
+  })
+})
+
+describe('getPointsAdjustments', () => {
+  it('returns every adjustment for the teams in the division, newest first', async () => {
+    mockSupabase.eq.mockResolvedValueOnce({ data: [{ id: 'team-a' }, { id: 'team-b' }] }) // teams .eq('division_id', ...)
+    mockSupabase.order.mockResolvedValueOnce({
+      data: [{ id: 'adj-1', team_id: 'team-a', points: -3, reason: 'Overage player', created_at: '2026-09-20T00:00:00Z' }],
+    })
+
+    const result = await getPointsAdjustments('div-1')
+    expect(result).toEqual([{ id: 'adj-1', teamId: 'team-a', points: -3, reason: 'Overage player', createdAt: '2026-09-20T00:00:00Z' }])
+    expect(mockSupabase.in).toHaveBeenCalledWith('team_id', ['team-a', 'team-b'])
+  })
+
+  it('returns an empty array without querying adjustments when the division has no teams', async () => {
+    mockSupabase.eq.mockResolvedValueOnce({ data: [] })
+    const result = await getPointsAdjustments('div-empty')
+    expect(result).toEqual([])
+    expect(mockSupabase.in).not.toHaveBeenCalled()
+  })
+})
+
+describe('addPointsAdjustment', () => {
+  it('rejects a blank reason without touching the database', async () => {
+    const result = await addPointsAdjustment({ teamId: 'team-a', points: -3, reason: '   ' })
+    expect(result.error).toBe('A reason is required.')
+    expect(mockSupabase.insert).not.toHaveBeenCalled()
+  })
+
+  it('rejects a zero points value without touching the database', async () => {
+    const result = await addPointsAdjustment({ teamId: 'team-a', points: 0, reason: 'Late arrival' })
+    expect(result.error).toBe('Points adjustment cannot be zero.')
+    expect(mockSupabase.insert).not.toHaveBeenCalled()
+  })
+
+  it('creates the adjustment and returns it, mapped to camelCase', async () => {
+    mockSupabase.single.mockResolvedValueOnce({
+      data: { id: 'adj-1', team_id: 'team-a', points: -1, reason: 'Late arrival', created_at: '2026-09-20T00:00:00Z' },
+      error: null,
+    })
+    const result = await addPointsAdjustment({ teamId: 'team-a', points: -1, reason: '  Late arrival  ' })
+    expect(result.error).toBeUndefined()
+    expect(mockSupabase.insert).toHaveBeenCalledWith({ team_id: 'team-a', points: -1, reason: 'Late arrival' })
+    expect(result.adjustment).toEqual({ id: 'adj-1', teamId: 'team-a', points: -1, reason: 'Late arrival', createdAt: '2026-09-20T00:00:00Z' })
+  })
+
+  it('surfaces a friendly error on DB failure', async () => {
+    mockSupabase.single.mockResolvedValueOnce({ data: null, error: { message: 'db error' } })
+    const result = await addPointsAdjustment({ teamId: 'team-a', points: -1, reason: 'Late arrival' })
+    expect(result.error).toBe('Failed to add points adjustment')
+  })
+})
+
+describe('deletePointsAdjustment', () => {
+  it('deletes the adjustment on success', async () => {
+    mockSupabase.eq.mockResolvedValueOnce({ error: null })
+    const result = await deletePointsAdjustment('adj-1')
+    expect(result.error).toBeUndefined()
+    expect(mockSupabase.delete).toHaveBeenCalled()
+    expect(mockSupabase.eq).toHaveBeenCalledWith('id', 'adj-1')
+  })
+
+  it('surfaces a friendly error on DB failure', async () => {
+    mockSupabase.eq.mockResolvedValueOnce({ error: { message: 'db error' } })
+    const result = await deletePointsAdjustment('adj-1')
+    expect(result.error).toBe('Failed to delete points adjustment')
   })
 })

@@ -4,6 +4,7 @@ import { PracticesAdmin } from '@/components/admin/practices-admin'
 import { LeaguePendingQueue } from '@/components/admin/league-pending-queue'
 import { LeagueDivisions } from '@/components/admin/league-divisions'
 import { LeagueFixturesAdmin } from '@/components/admin/league-fixtures-admin'
+import { LeaguePointsAdjustments } from '@/components/admin/league-points-adjustments'
 import { ManageLeagueClubs } from '@/components/admin/manage-league-clubs'
 import { ManageLeagueTeams } from '@/components/admin/manage-league-teams'
 import { LeagueBannerAdmin } from '@/components/admin/league-banner-admin'
@@ -90,6 +91,7 @@ export function LeagueAdminSection({
             onScheduleGenerated={() => setFixturesRefreshKey(k => k + 1)}
           />
           <LeagueFixturesAdmin key={fixturesRefreshKey} divisions={divisions} teams={approvedTeams} />
+          <LeaguePointsAdjustments divisions={divisions} teams={approvedTeams} />
         </div>
       )}
 

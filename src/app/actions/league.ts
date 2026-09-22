@@ -236,15 +236,31 @@ export async function getStandings(divisionId: string) {
     .eq('division_id', divisionId)
 
   const teamList = teams ?? []
+  const teamIds = teamList.map(t => t.id)
+
+  const { data: adjustmentRows } = teamIds.length > 0
+    ? await supabase.from('league_points_adjustments').select('team_id, points, reason').in('team_id', teamIds)
+    : { data: [] as { team_id: string; points: number; reason: string }[] }
+
   const standings = computeStandings(
-    teamList.map(t => t.id),
+    teamIds,
     (fixtures ?? []).map(f => ({
       homeTeamId: f.home_team_id,
       awayTeamId: f.away_team_id,
       homeScore: f.home_score,
       awayScore: f.away_score,
-    }))
+    })),
+    (adjustmentRows ?? []).map(a => ({ teamId: a.team_id, points: a.points }))
   )
+
+  // One-line note per adjustment (e.g. "-3: fielded an overage player"), so
+  // the public table can explain an otherwise-opaque points total on hover.
+  const notesByTeam = new Map<string, string[]>()
+  for (const a of adjustmentRows ?? []) {
+    const list = notesByTeam.get(a.team_id) ?? []
+    list.push(`${a.points > 0 ? '+' : ''}${a.points}: ${a.reason}`)
+    notesByTeam.set(a.team_id, list)
+  }
 
   return standings.map(row => {
     const team = teamList.find(t => t.id === row.teamId)
@@ -252,6 +268,7 @@ export async function getStandings(divisionId: string) {
       ...row,
       teamName: team?.name ?? 'Unknown',
       badgeCloudinaryPublicId: (team?.league_clubs as any)?.badge_cloudinary_public_id ?? null,
+      adjustmentNotes: notesByTeam.get(row.teamId) ?? [],
     }
   })
 }

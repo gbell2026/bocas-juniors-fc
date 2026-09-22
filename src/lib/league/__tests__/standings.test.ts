@@ -62,3 +62,33 @@ describe('computeStandings', () => {
     expect(a).toMatchObject({ played: 2, won: 1, drawn: 1, lost: 0, points: 4, goalsFor: 3, goalsAgainst: 1, goalDifference: 2 })
   })
 })
+
+describe('computeStandings with adjustments', () => {
+  it('folds a deduction into points and reports it separately via adjustmentPoints', () => {
+    const rows = computeStandings(
+      ['a', 'b'],
+      [{ homeTeamId: 'a', awayTeamId: 'b', homeScore: 2, awayScore: 0 }],
+      [{ teamId: 'a', points: -3 }]
+    )
+    const a = rows.find(r => r.teamId === 'a')!
+    expect(a.points).toBe(0) // 3 for the win, minus a 3-point deduction
+    expect(a.adjustmentPoints).toBe(-3)
+    const b = rows.find(r => r.teamId === 'b')!
+    expect(b.adjustmentPoints).toBe(0)
+  })
+
+  it('sums multiple adjustments for the same team', () => {
+    const rows = computeStandings(['a'], [], [{ teamId: 'a', points: -3 }, { teamId: 'a', points: -1 }])
+    expect(rows[0]).toMatchObject({ points: -4, adjustmentPoints: -4 })
+  })
+
+  it('ignores an adjustment for a team not in the division', () => {
+    const rows = computeStandings(['a'], [], [{ teamId: 'ghost', points: -3 }])
+    expect(rows[0]).toMatchObject({ points: 0, adjustmentPoints: 0 })
+  })
+
+  it('can push a team below zero points', () => {
+    const rows = computeStandings(['a'], [], [{ teamId: 'a', points: -5 }])
+    expect(rows[0].points).toBe(-5)
+  })
+})

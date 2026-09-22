@@ -393,6 +393,38 @@ export type Database = {
           },
         ]
       }
+      league_points_adjustments: {
+        Row: {
+          created_at: string
+          id: string
+          points: number
+          reason: string
+          team_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          points: number
+          reason: string
+          team_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          points?: number
+          reason?: string
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "league_points_adjustments_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "league_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       league_players: {
         Row: {
           created_at: string

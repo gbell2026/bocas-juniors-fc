@@ -1,6 +1,6 @@
 jest.mock('@/lib/supabase/server', () => ({ createSupabaseServiceClient: jest.fn() }))
 
-import { registerLeagueTeam, addLeaguePlayer, getApprovedClubs, addLeagueTeam, getFixtureCalendar } from '../league'
+import { registerLeagueTeam, addLeaguePlayer, getApprovedClubs, addLeagueTeam, getFixtureCalendar, getStandings } from '../league'
 import { createSupabaseServiceClient } from '@/lib/supabase/server'
 
 const mockSupabase = {
@@ -12,6 +12,7 @@ const mockSupabase = {
   select: jest.fn().mockReturnThis(),
   order: jest.fn().mockReturnThis(),
   limit: jest.fn().mockReturnThis(),
+  in: jest.fn().mockReturnThis(),
   single: jest.fn(),
 }
 
@@ -204,5 +205,45 @@ describe('getFixtureCalendar', () => {
         division: 'U10', kickoff: '09:00', homeTeam: 'Tangerine Toucans', awayTeam: 'Rival FC', isHomeClubMatch: true,
       })],
     }])
+  })
+})
+
+describe('getStandings', () => {
+  it('folds a points adjustment into the total and reports it separately with a note', async () => {
+    mockSupabase.eq
+      .mockReturnValueOnce(mockSupabase) // teams .eq('division_id', ...) -> chain
+      .mockResolvedValueOnce({ // teams .eq('status', 'approved') -> TERMINAL
+        data: [
+          { id: 'team-a', name: 'New Gen', league_clubs: { badge_cloudinary_public_id: null } },
+          { id: 'team-b', name: 'Toucans', league_clubs: { badge_cloudinary_public_id: null } },
+        ],
+      })
+      .mockResolvedValueOnce({ // fixtures .eq('division_id', ...) -> TERMINAL
+        data: [{ home_team_id: 'team-b', away_team_id: 'team-a', home_score: 1, away_score: 8 }],
+      })
+    mockSupabase.in.mockResolvedValueOnce({ // adjustments .in('team_id', [...]) -> TERMINAL
+      data: [{ team_id: 'team-a', points: -3, reason: 'Fielded an overage player' }],
+    })
+
+    const result = await getStandings('div-1')
+    const newGen = result.find(r => r.teamId === 'team-a')!
+    expect(newGen.points).toBe(0) // 3 for the win, minus the 3-point deduction
+    expect(newGen.adjustmentPoints).toBe(-3)
+    expect(newGen.adjustmentNotes).toEqual(['-3: Fielded an overage player'])
+
+    const toucans = result.find(r => r.teamId === 'team-b')!
+    expect(toucans.adjustmentPoints).toBe(0)
+    expect(toucans.adjustmentNotes).toEqual([])
+  })
+
+  it('skips the adjustments query entirely when the division has no approved teams', async () => {
+    mockSupabase.eq
+      .mockReturnValueOnce(mockSupabase)
+      .mockResolvedValueOnce({ data: [] })
+      .mockResolvedValueOnce({ data: [] })
+
+    const result = await getStandings('div-empty')
+    expect(result).toEqual([])
+    expect(mockSupabase.in).not.toHaveBeenCalled()
   })
 })
