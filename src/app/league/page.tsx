@@ -1,6 +1,5 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { PageHeader } from '@/components/page-header'
 import { FixtureCalendar } from '@/components/league/fixture-calendar'
 import { StandingsTable } from '@/components/league/standings-table'
 import { RegisterTeamForm } from '@/components/league/register-team-form'
@@ -53,28 +52,34 @@ export default function LeaguePage() {
   ]
 
   return (
-    <main className="bg-brand-cream min-h-screen">
-      <PageHeader title={t.league.title} subtitle={t.league.subtitle} />
+    <main className="bg-league-navy min-h-screen">
+      <div className="bg-league-panel border-l-4 border-league-gold px-6 py-5 flex items-center gap-4">
+        <img src="/Liga_Islenitos_Circular_Logo.png" alt="" className="w-14 h-14 object-contain flex-shrink-0" />
+        <div>
+          <h1 className="font-heading text-white uppercase tracking-wider text-3xl">{t.league.title}</h1>
+          <p className="text-league-gold font-bold uppercase tracking-[0.25em] text-xs mt-1">{t.league.subtitle}</p>
+        </div>
+      </div>
 
-      <div className="max-w-3xl mx-auto px-4 py-6 text-sm text-brand-muted space-y-3">
-        <h2 className="font-heading text-brand-ink text-lg uppercase tracking-wider">{t.league.about.title}</h2>
+      <div className="max-w-3xl mx-auto px-4 py-6 text-sm text-league-muted space-y-3">
+        <h2 className="font-heading text-white text-lg uppercase tracking-wider">{t.league.about.title}</h2>
         <p>{t.league.about.intro}</p>
         {seasonDateRange && <p>{t.league.about.format(seasonDateRange.start, seasonDateRange.end)}</p>}
         <p>{t.league.about.matchDay}</p>
         <p>{t.league.about.standings}</p>
         <p>{t.league.about.bracketPhase}</p>
         <p>
-          {t.league.about.registerPrefix} <span className="font-bold text-brand-ink">{t.league.about.registerBold}</span> {t.league.about.registerSuffix}
+          {t.league.about.registerPrefix} <span className="font-bold text-white">{t.league.about.registerBold}</span> {t.league.about.registerSuffix}
         </p>
       </div>
 
-      <div className="flex border-b border-brand-line overflow-x-auto">
+      <div className="flex border-b border-league-turquoise/20 overflow-x-auto">
         {TABS.map(tabDef => (
           <button
             key={tabDef.key}
             onClick={() => setTab(tabDef.key)}
             className={`flex-1 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap px-4 ${
-              tab === tabDef.key ? 'bg-brand-primary text-white' : 'bg-brand-tint text-brand-mutedWarm'
+              tab === tabDef.key ? 'bg-league-gold text-league-navy' : 'bg-league-panel text-league-muted'
             }`}
           >
             {tabDef.label}
@@ -85,7 +90,7 @@ export default function LeaguePage() {
       <div className="py-8 px-4 max-w-3xl mx-auto">
         {tab === 'table' && divisions.length > 0 && (
           <div className="mb-6">
-            <label htmlFor="divisionSelect" className="block text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-1">
+            <label htmlFor="divisionSelect" className="block text-league-gold font-bold uppercase tracking-wider text-xs mb-1">
               {t.league.divisionLabel}
             </label>
             <select
@@ -101,10 +106,10 @@ export default function LeaguePage() {
 
         {tab === 'fixtures' && <FixtureCalendar />}
         {tab === 'table' && (
-          divisionId ? <StandingsTable divisionId={divisionId} /> : <p className="text-brand-muted py-8 text-center">{t.league.noDivisions}</p>
+          divisionId ? <StandingsTable divisionId={divisionId} /> : <p className="text-league-muted py-8 text-center">{t.league.noDivisions}</p>
         )}
         {tab === 'topscorer' && (
-          <p className="text-brand-muted py-8 text-center">{t.league.topScorerComingSoon}</p>
+          <p className="text-league-muted py-8 text-center">{t.league.topScorerComingSoon}</p>
         )}
         {tab === 'register' && <RegisterTeamForm />}
       </div>

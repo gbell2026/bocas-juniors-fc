@@ -68,9 +68,9 @@ describe('shortDivisionLabel', () => {
 })
 
 describe('divisionPillClass', () => {
-  it('gives U10 the primary color and every other division the ink color', () => {
-    expect(divisionPillClass('U10')).toBe('bg-brand-primary text-white')
-    expect(divisionPillClass('U14')).toBe('bg-brand-ink text-white')
-    expect(divisionPillClass('U12')).toBe('bg-brand-ink text-white')
+  it('gives U10 the league turquoise and every other division the league gold — never the club colors', () => {
+    expect(divisionPillClass('U10')).toBe('bg-league-turquoise text-league-navy')
+    expect(divisionPillClass('U14')).toBe('bg-league-gold text-league-navy')
+    expect(divisionPillClass('U12')).toBe('bg-league-gold text-league-navy')
   })
 })

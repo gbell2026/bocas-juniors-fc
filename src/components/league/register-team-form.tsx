@@ -9,7 +9,10 @@ type Division = Awaited<ReturnType<typeof getOpenDivisions>>[number]
 type ApprovedTeam = Awaited<ReturnType<typeof getApprovedTeams>>[number]
 type ApprovedClub = Awaited<ReturnType<typeof getApprovedClubs>>[number]
 
-const labelClass = 'block text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-1'
+const labelClass = 'block text-league-gold font-bold uppercase tracking-wider text-xs mb-1'
+const modeButtonActive = 'bg-league-gold text-league-navy px-4 py-2 rounded font-bold uppercase tracking-wider text-sm flex-1 transition'
+const modeButtonInactive = 'border-2 border-league-turquoise text-league-turquoise px-4 py-2 rounded font-bold uppercase tracking-wider text-sm flex-1 hover:bg-league-panel transition'
+const submitButtonClass = 'bg-league-gold text-league-navy px-4 py-2 rounded font-bold uppercase tracking-wider hover:opacity-90 disabled:opacity-50 transition w-full'
 
 export function RegisterTeamForm() {
   const { locale, t } = useLocale()
@@ -126,8 +129,8 @@ export function RegisterTeamForm() {
   if (success) {
     return (
       <div className="text-center py-8">
-        <p className="text-brand-ink font-bold text-lg mb-2">{t.league.registerForm.thanksTitle}</p>
-        <p className="text-brand-muted text-sm">{t.league.registerForm.thanksBody}</p>
+        <p className="text-white font-bold text-lg mb-2">{t.league.registerForm.thanksTitle}</p>
+        <p className="text-league-muted text-sm">{t.league.registerForm.thanksBody}</p>
       </div>
     )
   }
@@ -139,7 +142,7 @@ export function RegisterTeamForm() {
           type="button"
           onClick={() => setMode('newTeam')}
           aria-pressed={mode === 'newTeam'}
-          className={mode === 'newTeam' ? 'btn-primary text-sm flex-1' : 'btn-secondary text-sm flex-1'}
+          className={mode === 'newTeam' ? modeButtonActive : modeButtonInactive}
         >
           {t.league.registerForm.modeNewClub}
         </button>
@@ -147,7 +150,7 @@ export function RegisterTeamForm() {
           type="button"
           onClick={() => setMode('addTeam')}
           aria-pressed={mode === 'addTeam'}
-          className={mode === 'addTeam' ? 'btn-primary text-sm flex-1' : 'btn-secondary text-sm flex-1'}
+          className={mode === 'addTeam' ? modeButtonActive : modeButtonInactive}
         >
           {t.league.registerForm.modeAddTeam}
         </button>
@@ -155,7 +158,7 @@ export function RegisterTeamForm() {
           type="button"
           onClick={() => setMode('addPlayer')}
           aria-pressed={mode === 'addPlayer'}
-          className={mode === 'addPlayer' ? 'btn-primary text-sm flex-1' : 'btn-secondary text-sm flex-1'}
+          className={mode === 'addPlayer' ? modeButtonActive : modeButtonInactive}
         >
           {t.league.registerForm.modeAddPlayer}
         </button>
@@ -163,8 +166,8 @@ export function RegisterTeamForm() {
 
       {mode === 'newTeam' && (
         <form onSubmit={handleNewTeamSubmit} className="space-y-6">
-          <p className="text-brand-muted text-xs">
-            {t.league.registerForm.newTeamHint} <span className="font-bold">{t.league.registerForm.newTeamHintBold}</span> {t.league.registerForm.newTeamHintSuffix}
+          <p className="text-league-muted text-xs">
+            {t.league.registerForm.newTeamHint} <span className="font-bold text-white">{t.league.registerForm.newTeamHintBold}</span> {t.league.registerForm.newTeamHintSuffix}
           </p>
           <fieldset className="space-y-4">
             <legend className={labelClass}>{t.league.registerForm.clubDetailsLegend}</legend>
@@ -205,12 +208,12 @@ export function RegisterTeamForm() {
             </div>
           </fieldset>
 
-          <p className="text-brand-muted text-xs">
-            {t.league.registerForm.playerHint} <span className="font-bold">{t.league.registerForm.playerHintBold}</span> {t.league.registerForm.playerHintSuffix}
+          <p className="text-league-muted text-xs">
+            {t.league.registerForm.playerHint} <span className="font-bold text-white">{t.league.registerForm.playerHintBold}</span> {t.league.registerForm.playerHintSuffix}
           </p>
 
-          {error && <p role="alert" className="text-red-500 text-sm">{error}</p>}
-          <button type="submit" disabled={loading} className="btn-primary w-full">
+          {error && <p role="alert" className="text-red-400 text-sm">{error}</p>}
+          <button type="submit" disabled={loading} className={submitButtonClass}>
             {loading ? t.league.registerForm.submitting : t.league.registerForm.submitRegistration}
           </button>
         </form>
@@ -218,7 +221,7 @@ export function RegisterTeamForm() {
 
       {mode === 'addTeam' && (
         <form onSubmit={handleAddTeamSubmit} className="space-y-4">
-          <p className="text-brand-muted text-xs">
+          <p className="text-league-muted text-xs">
             {t.league.registerForm.addTeamHint}
           </p>
           <div>
@@ -239,8 +242,8 @@ export function RegisterTeamForm() {
               {divisions.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
           </div>
-          {error && <p role="alert" className="text-red-500 text-sm">{error}</p>}
-          <button type="submit" disabled={loading} className="btn-primary w-full">
+          {error && <p role="alert" className="text-red-400 text-sm">{error}</p>}
+          <button type="submit" disabled={loading} className={submitButtonClass}>
             {loading ? t.league.registerForm.submitting : t.league.registerForm.submitTeam}
           </button>
         </form>
@@ -269,8 +272,8 @@ export function RegisterTeamForm() {
             <label htmlFor="playerSquadNumber" className={labelClass}>{t.league.registerForm.squadNumberLabel}</label>
             <input id="playerSquadNumber" type="number" min={1} step={1} required className="input w-full" value={playerSquadNumber} onChange={e => setPlayerSquadNumber(e.target.value)} />
           </div>
-          {error && <p role="alert" className="text-red-500 text-sm">{error}</p>}
-          <button type="submit" disabled={loading} className="btn-primary w-full">
+          {error && <p role="alert" className="text-red-400 text-sm">{error}</p>}
+          <button type="submit" disabled={loading} className={submitButtonClass}>
             {loading ? t.league.registerForm.submitting : t.league.registerForm.submitPlayer}
           </button>
         </form>

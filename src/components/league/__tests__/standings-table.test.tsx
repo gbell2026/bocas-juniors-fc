@@ -64,7 +64,7 @@ it('shows a footnote for a zero-point note (e.g. a default-loss scoreline) in a 
   expect(await screen.findByText(/Fielded an ineligible player/)).toBeInTheDocument()
   expect(screen.getByText('New Generation FC:')).toBeInTheDocument()
   for (const marker of screen.getAllByText('*')) {
-    expect(marker).toHaveClass('text-amber-600')
+    expect(marker).toHaveClass('text-league-gold')
   }
 })
 

@@ -38,8 +38,8 @@ export function FixtureCalendar() {
       .catch(() => setDays([]))
   }, [])
 
-  if (days === null) return <p className="text-brand-muted py-8 text-center">{t.league.calendar.loading}</p>
-  if (days.length === 0) return <p className="text-brand-muted py-8 text-center">{t.league.calendar.empty}</p>
+  if (days === null) return <p className="text-league-muted py-8 text-center">{t.league.calendar.loading}</p>
+  if (days.length === 0) return <p className="text-league-muted py-8 text-center">{t.league.calendar.empty}</p>
 
   const day = days[selected]
 
@@ -52,28 +52,28 @@ export function FixtureCalendar() {
             onClick={() => setSelected(i)}
             aria-pressed={i === selected}
             className={`min-w-[66px] flex-1 border rounded p-2 text-center text-xs transition ${
-              i === selected ? 'border-brand-primary bg-brand-tint' : 'border-brand-line'
+              i === selected ? 'border-league-gold bg-league-panel' : 'border-league-turquoise/30'
             }`}
           >
-            <div className="font-bold text-brand-ink">{shortDate(d.date, locale)}</div>
-            <div className="text-brand-muted">{d.rest ? t.league.calendar.restWeek : d.matches.length}</div>
+            <div className="font-bold text-white">{shortDate(d.date, locale)}</div>
+            <div className="text-league-muted">{d.rest ? t.league.calendar.restWeek : d.matches.length}</div>
           </button>
         ))}
       </div>
 
-      <p className="text-brand-mutedWarm text-xs mb-4">{t.league.calendar.toucansLegend}</p>
+      <p className="text-league-muted text-xs mb-4">{t.league.calendar.toucansLegend}</p>
 
       {day.rest ? (
         <div className="text-center py-12">
-          <p className="font-bold text-brand-ink mb-1">{t.league.calendar.restWeek}</p>
-          <p className="text-brand-muted text-sm">{longDate(day.date, locale)}</p>
-          <p className="text-brand-muted text-sm mt-2">{t.league.calendar.restWeekNote}</p>
+          <p className="font-bold text-white mb-1">{t.league.calendar.restWeek}</p>
+          <p className="text-league-muted text-sm">{longDate(day.date, locale)}</p>
+          <p className="text-league-muted text-sm mt-2">{t.league.calendar.restWeekNote}</p>
         </div>
       ) : (
         <div>
           <div className="flex items-center justify-between mb-3">
-            <p className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs">{longDate(day.date, locale)}</p>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-brand-muted">
+            <p className="text-league-gold font-bold uppercase tracking-wider text-xs">{longDate(day.date, locale)}</p>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-league-muted">
               {t.league.calendar.firstDivision(day.firstDivision)}
             </span>
           </div>
@@ -81,23 +81,23 @@ export function FixtureCalendar() {
             {day.matches.map(m => (
               <div
                 key={m.id}
-                className={`bg-brand-tint border border-brand-line rounded p-3 flex items-center gap-3 text-sm ${m.cancelled ? 'opacity-60' : ''}`}
+                className={`bg-league-panel border border-league-turquoise/30 rounded p-3 flex items-center gap-3 text-sm ${m.cancelled ? 'opacity-60' : ''}`}
               >
-                <span className="font-mono tabular-nums text-xs text-brand-muted min-w-[44px]">{m.kickoff ?? '—'}</span>
+                <span className="font-mono tabular-nums text-xs text-league-muted min-w-[44px]">{m.kickoff ?? '—'}</span>
                 <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded flex-shrink-0 ${divisionPillClass(m.division)}`}>
                   {m.division}
                 </span>
-                <span className="flex-1">
-                  {m.homeTeam} <span className="text-brand-muted">v</span> {m.awayTeam}
+                <span className="flex-1 text-white">
+                  {m.homeTeam} <span className="text-league-muted">v</span> {m.awayTeam}
                   {m.isHomeClubMatch && <span className="ml-1">★</span>}
                   {m.location && (
-                    <span className="block text-brand-primaryDeep text-xs font-bold mt-0.5">📍 {m.location}</span>
+                    <span className="block text-league-gold text-xs font-bold mt-0.5">📍 {m.location}</span>
                   )}
                 </span>
                 {m.cancelled ? (
-                  <span className="text-red-600 text-xs font-bold uppercase tracking-wider flex-shrink-0">{t.league.calendar.cancelled}</span>
+                  <span className="text-red-400 text-xs font-bold uppercase tracking-wider flex-shrink-0">{t.league.calendar.cancelled}</span>
                 ) : m.homeScore !== null && m.awayScore !== null ? (
-                  <span className="font-bold text-brand-ink flex-shrink-0">{m.homeScore}–{m.awayScore}</span>
+                  <span className="font-bold text-white flex-shrink-0">{m.homeScore}–{m.awayScore}</span>
                 ) : null}
               </div>
             ))}

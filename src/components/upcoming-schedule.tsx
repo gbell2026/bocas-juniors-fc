@@ -63,39 +63,39 @@ export function UpcomingSchedule({ schedule, locale }: { schedule: HomeSchedule;
             )}
           </div>
 
-          <div>
-            <h3 className="text-brand-primaryDeep font-bold uppercase tracking-wider text-xs mb-1">
+          <div className="bg-league-navy border border-league-turquoise/30 rounded-lg p-3">
+            <h3 className="text-league-gold font-bold uppercase tracking-wider text-xs mb-1">
               {t.home.schedule.leagueScheduleTitle}
             </h3>
-            <p className="text-brand-mutedWarm text-xs mb-2">{t.home.schedule.location}</p>
+            <p className="text-league-muted text-xs mb-2">{t.home.schedule.location}</p>
             {matches.length === 0 ? (
-              <p className="text-brand-muted text-sm">{t.home.schedule.noMatches}</p>
+              <p className="text-league-muted text-sm">{t.home.schedule.noMatches}</p>
             ) : (
               <div className="space-y-1.5">
                 {matches.map(m => (
                   <div
                     key={m.id}
-                    className={`border border-brand-line rounded p-2.5 bg-brand-tint text-sm ${m.cancelled ? 'opacity-60' : ''}`}
+                    className={`border border-league-turquoise/30 rounded p-2.5 bg-league-panel text-sm ${m.cancelled ? 'opacity-60' : ''}`}
                   >
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-brand-ink whitespace-nowrap flex-shrink-0">{formatDate(m.date, locale)}</span>
-                      <span className="font-mono tabular-nums text-xs text-brand-muted whitespace-nowrap flex-shrink-0">
+                      <span className="font-bold text-white whitespace-nowrap flex-shrink-0">{formatDate(m.date, locale)}</span>
+                      <span className="font-mono tabular-nums text-xs text-league-muted whitespace-nowrap flex-shrink-0">
                         {m.kickoff ? formatTime(m.kickoff, locale) : ''}
                       </span>
                       <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded flex-shrink-0 ${divisionPillClass(m.division)}`}>
                         {m.division}
                       </span>
-                      <span className="text-brand-muted flex-1 min-w-0 truncate">
-                        {m.homeTeam} <span className="text-brand-mutedWarm">v</span> {m.awayTeam}
+                      <span className="text-league-muted flex-1 min-w-0 truncate">
+                        {m.homeTeam} <span className="text-league-muted">v</span> {m.awayTeam}
                       </span>
                       {m.cancelled ? (
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-red-600 flex-shrink-0">{t.home.schedule.cancelled}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-red-400 flex-shrink-0">{t.home.schedule.cancelled}</span>
                       ) : m.homeScore !== null && m.awayScore !== null ? (
-                        <span className="font-bold text-brand-ink flex-shrink-0">{m.homeScore}–{m.awayScore}</span>
+                        <span className="font-bold text-white flex-shrink-0">{m.homeScore}–{m.awayScore}</span>
                       ) : null}
                     </div>
                     {m.location && (
-                      <p className="text-brand-primaryDeep text-xs font-bold mt-1">📍 {m.location}</p>
+                      <p className="text-league-gold text-xs font-bold mt-1">📍 {m.location}</p>
                     )}
                   </div>
                 ))}

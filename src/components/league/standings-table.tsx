@@ -27,8 +27,8 @@ export function StandingsTable({ divisionId }: { divisionId: string }) {
     return () => { cancelled = true }
   }, [divisionId])
 
-  if (rows === null) return <p className="text-brand-muted py-8 text-center">{t.league.standings.loading}</p>
-  if (rows.length === 0) return <p className="text-brand-muted py-8 text-center">{t.league.standings.empty}</p>
+  if (rows === null) return <p className="text-league-muted py-8 text-center">{t.league.standings.loading}</p>
+  if (rows.length === 0) return <p className="text-league-muted py-8 text-center">{t.league.standings.empty}</p>
 
   const headers = ['#', t.league.standings.team, t.league.standings.played, t.league.standings.won, t.league.standings.drawn, t.league.standings.lost, t.league.standings.goalDifference, t.league.standings.points]
 
@@ -42,36 +42,36 @@ export function StandingsTable({ divisionId }: { divisionId: string }) {
     <div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-brand-creamAlt">
+          <thead className="bg-league-panel">
             <tr>
               {headers.map(h => (
-                <th key={h} className="text-left p-2">{h}</th>
+                <th key={h} className="text-left p-2 text-league-muted">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {rows.map((row, index) => {
               const marker = markerByTeamId.get(row.teamId)
-              const adjustmentColor = row.adjustmentPoints < 0 ? 'text-red-600' : row.adjustmentPoints > 0 ? 'text-green-600' : 'text-amber-600'
+              const adjustmentColor = row.adjustmentPoints < 0 ? 'text-red-400' : row.adjustmentPoints > 0 ? 'text-green-400' : 'text-league-gold'
               return (
-                <tr key={row.teamId} className="border-t border-brand-line">
-                  <td className="p-2 font-bold">{index + 1}</td>
-                  <td className="p-2">
+                <tr key={row.teamId} className="border-t border-league-turquoise/20">
+                  <td className="p-2 font-bold text-white">{index + 1}</td>
+                  <td className="p-2 text-white">
                     <span className="flex items-center gap-2">
                       {row.badgeCloudinaryPublicId ? (
                         <img src={cloudinaryUrl(row.badgeCloudinaryPublicId, 40)} alt="" className="w-5 h-5 object-contain" />
                       ) : (
-                        <span className="w-5 h-5 rounded-full bg-brand-tint inline-block" />
+                        <span className="w-5 h-5 rounded-full bg-league-panel inline-block" />
                       )}
                       {row.teamName}
                     </span>
                   </td>
-                  <td className="p-2">{row.played}</td>
-                  <td className="p-2">{row.won}</td>
-                  <td className="p-2">{row.drawn}</td>
-                  <td className="p-2">{row.lost}</td>
-                  <td className="p-2">{row.goalDifference > 0 ? `+${row.goalDifference}` : row.goalDifference}</td>
-                  <td className="p-2 font-bold">
+                  <td className="p-2 text-league-muted">{row.played}</td>
+                  <td className="p-2 text-league-muted">{row.won}</td>
+                  <td className="p-2 text-league-muted">{row.drawn}</td>
+                  <td className="p-2 text-league-muted">{row.lost}</td>
+                  <td className="p-2 text-league-muted">{row.goalDifference > 0 ? `+${row.goalDifference}` : row.goalDifference}</td>
+                  <td className="p-2 font-bold text-league-gold">
                     {row.points}
                     {marker && <span className={`text-xs align-top ml-0.5 font-bold ${adjustmentColor}`}>{marker}</span>}
                   </td>
@@ -83,14 +83,14 @@ export function StandingsTable({ divisionId }: { divisionId: string }) {
       </div>
 
       {adjustedRows.length > 0 && (
-        <div className="px-2 py-3 space-y-1 text-xs border-t border-brand-line">
+        <div className="px-2 py-3 space-y-1 text-xs border-t border-league-turquoise/20">
           {adjustedRows.map(row => (
             <p key={row.teamId}>
-              <span className={`font-bold mr-1 ${row.adjustmentPoints < 0 ? 'text-red-600' : row.adjustmentPoints > 0 ? 'text-green-600' : 'text-amber-600'}`}>
+              <span className={`font-bold mr-1 ${row.adjustmentPoints < 0 ? 'text-red-400' : row.adjustmentPoints > 0 ? 'text-green-400' : 'text-league-gold'}`}>
                 {markerByTeamId.get(row.teamId)}
               </span>
-              <span className="font-bold text-brand-ink">{row.teamName}:</span>{' '}
-              <span className="text-brand-muted">{row.adjustmentNotes.join('; ')}</span>
+              <span className="font-bold text-white">{row.teamName}:</span>{' '}
+              <span className="text-league-muted">{row.adjustmentNotes.join('; ')}</span>
             </p>
           ))}
         </div>
