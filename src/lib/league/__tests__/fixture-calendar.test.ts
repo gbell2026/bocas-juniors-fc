@@ -68,8 +68,8 @@ describe('shortDivisionLabel', () => {
 })
 
 describe('divisionPillClass', () => {
-  it('gives U10 the league turquoise and every other division the league gold — never the club colors', () => {
-    expect(divisionPillClass('U10')).toBe('bg-league-turquoise text-league-navy')
+  it('gives U10 the league pink and every other division the league gold — never the club colors', () => {
+    expect(divisionPillClass('U10')).toBe('bg-league-pink text-white')
     expect(divisionPillClass('U14')).toBe('bg-league-gold text-league-navy')
     expect(divisionPillClass('U12')).toBe('bg-league-gold text-league-navy')
   })

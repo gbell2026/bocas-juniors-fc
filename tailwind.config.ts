@@ -40,6 +40,7 @@ const config: Config = {
           panel:     '#123A54',   // Lifted card/panel background within navy
           turquoise: '#22AEC4',   // Accent — U10 pill, secondary highlights, borders
           gold:      '#F4B32C',   // Accent — headings, U14 pill, primary highlights
+          pink:      '#FF4D8D',   // U10 pill — turquoise-on-navy read as too low-contrast/hard to spot
           muted:     '#A9C2D0',   // Secondary body text on navy
         },
       },

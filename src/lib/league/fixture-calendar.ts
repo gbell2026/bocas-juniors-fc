@@ -26,11 +26,13 @@ export function shortDivisionLabel(divisionName: string): string {
 
 // Same U10/everything-else split used for the calendar's division pills and
 // the homepage's League Schedule column — one shared mapping so both stay
-// visually consistent. Uses the league's own turquoise/gold palette (not the
-// club's tangerine) — parents were reading the old orange U10 pill as a
+// visually consistent. Uses the league's own palette (not the club's
+// tangerine) — parents were reading the old orange U10 pill as a
 // Toucans-branded thing when it's really the league's division marker.
+// U10 is pink rather than turquoise — turquoise-on-navy read as too
+// low-contrast to spot at a glance.
 export function divisionPillClass(division: string): string {
-  return division === 'U10' ? 'bg-league-turquoise text-league-navy' : 'bg-league-gold text-league-navy'
+  return division === 'U10' ? 'bg-league-pink text-white' : 'bg-league-gold text-league-navy'
 }
 
 // Same "walk forward one week at a time in UTC" approach as
