@@ -44,7 +44,9 @@ Every admin mutation updates local React state in place — never `window.locati
 
 ## Open item — needs a decision before touching it
 
-**U14 Real Barriada FC vs Loma Espina — not a duplicate.** The pair has 3 fixture rows: 11 Sep and 13 Sep (both Loma Espina at home, both 1–3) and 1 Nov. The handover originally assumed 11/13 Sep was one match entered twice; **the user confirmed (2026-10-31) these were two real games played two days apart.** Both results are genuine and correctly counted in the standings — do not delete or clear either. Still open: a double round-robin should have only 2 meetings, so the 1 Nov fixture would be a third. Ask the user whether 1 Nov should stand, before touching it. Also unconfirmed: whether one of the September games should actually be recorded with Real Barriada FC at home (doesn't affect points).
+**U14 Real Barriada FC vs Loma Espina — not a duplicate.** The pair has 3 fixture rows: 11 Sep and 13 Sep (both recorded with Loma Espina at home, both 1–3) and 1 Nov. **The user confirmed (2026-10-31) the two September games are both real**, played two days apart. Both results stand; do not delete or clear either. User decisions, not yet applied to the live DB as of 2026-10-31 (the session had no Supabase access):
+- **1 Nov fixture should not go ahead.** It is a third meeting. Mark it cancelled (it has no score, so standings are unaffected). The user said not to delete rows.
+- **Real Barriada FC were at home on 11 Sep.** Swap home/away on that row. **Swap the scores along with the teams** (so Barriada 3–1 Loma Espina), or the result flips. Confirm the scoreline with the user before saving.
 
 ## Verification
 
