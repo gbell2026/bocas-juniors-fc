@@ -44,7 +44,7 @@ Every admin mutation updates local React state in place — never `window.locati
 
 ## Open item — needs a decision before touching it
 
-**U14 duplicate fixture, unresolved as of this handover.** Real Barriada FC vs Loma Espina has 3 fixture rows instead of 2 — two of them (11 Sep and 13 Sep) are identical (same home team, same 1–3 score), almost certainly the same match entered twice by mistake. A third, legitimate fixture for this pair is scheduled for 1 Nov. **Do not delete either the 11 Sep or 13 Sep row without asking the user which one to keep first** — this was flagged to them and is awaiting their answer. Once resolved, double check whether removing the duplicate shifts the U14 standings (it currently double-counts one 1–3 result).
+**U14 Real Barriada FC vs Loma Espina — not a duplicate.** The pair has 3 fixture rows: 11 Sep and 13 Sep (both Loma Espina at home, both 1–3) and 1 Nov. The handover originally assumed 11/13 Sep was one match entered twice; **the user confirmed (2026-10-31) these were two real games played two days apart.** Both results are genuine and correctly counted in the standings — do not delete or clear either. Still open: a double round-robin should have only 2 meetings, so the 1 Nov fixture would be a third. Ask the user whether 1 Nov should stand, before touching it. Also unconfirmed: whether one of the September games should actually be recorded with Real Barriada FC at home (doesn't affect points).
 
 ## Verification
 
