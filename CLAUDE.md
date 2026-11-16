@@ -42,11 +42,18 @@ Every admin mutation updates local React state in place — never `window.locati
 - There's no "replay"/"postponed"/"walkover" scaffolding in the schema — `cancelled` is just a display flag. A makeup fixture for a cancelled match has to be added manually as a brand-new `league_fixtures` row. That means a replayed pair will show **3** rows total (the original cancelled one stays in place as the historical record) — expected and fine, not a bug, if you ever audit pair-counts expecting exactly 2.
 - `divisionPillClass` (`src/lib/league/fixture-calendar.ts`) is the single shared source for the U10/U14 colored pills, used by both the `/league` page and the homepage's "League Schedule" card. The `league.*` Tailwind palette (navy/panel/turquoise/gold/pink/muted) lives in `tailwind.config.ts` — that's the one place to change a league color.
 
-## Open item — needs a decision before touching it
+## Resolved — U14 Real Barriada FC vs Loma Espina
 
-**U14 Real Barriada FC vs Loma Espina — not a duplicate.** The pair has 3 fixture rows: 11 Sep and 13 Sep (both recorded with Loma Espina at home, both 1–3) and 1 Nov. **The user confirmed (2026-10-31) the two September games are both real**, played two days apart. Both results stand; do not delete or clear either. User decisions, not yet applied to the live DB as of 2026-10-31 (the session had no Supabase access):
-- **1 Nov fixture should not go ahead.** It is a third meeting. Mark it cancelled (it has no score, so standings are unaffected). The user said not to delete rows.
-- **Real Barriada FC were at home on 11 Sep.** Swap home/away on that row. **Swap the scores along with the teams** (so Barriada 3–1 Loma Espina), or the result flips. Confirm the scoreline with the user before saving.
+Not a duplicate; already applied to the live DB, nothing left to do. The pair has 3 fixture rows:
+- **11 Sep:** Real Barriada FC (home) 3–1 Loma Espina. Home/away and scores were swapped from the original entry.
+- **13 Sep:** Loma Espina (home) 3–1 Real Barriada FC. A real game two days later; unchanged.
+- **1 Nov:** cancelled, no score. It was a third meeting; kept as the record, not deleted.
+
+## 2026 season schedule — how it ended up
+
+- **Rained-off weekends were handled two ways.** The 1 Nov games had their rows moved to new dates. The 15 Nov games were left in place as `cancelled` and replayed as brand-new 22 Nov rows. So several pairs have 3–4 fixture rows; that's expected as long as each pair has exactly 2 non-cancelled rows, one home each (verified 2026-11-16: U14 15/15, U10 10/10).
+- **Pitch is stored in `league_fixtures.location`** ("Pitch 1" / "Pitch 2"; the Thu 5 Nov games say "Beach"). Both Sunday pitches are the same size, so either can host U14.
+- **Season ends Sun 22 Nov**, two pitches, 10 games. Atlético Bastimentos U14 playing three games that day (9am, 11am, 1pm) is deliberate: the user confirmed it's the only way to complete the season.
 
 ## Verification
 
